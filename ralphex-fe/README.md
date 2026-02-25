@@ -8,8 +8,10 @@ This is a standalone Docker image, not a devcontainer configuration. It can be u
 
 - **Ralphex Base** - Full-featured base image with common development tools
 - **Node.js** - Included from ralphex base image (version provided by base)
-- **Bun 1.3.8** - Fast JavaScript runtime, bundler, and package manager
-- **Hugo Extended 0.155.2** - Full-featured static site generator with extended capabilities
+- **Bun 1.3.9** - Fast JavaScript runtime, bundler, and package manager
+- **Hugo Extended 0.155.3** - Full-featured static site generator with extended capabilities
+- **Chromium** - System Chromium browser for Playwright end-to-end tests (Alpine/musl-native)
+- **jq** - Lightweight JSON processor for agent workflows and scripting
 - **Git** - Version control (included from base)
 - **Zsh** - Modern shell (included from base)
 
@@ -60,6 +62,35 @@ docker run --rm -v $(pwd):/workspace -w /workspace -p 1313:1313 ghcr.io/gatezh/r
 docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest hugo
 ```
 
+### Using Playwright
+
+Playwright is configured to use the system Chromium browser via the `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` environment variable. This avoids Playwright's built-in browser download, which requires glibc/Debian and is incompatible with Alpine's musl libc.
+
+```bash
+# Run Playwright tests (Playwright uses system Chromium automatically)
+docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest bun run test:e2e
+
+# Verify Chromium is available
+docker run --rm ghcr.io/gatezh/ralphex-fe:latest chromium-browser --version
+
+# Check the Playwright env var is set
+docker run --rm ghcr.io/gatezh/ralphex-fe:latest sh -c 'echo $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'
+```
+
+In your project's Playwright config, Chromium will be resolved automatically from `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. No extra configuration is needed beyond installing `@playwright/test` (without running `playwright install`).
+
+### Using jq
+
+jq is useful for JSON processing in scripts and agent workflows:
+
+```bash
+# Parse package.json
+docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest jq '.version' package.json
+
+# Check jq version
+docker run --rm ghcr.io/gatezh/ralphex-fe:latest jq --version
+```
+
 ## Building Locally
 
 ### Simple Build
@@ -73,7 +104,7 @@ docker build -t ralphex-fe ralphex-fe/
 ```bash
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/ralphex-fe:bun1.3.8-hugo0.155.2-ralphex \
+  -t ghcr.io/<USERNAME>/ralphex-fe:bun1.3.9-hugo0.155.3-ralphex \
   -t ghcr.io/<USERNAME>/ralphex-fe:latest \
   --push \
   ralphex-fe
@@ -97,14 +128,14 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
 ## Image Tags
 
 - `latest` - Most recent build
-- `bun{version}-hugo{version}-ralphex` - Version-specific tag (e.g., `bun1.3.8-hugo0.155.2-ralphex`)
+- `bun{version}-hugo{version}-ralphex` - Version-specific tag (e.g., `bun1.3.9-hugo0.155.3-ralphex`)
 
 ## Version Information
 
 The image uses specific versions defined as build arguments in the Dockerfile:
 
-- **Bun Version**: `1.3.8` (via `BUN_VERSION` build arg)
-- **Hugo Version**: `0.155.2` (via `HUGO_VERSION` build arg)
+- **Bun Version**: `1.3.9` (via `BUN_VERSION` build arg)
+- **Hugo Version**: `0.155.3` (via `HUGO_VERSION` build arg)
 - **Base Image**: `ghcr.io/umputun/ralphex:latest`
 
 ## License

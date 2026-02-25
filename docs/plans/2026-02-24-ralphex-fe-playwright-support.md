@@ -55,9 +55,9 @@
 - [x] Clean up test image
 
 ### Task 3: Update ralphex-fe README
-- [ ] Add Chromium/Playwright to the features list
-- [ ] Add jq to the features list
-- [ ] Add a section explaining Playwright usage (env var, how to run tests)
+- [x] Add Chromium/Playwright to the features list
+- [x] Add jq to the features list
+- [x] Add a section explaining Playwright usage (env var, how to run tests)
 
 ### Task 4: Verify acceptance criteria
 - [ ] Chromium is installed and accessible at `/usr/bin/chromium-browser`
