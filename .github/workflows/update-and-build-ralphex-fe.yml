@@ -243,7 +243,7 @@ jobs:
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "Verifying Chromium installation (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --version
@@ -253,7 +253,7 @@ jobs:
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "✅ Multiplatform image successfully built and pushed!"
           echo "Tags: $TAGS"

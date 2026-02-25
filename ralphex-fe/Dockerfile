@@ -16,19 +16,22 @@ ARG TARGETARCH
 # - ca-certificates: Required for HTTPS connections
 # - chromium: System Chromium browser for Playwright tests (Alpine/musl-native, avoids Playwright's
 #             bundled binary which requires glibc/Debian)
+# - ttf-freefont: TrueType fonts required for Chromium text rendering in headless/screenshot mode
 # - curl: Required by Bun install script
 # - gcompat: glibc compatibility layer required for Hugo Extended binary (Alpine uses musl)
 # - go: Required for Hugo Modules to download and manage dependencies (e.g., PaperMod theme)
 # - jq: JSON processor for agent workflows (parsing configs, API responses, package.json)
 # - unzip: Required by Bun install script on Linux
 # - wget: Required to download Hugo Extended binary
-RUN apk add --no-cache ca-certificates chromium curl gcompat go jq unzip wget
+RUN apk add --no-cache ca-certificates chromium curl gcompat go jq ttf-freefont unzip wget
 
-# Custom env var that projects can reference in playwright.config.ts via executablePath.
-# NOTE: Playwright does NOT read this variable automatically - you must wire it up manually
-# in your config (e.g. executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH).
-# Playwright's bundled browser download does not work on Alpine/musl, so the system
-# Chromium installed above must be used instead.
+# Playwright environment variables:
+# - PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: Prevents Playwright's postinstall from attempting to
+#   download its bundled Chromium binary (which requires glibc and is incompatible with Alpine/musl).
+# - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: Custom env var that projects can reference in
+#   playwright.config.ts via executablePath. NOTE: Playwright does NOT read this automatically -
+#   you must wire it up manually (e.g. executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH).
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Install Bun using official install script
