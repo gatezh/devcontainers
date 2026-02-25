@@ -124,5 +124,21 @@ jobs:
           echo "Verifying Hugo installation (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" hugo version
 
+          echo "Verifying Chromium installation (amd64)..."
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --version
+
+          echo "Verifying jq installation (amd64)..."
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" jq --version
+
+          echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (amd64)..."
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+
+          echo "Verifying Chromium installation (arm64)..."
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --version
+
+          echo "Verifying jq installation (arm64)..."
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" jq --version
+
           echo "Multiplatform image successfully built and pushed!"
           echo "Tags: $TAGS"

@@ -64,10 +64,37 @@ docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:lat
 
 ### Using Playwright
 
-Playwright is configured to use the system Chromium browser via the `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` environment variable. This avoids Playwright's built-in browser download, which requires glibc/Debian and is incompatible with Alpine's musl libc.
+This image includes system Chromium (Alpine/musl-native) as an alternative to Playwright's bundled browser download, which requires glibc/Debian and is incompatible with Alpine's musl libc.
+
+The `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` environment variable is set to `/usr/bin/chromium-browser` for convenient reference in your Playwright config.
+
+In your `playwright.config.ts`, reference this variable via `executablePath`:
+
+```typescript
+import { defineConfig } from '@playwright/test';
+
+export default defineConfig({
+  use: {
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      // Required when running as root inside Docker
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+  },
+});
+```
+
+Install Playwright without downloading bundled browsers:
 
 ```bash
-# Run Playwright tests (Playwright uses system Chromium automatically)
+bun add -d @playwright/test
+# Do NOT run: playwright install (not compatible with Alpine/musl)
+```
+
+Then run tests:
+
+```bash
+# Run Playwright tests
 docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest bun run test:e2e
 
 # Verify Chromium is available
@@ -76,8 +103,6 @@ docker run --rm ghcr.io/gatezh/ralphex-fe:latest chromium-browser --version
 # Check the Playwright env var is set
 docker run --rm ghcr.io/gatezh/ralphex-fe:latest sh -c 'echo $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'
 ```
-
-In your project's Playwright config, Chromium will be resolved automatically from `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. No extra configuration is needed beyond installing `@playwright/test` (without running `playwright install`).
 
 ### Using jq
 
@@ -136,7 +161,7 @@ The image uses specific versions defined as build arguments in the Dockerfile:
 
 - **Bun Version**: `1.3.9` (via `BUN_VERSION` build arg)
 - **Hugo Version**: `0.155.3` (via `HUGO_VERSION` build arg)
-- **Base Image**: `ghcr.io/umputun/ralphex:latest`
+- **Base Image**: `ghcr.io/umputun/ralphex:0.11.0` (via `RALPHEX_VERSION` build arg)
 
 ## License
 
