@@ -60,12 +60,12 @@
 - [x] Add a section explaining Playwright usage (env var, how to run tests)
 
 ### Task 4: Verify acceptance criteria
-- [ ] Chromium is installed and accessible at `/usr/bin/chromium-browser`
-- [ ] `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` env var is set correctly
-- [ ] jq is installed and working
-- [ ] All existing tools (bun, hugo, go, curl, wget) still work
-- [ ] Dockerfile follows existing comment and formatting conventions
-- [ ] README accurately documents new capabilities
+- [x] Chromium is installed and accessible at `/usr/bin/chromium-browser`
+- [x] `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` env var is set correctly
+- [x] jq is installed and working
+- [x] All existing tools (bun, hugo, go, curl, wget) still work
+- [x] Dockerfile follows existing comment and formatting conventions
+- [x] README accurately documents new capabilities
 
 ## Technical Details
 
