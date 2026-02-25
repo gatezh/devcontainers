@@ -251,5 +251,9 @@ jobs:
           echo "Verifying jq installation (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" jq --version
 
+          echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (arm64)..."
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+
           echo "✅ Multiplatform image successfully built and pushed!"
           echo "Tags: $TAGS"

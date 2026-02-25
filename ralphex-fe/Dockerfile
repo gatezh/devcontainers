@@ -24,8 +24,11 @@ ARG TARGETARCH
 # - wget: Required to download Hugo Extended binary
 RUN apk add --no-cache ca-certificates chromium curl gcompat go jq unzip wget
 
-# Tell Playwright to use system Chromium instead of downloading its own binary
-# (Playwright's built-in browser download doesn't work on Alpine/musl)
+# Custom env var that projects can reference in playwright.config.ts via executablePath.
+# NOTE: Playwright does NOT read this variable automatically - you must wire it up manually
+# in your config (e.g. executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH).
+# Playwright's bundled browser download does not work on Alpine/musl, so the system
+# Chromium installed above must be used instead.
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Install Bun using official install script
