@@ -57,6 +57,14 @@ jobs:
           CURRENT_HUGO=$(grep '^ARG HUGO_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
           CURRENT_RALPHEX=$(grep '^ARG RALPHEX_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
 
+          if [ -z "$CURRENT_BUN" ] || [ -z "$CURRENT_HUGO" ] || [ -z "$CURRENT_RALPHEX" ]; then
+            echo "Error: Failed to extract current version(s) from Dockerfile"
+            echo "  Bun: ${CURRENT_BUN:-<empty>}"
+            echo "  Hugo: ${CURRENT_HUGO:-<empty>}"
+            echo "  Ralphex: ${CURRENT_RALPHEX:-<empty>}"
+            exit 1
+          fi
+
           echo "Current versions:"
           echo "  Bun: $CURRENT_BUN"
           echo "  Hugo: $CURRENT_HUGO"
