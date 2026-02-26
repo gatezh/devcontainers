@@ -75,11 +75,11 @@
 - [x] Update "Version Information" section with RALPHEX_VERSION build arg
 
 ### Task 6: Verify all changes
-- [ ] Review all modified files for consistency
-- [ ] Verify Dockerfile comments match template's style (clear, explains "why")
-- [ ] Verify workflow YAML is valid (proper indentation, correct action versions)
-- [ ] Verify README examples use correct image name and tag format
-- [ ] Run `git diff` to review complete changeset
+- [x] Review all modified files for consistency
+- [x] Verify Dockerfile comments match template's style (clear, explains "why")
+- [x] Verify workflow YAML is valid (proper indentation, correct action versions)
+- [x] Verify README examples use correct image name and tag format
+- [x] Run `git diff` to review complete changeset
 
 ### Task 7: Update documentation
 - [ ] Check if main README.md needs any updates for the new tag format
