@@ -57,10 +57,10 @@
 - [x] Validate YAML syntax
 
 ### Task 4: Update update-and-build-ralphex-fe.yml
-- [ ] Change tag generation to match build workflow (just ralphex version)
-- [ ] Fix sed delimiter from `/` to `|` for safety (prevents breakage if versions contain `/`)
-- [ ] Add same Playwright verification steps as build workflow
-- [ ] Validate YAML syntax
+- [x] Change tag generation to match build workflow (just ralphex version)
+- [x] Fix sed delimiter from `/` to `|` for safety (prevents breakage if versions contain `/`)
+- [x] Add same Playwright verification steps as build workflow
+- [x] Validate YAML syntax
 
 ### Task 5: Update README.md
 - [ ] Update version numbers: Bun 1.3.9, Hugo 0.155.3 (matching current Dockerfile)
