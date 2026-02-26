@@ -38,13 +38,13 @@
 - [x] Verify branch is at master HEAD with `git log --oneline -1`
 
 ### Task 2: Update Dockerfile with Playwright support
-- [ ] Add `chromium` and `ttf-freefont` to the `apk add` line (with descriptive comments matching template style)
-- [ ] Add Playwright environment variables section after `apk add`:
+- [x] Add `chromium` and `ttf-freefont` to the `apk add` line (with descriptive comments matching template style)
+- [x] Add Playwright environment variables section after `apk add`:
   - `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` — prevent postinstall from downloading glibc binary
   - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` — for project reference in playwright.config.ts
   - Include comment noting Playwright does NOT read this env var automatically
-- [ ] Update the image description label to mention Chromium
-- [ ] Verify Dockerfile syntax is valid (no trailing whitespace, proper line continuations)
+- [x] Update the image description label to mention Chromium
+- [x] Verify Dockerfile syntax is valid (no trailing whitespace, proper line continuations)
 
 ### Task 3: Simplify image tags in build-ralphex-fe.yml
 - [ ] Change tag generation to use only ralphex version: `${RALPHEX_VERSION}` instead of `bun${BUN_VERSION}-hugo${HUGO_VERSION}-ralphex${RALPHEX_VERSION}`
