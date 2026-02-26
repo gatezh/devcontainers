@@ -98,7 +98,7 @@ Then run tests:
 docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest bun run test:e2e
 
 # Verify Chromium is available
-docker run --rm ghcr.io/gatezh/ralphex-fe:latest chromium-browser --version
+docker run --rm ghcr.io/gatezh/ralphex-fe:latest chromium-browser --no-sandbox --version
 
 # Check the Playwright env var is set
 docker run --rm ghcr.io/gatezh/ralphex-fe:latest sh -c 'echo $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'
