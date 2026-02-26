@@ -129,7 +129,7 @@ docker build -t ralphex-fe ralphex-fe/
 ```bash
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/ralphex-fe:bun1.3.9-hugo0.155.3-ralphex0.11.0 \
+  -t ghcr.io/<USERNAME>/ralphex-fe:0.11.0 \
   -t ghcr.io/<USERNAME>/ralphex-fe:latest \
   --push \
   ralphex-fe
@@ -153,7 +153,7 @@ echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
 ## Image Tags
 
 - `latest` - Most recent build
-- `bun{version}-hugo{version}-ralphex{version}` - Version-specific tag (e.g., `bun1.3.9-hugo0.155.3-ralphex0.11.0`)
+- `{ralphex-version}` - Version-specific tag (e.g., `0.11.0`)
 
 ## Version Information
 

@@ -63,16 +63,16 @@
 - [x] Validate YAML syntax
 
 ### Task 5: Update README.md
-- [ ] Update version numbers: Bun 1.3.9, Hugo 0.155.3 (matching current Dockerfile)
-- [ ] Add Chromium to Features list
-- [ ] Add "Using Playwright" section (following template's documentation style, adapted for Alpine):
+- [x] Update version numbers: Bun 1.3.9, Hugo 0.155.3 (matching current Dockerfile)
+- [x] Add Chromium to Features list
+- [x] Add "Using Playwright" section (following template's documentation style, adapted for Alpine):
   - Explain why system Chromium is used instead of Playwright's bundled binary
   - Show `playwright.config.ts` example with `executablePath` and sandbox flags
   - Show install command (`bun add -d @playwright/test`, NOT `playwright install`)
   - Show test run and verification commands
-- [ ] Update "Image Tags" section to show new format: `{ralphex-version}` (e.g., `0.11.0`)
-- [ ] Update "Building Locally" buildx example to use new tag format
-- [ ] Update "Version Information" section with RALPHEX_VERSION build arg
+- [x] Update "Image Tags" section to show new format: `{ralphex-version}` (e.g., `0.11.0`)
+- [x] Update "Building Locally" buildx example to use new tag format
+- [x] Update "Version Information" section with RALPHEX_VERSION build arg
 
 ### Task 6: Verify all changes
 - [ ] Review all modified files for consistency
