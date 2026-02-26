@@ -31,8 +31,8 @@ RUN apk add --no-cache ca-certificates chromium curl gcompat go jq ttf-freefont 
 # - PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: Custom env var that projects can reference in
 #   playwright.config.ts via executablePath. NOTE: Playwright does NOT read this automatically -
 #   you must wire it up manually (e.g. executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH).
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Install Bun using official install script
 # BUN_INSTALL sets the installation directory

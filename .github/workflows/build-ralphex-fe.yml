@@ -58,8 +58,6 @@ jobs:
           NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           BASE_IMAGE="${{ env.REGISTRY }}/${NAMESPACE}/${{ env.IMAGE_NAME }}"
 
-          BUN_VERSION="${{ steps.versions.outputs.bun }}"
-          HUGO_VERSION="${{ steps.versions.outputs.hugo }}"
           RALPHEX_VERSION="${{ steps.versions.outputs.ralphex }}"
 
           VERSION_TAG="${RALPHEX_VERSION}"
@@ -125,14 +123,16 @@ jobs:
           docker run --rm --platform linux/arm64 "$FIRST_TAG" hugo version
 
           echo "Verifying Chromium installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --version
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --no-sandbox --version
 
           echo "Verifying jq installation (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" jq --version
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
+            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
@@ -143,14 +143,16 @@ jobs:
             'ls /usr/share/fonts/freefont/FreeSans.ttf && echo "OK: freefont found" || (echo "FAIL: freefont not found" && exit 1)'
 
           echo "Verifying Chromium installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --version
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --no-sandbox --version
 
           echo "Verifying jq installation (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" jq --version
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
+            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \

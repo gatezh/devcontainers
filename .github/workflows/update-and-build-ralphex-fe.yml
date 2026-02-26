@@ -155,6 +155,14 @@ jobs:
           HUGO_VERSION=$(grep '^ARG HUGO_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
           RALPHEX_VERSION=$(grep '^ARG RALPHEX_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
 
+          if [ -z "$BUN_VERSION" ] || [ -z "$HUGO_VERSION" ] || [ -z "$RALPHEX_VERSION" ]; then
+            echo "Error: Failed to extract version(s) from Dockerfile"
+            echo "  Bun: ${BUN_VERSION:-<empty>}"
+            echo "  Hugo: ${HUGO_VERSION:-<empty>}"
+            echo "  Ralphex: ${RALPHEX_VERSION:-<empty>}"
+            exit 1
+          fi
+
           echo "bun=$BUN_VERSION" >> $GITHUB_OUTPUT
           echo "hugo=$HUGO_VERSION" >> $GITHUB_OUTPUT
           echo "ralphex=$RALPHEX_VERSION" >> $GITHUB_OUTPUT
@@ -167,8 +175,6 @@ jobs:
       - name: Generate image tags
         id: tags
         env:
-          BUN_VERSION: ${{ steps.versions.outputs.bun }}
-          HUGO_VERSION: ${{ steps.versions.outputs.hugo }}
           RALPHEX_VERSION: ${{ steps.versions.outputs.ralphex }}
         run: |
           NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
@@ -237,14 +243,16 @@ jobs:
           docker run --rm --platform linux/arm64 "$FIRST_TAG" hugo version
 
           echo "Verifying Chromium installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --version
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --no-sandbox --version
 
           echo "Verifying jq installation (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" jq --version
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
+            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (amd64)..."
           docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
@@ -255,14 +263,16 @@ jobs:
             'ls /usr/share/fonts/freefont/FreeSans.ttf && echo "OK: freefont found" || (echo "FAIL: freefont not found" && exit 1)'
 
           echo "Verifying Chromium installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --version
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --no-sandbox --version
 
           echo "Verifying jq installation (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" jq --version
 
           echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
+          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
+            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
 
           echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (arm64)..."
           docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \

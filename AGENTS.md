@@ -15,6 +15,9 @@ When implementing features or making changes, **ALWAYS** check the latest offici
 - **GitHub Actions**: https://docs.github.com/en/actions
   - Runs on Ubuntu (GNU/Linux) - use GNU coreutils syntax, NOT macOS/BSD syntax
   - Example: `sed -i "pattern" file` (GNU) NOT `sed -i.bak "pattern" file` (BSD)
+  - When substituting version strings with `sed`, use `|` as delimiter instead of `/`:
+    - Correct: `sed -i "s|^ARG FOO=.*|ARG FOO=$NEW_VERSION|"` — safe with any version string
+    - Incorrect: `sed -i "s/^ARG FOO=.*/ARG FOO=$NEW_VERSION/"` — breaks if version contains `/`
   - Check platform-specific tool behavior (sed, grep, awk, etc.)
   - Verify workflow syntax with official examples
 
@@ -83,11 +86,10 @@ repository-root/
 
 ### Image Tags
 - Always include `latest` tag
-- Version-specific tag format: `{tool}{version}-{variant}`
-- Examples:
-  - `ghcr.io/owner/devcontainer-bun:latest`
-  - `ghcr.io/owner/devcontainer-bun:bun1.3.5-alpine`
-  - `ghcr.io/owner/devcontainer-claude-bun:bun1.3.5-slim`
+- Devcontainer version-specific tag format: `{tool}{version}-{variant}`
+  - Examples: `ghcr.io/owner/devcontainer-bun:bun1.3.5-alpine`, `ghcr.io/owner/devcontainer-claude-bun:bun1.3.5-slim`
+- Standalone image version-specific tag format: `{primary-version}` (primary tool version only)
+  - Example: `ghcr.io/owner/ralphex-fe:0.11.0` (ralphex version only; Bun/Hugo versions in README)
 
 ## Dockerfile Patterns
 
@@ -113,6 +115,27 @@ Minimal images should include:
 - `ca-certificates` - HTTPS connections
 - `git` - Version control
 - `zsh` - Better shell for VS Code integration
+
+### Alpine Playwright Support
+
+When adding Playwright to an Alpine/musl-based image, do NOT use `playwright install` — the bundled Chromium binary requires glibc and is incompatible with Alpine's musl libc.
+
+Instead:
+1. Install system Chromium via apk: `apk add --no-cache chromium ttf-freefont`
+2. Set env vars in the Dockerfile (combine into one `ENV` instruction to minimize layers):
+   ```dockerfile
+   ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+   ```
+3. In the project's `playwright.config.ts`, wire up `executablePath` manually:
+   ```typescript
+   launchOptions: {
+     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+   }
+   ```
+4. Projects install only `@playwright/test` (e.g., `bun add -d @playwright/test`) — never `playwright install`.
+5. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` is a project-level convention; Playwright does NOT read it automatically.
 
 ## devcontainer.json Patterns
 
