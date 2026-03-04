@@ -10,7 +10,7 @@ This is a standalone Docker image, not a devcontainer configuration. It can be u
 - **Node.js** - Included from ralphex base image (version provided by base)
 - **Bun 1.3.9** - Fast JavaScript runtime, bundler, and package manager
 - **Hugo Extended 0.155.3** - Full-featured static site generator with extended capabilities
-- **Chromium** - System Chromium browser for Playwright end-to-end tests (Alpine/musl-native)
+- **Chromium** - System browser for headless end-to-end testing
 - **Git** - Version control (included from base)
 - **Zsh** - Modern shell (included from base)
 
@@ -59,49 +59,6 @@ docker run --rm -v $(pwd):/workspace -w /workspace -p 1313:1313 ghcr.io/gatezh/r
 
 # Build a Hugo site
 docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest hugo
-```
-
-### Using Playwright
-
-This image includes system Chromium (Alpine/musl-native) as an alternative to Playwright's bundled browser download, which requires glibc/Debian and is incompatible with Alpine's musl libc.
-
-The `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` environment variable is set to `/usr/bin/chromium-browser` for convenient reference in your Playwright config.
-
-In your `playwright.config.ts`, reference this variable via `executablePath`:
-
-```typescript
-import { defineConfig } from '@playwright/test';
-
-export default defineConfig({
-  use: {
-    launchOptions: {
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      // Required when running as root inside Docker
-      // --disable-dev-shm-usage: prevents Chromium crashes in Docker (default /dev/shm is 64MB)
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-    },
-  },
-});
-```
-
-Install Playwright without downloading bundled browsers:
-
-```bash
-bun add -d @playwright/test
-# Do NOT run: playwright install (not compatible with Alpine/musl)
-```
-
-Then run tests:
-
-```bash
-# Run Playwright tests
-docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/gatezh/ralphex-fe:latest bun run test:e2e
-
-# Verify Chromium is available
-docker run --rm ghcr.io/gatezh/ralphex-fe:latest chromium-browser --no-sandbox --version
-
-# Check the Playwright env var is set
-docker run --rm ghcr.io/gatezh/ralphex-fe:latest sh -c 'echo $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'
 ```
 
 ## Building Locally

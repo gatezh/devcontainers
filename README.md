@@ -91,8 +91,6 @@ docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/<username>/ralphex-fe
 # Run Hugo commands
 docker run --rm -v $(pwd):/workspace -w /workspace -p 1313:1313 ghcr.io/<username>/ralphex-fe:latest hugo server --bind 0.0.0.0
 
-# Run Playwright tests (configure executablePath in playwright.config.ts to use $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH)
-docker run --rm -v $(pwd):/workspace -w /workspace ghcr.io/<username>/ralphex-fe:latest bun run test:e2e
 ```
 
 ## Adding a New Image
