@@ -9,18 +9,15 @@ on:
       - 'devcontainer-claude-bun/.devcontainer/init-firewall.sh'
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: devcontainer-claude-bun
+concurrency:
+  group: build-devcontainer-claude-bun-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-push:
+  prepare:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-
+    outputs:
+      version-tag: ${{ steps.versions.outputs.version-tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,72 +26,17 @@ jobs:
         id: versions
         run: |
           DOCKERFILE="devcontainer-claude-bun/.devcontainer/Dockerfile"
-
           BUN_VERSION=$(grep '^ARG BUN_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
+          echo "version-tag=bun${BUN_VERSION}-slim" >> "$GITHUB_OUTPUT"
+          echo "Bun: $BUN_VERSION"
 
-          echo "bun=$BUN_VERSION" >> "$GITHUB_OUTPUT"
-
-          echo "Extracted versions:"
-          echo "  Bun: $BUN_VERSION"
-
-      - name: Generate image tags
-        id: tags
-        run: |
-          NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          BASE_IMAGE="${{ env.REGISTRY }}/${NAMESPACE}/${{ env.IMAGE_NAME }}"
-
-          BUN_VERSION="${{ steps.versions.outputs.bun }}"
-
-          VERSION_TAG="bun${BUN_VERSION}-slim"
-
-          TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${VERSION_TAG}"
-
-          {
-            echo "namespace=$NAMESPACE"
-            echo "tags=$TAGS"
-          } >> "$GITHUB_OUTPUT"
-          echo "Generated tags:"
-          echo "$TAGS" | tr ',' '\n'
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.tags.outputs.namespace }}/${{ env.IMAGE_NAME }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: devcontainer-claude-bun/.devcontainer
-          file: devcontainer-claude-bun/.devcontainer/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Verify image
-        run: |
-          TAGS="${{ steps.tags.outputs.tags }}"
-          FIRST_TAG=$(echo "$TAGS" | cut -d',' -f1)
-
-          echo "Verifying multiplatform image: $FIRST_TAG"
-          docker pull --platform linux/amd64 "$FIRST_TAG"
-          docker pull --platform linux/arm64 "$FIRST_TAG"
-
-          echo "Multiplatform image successfully built and pushed!"
-          echo "Tags: $TAGS"
+  build:
+    needs: prepare
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      image-name: devcontainer-claude-bun
+      context: devcontainer-claude-bun/.devcontainer
+      dockerfile: devcontainer-claude-bun/.devcontainer/Dockerfile
+      version-tag: ${{ needs.prepare.outputs.version-tag }}
+      verify-command: 'bun --version'
+    secrets: inherit

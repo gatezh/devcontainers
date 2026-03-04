@@ -8,20 +8,15 @@ on:
       - 'ralphex-fe/Dockerfile'
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ralphex-fe
+concurrency:
+  group: build-ralphex-fe-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-push:
+  prepare:
     runs-on: ubuntu-latest
-    # Skip if commit was made by the update workflow to avoid double builds
-    if: ${{ !contains(github.event.head_commit.message, 'via GitHub Actions workflow dispatch') }}
-
-    permissions:
-      contents: read
-      packages: write
-
+    outputs:
+      version-tag: ${{ steps.versions.outputs.version-tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,124 +38,34 @@ jobs:
             exit 1
           fi
 
-          {
-            echo "bun=$BUN_VERSION"
-            echo "hugo=$HUGO_VERSION"
-            echo "ralphex=$RALPHEX_VERSION"
-          } >> "$GITHUB_OUTPUT"
+          echo "version-tag=bun${BUN_VERSION}-hugo${HUGO_VERSION}-ralphex${RALPHEX_VERSION}" >> "$GITHUB_OUTPUT"
 
           echo "Extracted versions:"
           echo "  Bun: $BUN_VERSION"
           echo "  Hugo: $HUGO_VERSION"
           echo "  Ralphex: $RALPHEX_VERSION"
 
-      - name: Generate image tags
-        id: tags
-        run: |
-          NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          BASE_IMAGE="${{ env.REGISTRY }}/${NAMESPACE}/${{ env.IMAGE_NAME }}"
-
-          BUN_VERSION="${{ steps.versions.outputs.bun }}"
-          HUGO_VERSION="${{ steps.versions.outputs.hugo }}"
-          RALPHEX_VERSION="${{ steps.versions.outputs.ralphex }}"
-
-          VERSION_TAG="bun${BUN_VERSION}-hugo${HUGO_VERSION}-ralphex${RALPHEX_VERSION}"
-
-          TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${VERSION_TAG}"
-
-          {
-            echo "namespace=$NAMESPACE"
-            echo "tags=$TAGS"
-          } >> "$GITHUB_OUTPUT"
-          echo "Generated tags:"
-          echo "$TAGS" | tr ',' '\n'
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.tags.outputs.namespace }}/${{ env.IMAGE_NAME }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ralphex-fe
-          file: ralphex-fe/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Verify image
-        env:
-          TAGS: ${{ steps.tags.outputs.tags }}
-        run: |
-          FIRST_TAG=$(echo "$TAGS" | cut -d',' -f1)
-
-          echo "Verifying multiplatform image: $FIRST_TAG"
-          docker pull --platform linux/amd64 "$FIRST_TAG"
-          docker pull --platform linux/arm64 "$FIRST_TAG"
-
-          echo "Verifying Bun installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" bun --version
-
-          echo "Verifying Hugo installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" hugo version
-
-          echo "Verifying Bun installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" bun --version
-
-          echo "Verifying Hugo installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" hugo version
-
-          echo "Verifying Chromium installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" chromium-browser --no-sandbox --version
-
-          echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
-
-          echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" = "1" && echo "OK: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" || (echo "FAIL: got PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" && exit 1)'
-
-          echo "Verifying ttf-freefont installation (amd64)..."
-          docker run --rm --platform linux/amd64 "$FIRST_TAG" sh -c \
-            'ls /usr/share/fonts/freefont/FreeSans.ttf && echo "OK: freefont found" || (echo "FAIL: freefont not found" && exit 1)'
-
-          echo "Verifying Chromium installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" chromium-browser --no-sandbox --version
-
-          echo "Verifying PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1)'
-
-          echo "Verifying PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD env var (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'test "$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" = "1" && echo "OK: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" || (echo "FAIL: got PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" && exit 1)'
-
-          echo "Verifying ttf-freefont installation (arm64)..."
-          docker run --rm --platform linux/arm64 "$FIRST_TAG" sh -c \
-            'ls /usr/share/fonts/freefont/FreeSans.ttf && echo "OK: freefont found" || (echo "FAIL: freefont not found" && exit 1)'
-
-          echo "Multiplatform image successfully built and pushed!"
-          echo "Tags: $TAGS"
+  build:
+    needs: prepare
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      image-name: ralphex-fe
+      context: ralphex-fe
+      dockerfile: ralphex-fe/Dockerfile
+      version-tag: ${{ needs.prepare.outputs.version-tag }}
+      verify-command: 'bun --version && hugo version'
+      extra-verify-script: |
+        chromium-browser --no-sandbox --version && \
+        test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && \
+          echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || \
+          (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
+        test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && \
+          echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || \
+          (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
+        test "$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" = "1" && \
+          echo "OK: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" || \
+          (echo "FAIL: got PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" && exit 1) && \
+        ls /usr/share/fonts/freefont/FreeSans.ttf && \
+          echo "OK: freefont found" || \
+          (echo "FAIL: freefont not found" && exit 1)
+    secrets: inherit

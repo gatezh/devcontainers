@@ -1,0 +1,120 @@
+name: Reusable Docker Build
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: 'Image name (e.g. devcontainer-bun)'
+        required: true
+        type: string
+      context:
+        description: 'Docker build context path'
+        required: true
+        type: string
+      dockerfile:
+        description: 'Path to Dockerfile'
+        required: true
+        type: string
+      version-tag:
+        description: 'Version-specific tag suffix (e.g. bun1.3.5-alpine)'
+        required: true
+        type: string
+      verify-command:
+        description: 'Tool verification command (e.g. bun --version)'
+        required: true
+        type: string
+      extra-verify-script:
+        description: 'Additional verification script (e.g. Chromium/Playwright checks)'
+        required: false
+        default: ''
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate image tags
+        id: tags
+        run: |
+          NAMESPACE=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          BASE_IMAGE="${{ env.REGISTRY }}/${NAMESPACE}/${{ inputs.image-name }}"
+
+          TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${{ inputs.version-tag }}"
+
+          {
+            echo "namespace=$NAMESPACE"
+            echo "tags=$TAGS"
+          } >> "$GITHUB_OUTPUT"
+          echo "Generated tags:"
+          echo "$TAGS" | tr ',' '\n'
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ steps.tags.outputs.namespace }}/${{ inputs.image-name }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.image-name }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.image-name }}
+
+      - name: Verify image
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+          VERIFY_CMD: ${{ inputs.verify-command }}
+          EXTRA_VERIFY: ${{ inputs.extra-verify-script }}
+        run: |
+          FIRST_TAG=$(echo "$TAGS" | cut -d',' -f1)
+
+          echo "Verifying multiplatform image: $FIRST_TAG"
+          docker pull --platform linux/amd64 "$FIRST_TAG"
+          docker pull --platform linux/arm64 "$FIRST_TAG"
+
+          echo "Verifying tools (amd64)..."
+          docker run --rm --platform linux/amd64 --entrypoint sh "$FIRST_TAG" -c "$VERIFY_CMD"
+
+          echo "Verifying tools (arm64)..."
+          docker run --rm --platform linux/arm64 --entrypoint sh "$FIRST_TAG" -c "$VERIFY_CMD"
+
+          if [ -n "$EXTRA_VERIFY" ]; then
+            echo "Running extra verification (amd64)..."
+            docker run --rm --platform linux/amd64 --entrypoint sh "$FIRST_TAG" -c "$EXTRA_VERIFY"
+
+            echo "Running extra verification (arm64)..."
+            docker run --rm --platform linux/arm64 --entrypoint sh "$FIRST_TAG" -c "$EXTRA_VERIFY"
+          fi
+
+          echo "Multiplatform image successfully built and pushed!"
+          echo "Tags: $TAGS"
