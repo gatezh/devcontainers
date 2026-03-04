@@ -33,9 +33,11 @@ jobs:
           BUN_VERSION=$(grep '^ARG BUN_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
           NODE_VERSION=$(grep '^ARG NODE_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
 
-          echo "hugo=$HUGO_VERSION" >> $GITHUB_OUTPUT
-          echo "bun=$BUN_VERSION" >> $GITHUB_OUTPUT
-          echo "node=$NODE_VERSION" >> $GITHUB_OUTPUT
+          {
+            echo "hugo=$HUGO_VERSION"
+            echo "bun=$BUN_VERSION"
+            echo "node=$NODE_VERSION"
+          } >> "$GITHUB_OUTPUT"
 
           echo "Extracted versions:"
           echo "  Hugo: $HUGO_VERSION"
@@ -56,8 +58,10 @@ jobs:
 
           TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${VERSION_TAG}"
 
-          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          {
+            echo "namespace=$NAMESPACE"
+            echo "tags=$TAGS"
+          } >> "$GITHUB_OUTPUT"
           echo "Generated tags:"
           echo "$TAGS" | tr ',' '\n'
 

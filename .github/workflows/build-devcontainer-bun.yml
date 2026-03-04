@@ -31,7 +31,7 @@ jobs:
 
           BUN_VERSION=$(grep '^ARG BUN_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
 
-          echo "bun=$BUN_VERSION" >> $GITHUB_OUTPUT
+          echo "bun=$BUN_VERSION" >> "$GITHUB_OUTPUT"
 
           echo "Extracted versions:"
           echo "  Bun: $BUN_VERSION"
@@ -48,8 +48,10 @@ jobs:
 
           TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${VERSION_TAG}"
 
-          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          {
+            echo "namespace=$NAMESPACE"
+            echo "tags=$TAGS"
+          } >> "$GITHUB_OUTPUT"
           echo "Generated tags:"
           echo "$TAGS" | tr ',' '\n'
 

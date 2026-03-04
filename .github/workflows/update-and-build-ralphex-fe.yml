@@ -97,15 +97,17 @@ jobs:
           # Check if anything changed
           if git diff --quiet "${{ env.DOCKERFILE_PATH }}"; then
             echo "No changes detected - versions are already up to date"
-            echo "updated=false" >> $GITHUB_OUTPUT
+            echo "updated=false" >> "$GITHUB_OUTPUT"
           else
             echo "Changes detected - versions updated"
-            echo "updated=true" >> $GITHUB_OUTPUT
+            echo "updated=true" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "bun_version=$NEW_BUN" >> $GITHUB_OUTPUT
-          echo "hugo_version=$NEW_HUGO" >> $GITHUB_OUTPUT
-          echo "ralphex_version=$NEW_RALPHEX" >> $GITHUB_OUTPUT
+          {
+            echo "bun_version=$NEW_BUN"
+            echo "hugo_version=$NEW_HUGO"
+            echo "ralphex_version=$NEW_RALPHEX"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit and push changes
         if: steps.update.outputs.updated == 'true'
@@ -171,9 +173,11 @@ jobs:
             exit 1
           fi
 
-          echo "bun=$BUN_VERSION" >> $GITHUB_OUTPUT
-          echo "hugo=$HUGO_VERSION" >> $GITHUB_OUTPUT
-          echo "ralphex=$RALPHEX_VERSION" >> $GITHUB_OUTPUT
+          {
+            echo "bun=$BUN_VERSION"
+            echo "hugo=$HUGO_VERSION"
+            echo "ralphex=$RALPHEX_VERSION"
+          } >> "$GITHUB_OUTPUT"
 
           echo "Building with versions:"
           echo "  Bun: $BUN_VERSION"
@@ -192,8 +196,10 @@ jobs:
 
           TAGS="${BASE_IMAGE}:latest,${BASE_IMAGE}:${VERSION_TAG}"
 
-          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          {
+            echo "namespace=$NAMESPACE"
+            echo "tags=$TAGS"
+          } >> "$GITHUB_OUTPUT"
           echo "Generated tags:"
           echo "$TAGS" | tr ',' '\n'
 

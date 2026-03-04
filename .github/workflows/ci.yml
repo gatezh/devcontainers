@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - '**/Dockerfile'
+      - '**/*.sh'
+      - '.github/workflows/**'
+      - '.hadolint.yaml'
+
+jobs:
+  # ── Lint Dockerfiles with hadolint ──────────────────────────────────
+  lint-dockerfiles:
+    name: Hadolint · ${{ matrix.dockerfile }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile:
+          - devcontainer-bun/.devcontainer/Dockerfile
+          - devcontainer-claude-bun/.devcontainer/Dockerfile
+          - devcontainer-hugo-bun/.devcontainer/Dockerfile
+          - devcontainer-hugo-bun-node/.devcontainer/Dockerfile
+          - ralphex-fe/Dockerfile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run hadolint
+        uses: hadolint/hadolint-action@v3.0.0
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+
+  # ── Lint GitHub Actions workflows with actionlint ───────────────────
+  lint-workflows:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+
+  # ── Detect which images have changed files ──────────────────────────
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has-changes: ${{ steps.set-matrix.outputs.has-changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            devcontainer-bun:
+              - 'devcontainer-bun/**'
+            devcontainer-claude-bun:
+              - 'devcontainer-claude-bun/**'
+            devcontainer-hugo-bun:
+              - 'devcontainer-hugo-bun/**'
+            devcontainer-hugo-bun-node:
+              - 'devcontainer-hugo-bun-node/**'
+            ralphex-fe:
+              - 'ralphex-fe/**'
+
+      - name: Build matrix from changes
+        id: set-matrix
+        env:
+          CHANGED_BUN: ${{ steps.filter.outputs.devcontainer-bun }}
+          CHANGED_CLAUDE_BUN: ${{ steps.filter.outputs.devcontainer-claude-bun }}
+          CHANGED_HUGO_BUN: ${{ steps.filter.outputs.devcontainer-hugo-bun }}
+          CHANGED_HUGO_BUN_NODE: ${{ steps.filter.outputs.devcontainer-hugo-bun-node }}
+          CHANGED_RALPHEX: ${{ steps.filter.outputs.ralphex-fe }}
+        run: |
+          INCLUDES="[]"
+
+          add_image() {
+            local image="$1" context="$2" dockerfile="$3" verify="$4"
+            INCLUDES=$(echo "$INCLUDES" | jq -c \
+              --arg img "$image" \
+              --arg ctx "$context" \
+              --arg df "$dockerfile" \
+              --arg v "$verify" \
+              '. + [{"image":$img,"context":$ctx,"dockerfile":$df,"verify":$v}]')
+          }
+
+          if [ "$CHANGED_BUN" = "true" ]; then
+            add_image "devcontainer-bun" \
+              "devcontainer-bun/.devcontainer" \
+              "devcontainer-bun/.devcontainer/Dockerfile" \
+              "bun --version"
+          fi
+
+          if [ "$CHANGED_CLAUDE_BUN" = "true" ]; then
+            add_image "devcontainer-claude-bun" \
+              "devcontainer-claude-bun/.devcontainer" \
+              "devcontainer-claude-bun/.devcontainer/Dockerfile" \
+              "bun --version"
+          fi
+
+          if [ "$CHANGED_HUGO_BUN" = "true" ]; then
+            add_image "devcontainer-hugo-bun" \
+              "devcontainer-hugo-bun/.devcontainer" \
+              "devcontainer-hugo-bun/.devcontainer/Dockerfile" \
+              "bun --version && hugo version"
+          fi
+
+          if [ "$CHANGED_HUGO_BUN_NODE" = "true" ]; then
+            add_image "devcontainer-hugo-bun-node" \
+              "devcontainer-hugo-bun-node/.devcontainer" \
+              "devcontainer-hugo-bun-node/.devcontainer/Dockerfile" \
+              "bun --version && hugo version && node --version"
+          fi
+
+          if [ "$CHANGED_RALPHEX" = "true" ]; then
+            add_image "ralphex-fe" \
+              "ralphex-fe" \
+              "ralphex-fe/Dockerfile" \
+              "bun --version && hugo version && ralphex --version"
+          fi
+
+          if [ "$INCLUDES" = "[]" ]; then
+            {
+              echo "has-changes=false"
+              echo "matrix={\"include\":[]}"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "has-changes=true"
+              echo "matrix=$(echo "$INCLUDES" | jq -c '{include:.}')"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Build changed images and verify installed tools ─────────────────
+  build-and-verify:
+    name: Build · ${{ matrix.image }}
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has-changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build amd64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ matrix.image }}:test
+          cache-from: type=gha,scope=${{ matrix.image }}-amd64
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-amd64
+
+      - name: Verify tools (amd64)
+        env:
+          IMAGE_TAG: ${{ matrix.image }}:test
+          VERIFY_CMD: ${{ matrix.verify }}
+        run: docker run --rm --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
+
+      - name: Build arm64 image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/arm64
+          cache-from: type=gha,scope=${{ matrix.image }}-arm64
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-arm64
