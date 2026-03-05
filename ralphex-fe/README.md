@@ -11,6 +11,7 @@ This is a standalone Docker image, not a devcontainer configuration. It can be u
 - **Bun 1.3.9** - Fast JavaScript runtime, bundler, and package manager
 - **Hugo Extended 0.155.3** - Full-featured static site generator with extended capabilities
 - **Chromium** - System browser for headless end-to-end testing
+- **RTK 0.26.0** - [Rust Token Killer](https://www.rtk-ai.app/) - CLI proxy to minimize LLM token consumption
 - **Git** - Version control (included from base)
 - **Zsh** - Modern shell (included from base)
 

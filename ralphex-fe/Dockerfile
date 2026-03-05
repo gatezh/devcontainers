@@ -1,6 +1,16 @@
 ARG BUN_VERSION=1.3.9
 ARG HUGO_VERSION=0.156.0
 ARG RALPHEX_VERSION=0.20.0
+ARG RTK_VERSION=0.26.0
+
+# Build RTK from source for Alpine/musl compatibility
+# The pre-built arm64 binary is gnu-linked and incompatible with Alpine's musl libc.
+# For amd64, a pre-built musl binary exists but building from source keeps both arches consistent.
+FROM rust:alpine AS rtk-builder
+ARG RTK_VERSION
+RUN apk add --no-cache musl-dev
+RUN cargo install --git https://github.com/rtk-ai/rtk.git --tag "v${RTK_VERSION}" --locked && \
+    rtk --version
 
 # Extend the ralphex base image which provides the ralphex binary at /srv/ralphex
 # along with Claude Code, Codex, Node.js, git, ripgrep, and other development tools
@@ -61,6 +71,10 @@ RUN set -eux; \
     tar -xzf hugo.tar.gz -C /usr/local/bin/ hugo; \
     rm hugo.tar.gz hugo_checksums.txt; \
     hugo version
+
+# Copy RTK binary built from source in the builder stage
+COPY --from=rtk-builder /usr/local/cargo/bin/rtk /usr/local/bin/rtk
+RUN rtk --version
 
 # OCI labels for container metadata and GitHub Package integration
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images"

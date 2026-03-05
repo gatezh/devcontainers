@@ -56,7 +56,7 @@ jobs:
       context: ralphex-fe
       dockerfile: ralphex-fe/Dockerfile
       version-tag: ${{ needs.prepare.outputs.version-tag }}
-      verify-command: 'bun --version && hugo version'
+      verify-command: 'bun --version && hugo version && rtk --version'
       extra-verify-script: |
         chromium-browser --no-sandbox --version && \
         test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && \
