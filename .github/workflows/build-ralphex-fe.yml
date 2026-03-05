@@ -68,7 +68,7 @@ jobs:
         test "$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" = "1" && \
           echo "OK: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" || \
           (echo "FAIL: got PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" && exit 1) && \
-        ls /usr/share/fonts/freefont/FreeSans.ttf && \
+        ls /usr/share/fonts/freefont/FreeSans.otf && \
           echo "OK: freefont found" || \
           (echo "FAIL: freefont not found" && exit 1)
     secrets: inherit
