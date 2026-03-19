@@ -154,12 +154,12 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
 USER node
 
 # agent-browser: headless browser automation for AI agents
-# Installs its own bundled playwright-core + full chromium (separate from Playwright above)
-# Requires root for system deps (apt-get install triggered by --with-deps)
+# Downloads Chrome from Chrome for Testing (Google's official automation channel).
+# --with-deps installs system dependencies on Linux.
 ARG AGENT_BROWSER_VERSION=latest
 USER root
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
-  && $(npm root -g)/agent-browser/node_modules/.bin/playwright-core install --with-deps chromium \
+  && agent-browser install --with-deps \
   && chown -R node:node /usr/local/share/npm-global
 USER node
 
