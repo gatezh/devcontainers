@@ -61,6 +61,7 @@ jobs:
           tags: |
             type=raw,value=latest
             type=sha,prefix=
+            type=raw,value={{date 'YYYYMMDD'}}
 
       - name: Build and push
         id: push
