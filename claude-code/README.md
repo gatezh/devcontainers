@@ -40,7 +40,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds daily at 5am MT (11:00 UTC). Cached layers (system packages, Playwright) are reused for speed, while Claude Code and agent-browser always install fresh via a cache-busting build arg. Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd64 and arm64 (no QEMU emulation). Each rebuild picks up the latest Claude Code and agent-browser. Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 

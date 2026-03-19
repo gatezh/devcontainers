@@ -8,98 +8,98 @@ on:
   schedule:
     - cron: '0 11 * * *'
   workflow_dispatch:
-    inputs:
-      no-cache:
-        description: 'Full rebuild without Docker cache'
-        type: boolean
-        default: false
 
 permissions:
   contents: read
   packages: write
-  attestations: write
   id-token: write
-
-env:
-  REGISTRY: ghcr.io
 
 concurrency:
   group: build-claude-code-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-push:
-    name: Build & Push (${{ matrix.target }})
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        include:
-          - target: default
-            image-suffix: claude-code
-            verify-command: "bun --version || true && claude --version && mise --version && fish --version"
-          - target: sandbox
-            image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && fish --version && which iptables"
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Lowercase image base
-        id: repo
-        run: echo "image_base=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
+  build-default:
+    uses: docker/github-builder/.github/workflows/build.yml@v1
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    with:
+      output: image
+      push: true
+      target: default
+      context: claude-code/.devcontainer
+      file: claude-code/.devcontainer/Dockerfile
+      platforms: linux/amd64,linux/arm64
+      meta-images: ghcr.io/gatezh/devcontainer-images/claude-code
+      meta-tags: |
+        type=raw,value=latest
+        type=sha,prefix=
+        type=raw,value={{date 'YYYYMMDD'}}
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}
-          tags: |
-            type=raw,value=latest
-            type=sha,prefix=
-            type=raw,value={{date 'YYYYMMDD'}}
+  build-sandbox:
+    uses: docker/github-builder/.github/workflows/build.yml@v1
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    with:
+      output: image
+      push: true
+      target: sandbox
+      context: claude-code/.devcontainer
+      file: claude-code/.devcontainer/Dockerfile
+      platforms: linux/amd64,linux/arm64
+      meta-images: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox
+      meta-tags: |
+        type=raw,value=latest
+        type=sha,prefix=
+        type=raw,value={{date 'YYYYMMDD'}}
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        id: push
-        uses: docker/build-push-action@v7
+  verify:
+    name: Verify ${{ matrix.image-suffix }} (${{ matrix.arch }})
+    needs: [build-default, build-sandbox]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image-suffix: claude-code
+            verify-command: "bun --version || true && claude --version && mise --version && fish --version"
+            runner: ubuntu-24.04
+            arch: amd64
+          - image-suffix: claude-code
+            verify-command: "bun --version || true && claude --version && mise --version && fish --version"
+            runner: ubuntu-24.04-arm
+            arch: arm64
+          - image-suffix: claude-code-sandbox
+            verify-command: "claude --version && mise --version && fish --version && which iptables"
+            runner: ubuntu-24.04
+            arch: amd64
+          - image-suffix: claude-code-sandbox
+            verify-command: "claude --version && mise --version && fish --version && which iptables"
+            runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
         with:
-          context: claude-code/.devcontainer
-          file: claude-code/.devcontainer/Dockerfile
-          target: ${{ matrix.target }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            CACHE_BUST=${{ github.event_name != 'push' && github.run_id || 'stable' }}
-          no-cache: ${{ inputs.no-cache == true }}
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate artifact attestation
-        uses: actions/attest@v4
-        with:
-          subject-name: ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      - name: Verify image (amd64)
+      - name: Verify image
         run: |
-          docker pull --platform linux/amd64 ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}:latest
-          docker run --rm --platform linux/amd64 ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"
-
-      - name: Verify image (arm64)
-        run: |
-          docker pull --platform linux/arm64 ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}:latest
-          docker run --rm --platform linux/arm64 ${{ steps.repo.outputs.image_base }}/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"
+          docker pull ghcr.io/gatezh/devcontainer-images/${{ matrix.image-suffix }}:latest
+          docker run --rm ghcr.io/gatezh/devcontainer-images/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"

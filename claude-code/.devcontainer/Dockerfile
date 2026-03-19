@@ -119,12 +119,6 @@ RUN npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
 USER node
 RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell
 
-# ── Cache bust ────────────────────────────────────────────────────────────────
-# Layers above (system packages, Playwright, etc.) stay cached for speed.
-# Layers below (Claude Code, agent-browser) rebuild when CACHE_BUST changes,
-# picking up the latest versions on daily scheduled builds.
-ARG CACHE_BUST=stable
-
 # ── Claude Code CLI (native installer) ───────────────────────────────────────
 # Native installer replaces deprecated npm method (npm install -g @anthropic-ai/claude-code)
 # See: https://code.claude.com/docs/en/getting-started
