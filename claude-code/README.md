@@ -40,7 +40,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds daily at 5am MT (11:00 UTC) with no Docker cache, picking up the latest Claude Code, Playwright, and other tools. Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds daily at 5am MT (11:00 UTC). Cached layers (system packages, Playwright) are reused for speed, while Claude Code and agent-browser always install fresh via a cache-busting build arg. Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -225,7 +225,7 @@ The image bakes in a Playwright browser binary at a specific version (controlled
 |-----|---------|-------------|
 | `GIT_DELTA_VERSION` | `0.18.2` | git-delta version |
 | `PLAYWRIGHT_VERSION` | `1.58.2` | Playwright browser binary version |
-| `AGENT_BROWSER_VERSION` | `0.14.0` | agent-browser version (default target only) |
+| `AGENT_BROWSER_VERSION` | `latest` | agent-browser version (default target only) |
 
 ## Building Locally
 

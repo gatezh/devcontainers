@@ -16,7 +16,6 @@ FROM node:22-trixie-slim AS base
 
 ARG GIT_DELTA_VERSION=0.18.2
 ARG PLAYWRIGHT_VERSION=1.58.2
-ARG AGENT_BROWSER_VERSION=0.14.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -120,6 +119,12 @@ RUN npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
 USER node
 RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell
 
+# ── Cache bust ────────────────────────────────────────────────────────────────
+# Layers above (system packages, Playwright, etc.) stay cached for speed.
+# Layers below (Claude Code, agent-browser) rebuild when CACHE_BUST changes,
+# picking up the latest versions on daily scheduled builds.
+ARG CACHE_BUST=stable
+
 # ── Claude Code CLI (native installer) ───────────────────────────────────────
 # Native installer replaces deprecated npm method (npm install -g @anthropic-ai/claude-code)
 # See: https://code.claude.com/docs/en/getting-started
@@ -151,6 +156,7 @@ USER node
 # agent-browser: headless browser automation for AI agents
 # Installs its own bundled playwright-core + full chromium (separate from Playwright above)
 # Requires root for system deps (apt-get install triggered by --with-deps)
+ARG AGENT_BROWSER_VERSION=latest
 USER root
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
   && $(npm root -g)/agent-browser/node_modules/.bin/playwright-core install --with-deps chromium \

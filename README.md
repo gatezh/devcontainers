@@ -6,6 +6,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 
 ### Devcontainer Images
 
+- **[claude-code](./claude-code/README.md)** - Shared Claude Code devcontainer image (default + sandbox variants)
 - **[devcontainer-bun](./devcontainer-bun/README.md)** - Bun development container
 - **[devcontainer-claude-bun](./devcontainer-claude-bun/README.md)** - Claude Code development container with firewall sandbox
 - **[devcontainer-hugo-bun](./devcontainer-hugo-bun/README.md)** - Hugo Extended + Bun development container
@@ -35,6 +36,27 @@ image-name/
 ```
 
 ## Available Images
+
+### claude-code
+
+Shared devcontainer base image for Claude Code projects. Two variants from a single multi-stage Dockerfile: **default** (full dev environment with agent-browser) and **sandbox** (network-restricted with iptables firewall). Projects consume pre-built images and control tool versions via `.mise.toml`. Rebuilds daily to pick up latest Claude Code.
+
+**Usage in other projects:**
+
+```jsonc
+// Default variant
+{
+  "image": "ghcr.io/gatezh/devcontainer-images/claude-code:latest"
+}
+
+// Sandbox variant
+{
+  "image": "ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest",
+  "capAdd": ["NET_ADMIN", "NET_RAW"]
+}
+```
+
+See the [claude-code README](./claude-code/README.md) for full setup guide.
 
 ### devcontainer-bun
 
