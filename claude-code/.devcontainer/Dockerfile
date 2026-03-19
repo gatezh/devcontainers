@@ -148,12 +148,18 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
 USER node
 
 # agent-browser: headless browser automation for AI agents
-# Downloads Chrome from Chrome for Testing (Google's official automation channel).
-# --with-deps installs system dependencies on Linux.
+# amd64: Chrome for Testing (Google's official automation channel)
+# arm64: system Chromium (Chrome for Testing has no ARM64 Linux builds)
 ARG AGENT_BROWSER_VERSION=latest
 USER root
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
-  && agent-browser install --with-deps \
+  && ARCH=$(dpkg --print-architecture) \
+  && if [ "$ARCH" = "amd64" ]; then \
+       agent-browser install --with-deps; \
+     else \
+       apt-get update && apt-get install -y --no-install-recommends chromium \
+       && apt-get clean && rm -rf /var/lib/apt/lists/*; \
+     fi \
   && chown -R node:node /usr/local/share/npm-global
 USER node
 

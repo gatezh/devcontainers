@@ -30,7 +30,7 @@ jobs:
       push: true
       target: default
       context: claude-code/.devcontainer
-      file: claude-code/.devcontainer/Dockerfile
+      file: Dockerfile
       platforms: linux/amd64,linux/arm64
       meta-images: ghcr.io/gatezh/devcontainer-images/claude-code
       meta-tags: |
@@ -54,7 +54,7 @@ jobs:
       push: true
       target: sandbox
       context: claude-code/.devcontainer
-      file: claude-code/.devcontainer/Dockerfile
+      file: Dockerfile
       platforms: linux/amd64,linux/arm64
       meta-images: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox
       meta-tags: |
