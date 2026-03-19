@@ -5,6 +5,8 @@ on:
     branches: [master]
     paths:
       - "claude-code/.devcontainer/Dockerfile"
+  schedule:
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +34,7 @@ jobs:
             verify-command: "bun --version || true && claude --version && mise --version && fish --version"
           - target: sandbox
             image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && fish --version && iptables --version"
+            verify-command: "claude --version && mise --version && fish --version && which iptables"
     steps:
       - uses: actions/checkout@v6
 
@@ -74,6 +76,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          no-cache: ${{ github.event_name != 'push' }}
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
 
