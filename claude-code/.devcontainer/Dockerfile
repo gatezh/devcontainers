@@ -15,7 +15,7 @@
 FROM node:22-trixie-slim AS base
 
 ARG GIT_DELTA_VERSION=0.18.2
-ARG PLAYWRIGHT_VERSION=1.50.1
+ARG PLAYWRIGHT_VERSION=1.58.2
 ARG AGENT_BROWSER_VERSION=0.14.0
 
 # System packages shared by all targets
