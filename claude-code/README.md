@@ -19,7 +19,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Shell | Fish, Starship, fzf | Built-in syntax highlighting, autosuggestions, completions |
 | Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps | Standard dev utilities |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
-| Claude Code | Native CLI installer | Binary copied to `/usr/local/bin/` to survive volume mounts |
+| Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 | Playwright | System deps + browser binary at a pinned version | See [Playwright version strategy](#playwright-version-strategy) |
 
 **Default-only:** passwordless sudo, agent-browser + full Chromium
