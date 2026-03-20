@@ -12,12 +12,17 @@ ARG ZSH_IN_DOCKER_VERSION=1.2.0
 # Install basic development tools and iptables/ipset
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
+  wget \
   curl \
   less \
   git \
+  procps \
   sudo \
   fzf \
   zsh \
+  man-db \
+  unzip \
+  gnupg2 \
   gh \
   iptables \
   ipset \
@@ -25,6 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   dnsutils \
   aggregate \
   jq \
+  nano \
+  vim \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Ensure default bun user has access to /usr/local/share
@@ -49,8 +56,7 @@ RUN mkdir -p /workspace /home/bun/.claude /home/bun/.bun && \
 WORKDIR /workspace
 
 RUN ARCH=$(dpkg --print-architecture) && \
-  curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-    "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
+  wget "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
   rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
@@ -65,8 +71,12 @@ ENV PATH="$BUN_INSTALL/bin:$PATH"
 # Set the default shell to zsh rather than sh
 ENV SHELL=/bin/zsh
 
+# Set the default editor and visual
+ENV EDITOR=nano
+ENV VISUAL=nano
+
 # Default powerline10k theme
-RUN sh -c "$(curl -fsSL https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
   -p git \
   -p fzf \
   -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
