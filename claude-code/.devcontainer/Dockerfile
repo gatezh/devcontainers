@@ -119,25 +119,16 @@ RUN npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
 USER node
 RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell
 
-# ── Claude Code CLI (native installer) ───────────────────────────────────────
-# Native installer replaces deprecated npm method (npm install -g @anthropic-ai/claude-code)
-# See: https://code.claude.com/docs/en/getting-started
-# The installer places the binary in ~/.local/bin/ (previously ~/.claude/bin/).
-# Runtime volume mounts over ~/.claude/ (for config persistence) could shadow it,
-# so copy to a system path to ensure the binary survives volume mounts.
-RUN for i in 1 2 3; do \
-      curl -fsSL https://claude.ai/install.sh | bash && break; \
-      echo "Retry $i/3 in 15s..." && sleep 15; \
-    done \
-  && test -x /home/node/.local/bin/claude
+# ── Claude Code CLI ───────────────────────────────────────────────────────────
+# Using npm instead of the native installer (curl claude.ai/install.sh | bash).
+# The native installer is recommended for interactive use, but rate-limits (429)
+# when multiple parallel Docker builds hit it simultaneously.
+# npm is deprecated for interactive users but still supported "for compatibility
+# reasons" — Docker/CI parallel builds are exactly that reason.
+# See: https://code.claude.com/docs/en/getting-started#install-with-npm
+# Auto-updates don't matter here — the image rebuilds daily.
 USER root
-RUN if [ -d /home/node/.local/bin ] && ls /home/node/.local/bin/claude* >/dev/null 2>&1; then \
-      cp /home/node/.local/bin/claude* /usr/local/bin/; \
-    elif [ -d /home/node/.claude/bin ]; then \
-      cp /home/node/.claude/bin/* /usr/local/bin/; \
-    else \
-      echo "ERROR: Claude Code binary not found in ~/.local/bin/ or ~/.claude/bin/" && exit 1; \
-    fi
+RUN npm install -g @anthropic-ai/claude-code
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
