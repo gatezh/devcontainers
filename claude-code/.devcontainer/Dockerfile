@@ -19,19 +19,14 @@ ARG PLAYWRIGHT_VERSION=1.58.2
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
-# - curl/wget: downloading tools and installers
+# - curl: downloading tools and installers
 # - fish: interactive shell (built-in syntax highlighting, autosuggestions, completions)
 # - fzf: fuzzy finder (fish integration via fzf.fish or built-in)
 # - gh: GitHub CLI
 # - git: version control
-# - gnupg2: package signing verification
 # - jq: JSON processing (firewall script, onboarding patch)
 # - less: pager for git delta output
-# - man-db: manual pages
-# - nano/vim: editors
-# - procps: ps, top (debugging)
 # - sudo: privilege escalation for firewall setup
-# - unzip: extracting archives
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
@@ -39,16 +34,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   fzf \
   gh \
   git \
-  gnupg2 \
   jq \
   less \
-  man-db \
-  nano \
-  procps \
   sudo \
-  unzip \
-  vim \
-  wget \
   && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # npm global directory with proper permissions for node user
@@ -77,7 +65,8 @@ WORKDIR /workspace
 
 # Install git-delta (better git diffs)
 RUN ARCH=$(dpkg --print-architecture) \
-  && wget -q "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
+  && curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
+    "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
   && dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
   && rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
@@ -87,8 +76,8 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/usr/bin/fish
-ENV EDITOR=nano
-ENV VISUAL=nano
+ENV EDITOR="code --wait"
+ENV VISUAL="code --wait"
 
 # ── Starship + Mise (install as root, configure as node) ───────────────────────
 USER root
