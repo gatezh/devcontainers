@@ -97,6 +97,28 @@ RUN mkdir -p /home/node/.config/fish \
 ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 
+# ── Dev tools (always latest) ─────────────────────────────────────────────────
+# rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
+# Like Claude Code itself, these are dev infrastructure — not project dependencies.
+# Downloaded from GitHub Releases; refreshed on each daily image rebuild.
+USER root
+RUN set -eux; \
+    ARCH="$(uname -m)"; \
+    # ── rtk ──
+    case "$ARCH" in \
+      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
+      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
+    esac; \
+    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz" \
+      | tar -xz -C /usr/local/bin rtk; \
+    # ── ralphex ──
+    RALPHEX_ARCH=$(echo "$ARCH" | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
+    RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${RALPHEX_ARCH}.tar.gz" \
+      | tar -xz -C /usr/local/bin ralphex
+USER node
+
 # ── Playwright (headless shell for browser testing) ───────────────────────────
 # Two-layer strategy for multi-project compatibility:
 #   1. System deps (install-deps) — heavy, needs root, version-stable across

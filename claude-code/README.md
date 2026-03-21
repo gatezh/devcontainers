@@ -19,6 +19,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Shell | Fish, Starship, fzf | Built-in syntax highlighting, autosuggestions, completions |
 | Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps | Standard dev utilities |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
+| rtk, ralphex | Always-latest from GitHub Releases | Dev infrastructure (like Claude Code) — no version pinning needed in projects |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 | Playwright | System deps + browser binary at a pinned version | See [Playwright version strategy](#playwright-version-strategy) |
 
@@ -83,7 +84,7 @@ Add to your project's `.devcontainer/devcontainer.json`:
 
 ```jsonc
 {
-  "name": "Claude Sandbox",
+  "name": "Claude Code Sandbox",
   "image": "ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest",
   // Capabilities required for iptables firewall setup
   "capAdd": ["NET_ADMIN", "NET_RAW"],
@@ -99,7 +100,7 @@ Add to your project's `.devcontainer/devcontainer.json`:
     "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
   ],
   "containerEnv": {
-    "TZ": "${localEnv:TZ:America/Los_Angeles}",
+    "TZ": "${localEnv:TZ:America/Edmonton}",
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
@@ -121,15 +122,15 @@ Projects consuming these images need the following files in their repository.
 
 ### Required: `.mise.toml` (project root)
 
-Each project defines its own tool versions:
+Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image at latest:
 
 ```toml
+# Pin runtime and build tools that affect project stability.
+# node is provided by the base image — needed for VS Code extensions
+# (OXC, Playwright, etc.) that spawn node. Do not add it here.
 [tools]
 bun = "1.3.8"
-# node is provided by the base image (node:24-trixie-slim).
-# This entry is for CI environments where the base image isn't available.
-# Inside the devcontainer, mise detects Node is already on $PATH and skips installation.
-node = "24"
+hugo = "0.155.1"
 ```
 
 ### Optional: `.devcontainer/init-plugins.sh`
