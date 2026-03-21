@@ -1,6 +1,6 @@
 // For format details, see https://aka.ms/devcontainer.json
 {
-  "name": "Sandbox",
+  "name": "Claude Code Sandbox",
   "build": {
     "context": "..",
     "dockerfile": "../Dockerfile",
