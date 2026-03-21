@@ -1,4 +1,7 @@
 
+# log files
+*.log
+
 # ralphex progress logs
 progress*.txt
 
