@@ -1,0 +1,51 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+  "name": "Default",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "target": "default"
+  },
+  "init": true,
+  "remoteUser": "node",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // **AI Agents**
+        // Claude Code - AI assistant
+        "anthropic.claude-code",
+
+        // **General**
+        // YAML - YAML support (for workflows and docker-compose)
+        "redhat.vscode-yaml",
+        // Markdown Preview Github Styles - Markdown preview
+        "bierner.markdown-preview-github-styles",
+        // Docker - Dockerfile support
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.profiles.linux": {
+          "fish": { "path": "fish" },
+          "bash": { "path": "bash", "icon": "terminal-bash" }
+        },
+        // Suppress extension recommendation prompts
+        "extensions.ignoreRecommendations": true
+      }
+    }
+  },
+  "mounts": [
+    // Persist Claude Code configuration between container rebuilds
+    "source=devcontainer-images-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    // Persist fish shell history between container rebuilds
+    "source=devcontainer-images-fish-data-${devcontainerId},target=/home/node/.local/share/fish,type=volume"
+  ],
+  "containerEnv": {
+    "TZ": "${localEnv:TZ:America/Edmonton}",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude"
+  },
+  // Initialize Claude Code plugins (runs once when container is created)
+  "postCreateCommand": "sudo chown -R node /home/node/.claude && bash /workspace/.devcontainer/init-plugins.sh",
+  "waitFor": "postCreateCommand"
+}

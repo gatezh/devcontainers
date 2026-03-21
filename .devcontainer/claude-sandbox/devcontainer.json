@@ -1,0 +1,53 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+  "name": "Sandbox",
+  "build": {
+    "context": "..",
+    "dockerfile": "../Dockerfile",
+    "target": "sandbox"
+  },
+  // Capabilities required for iptables firewall setup
+  "capAdd": ["NET_ADMIN", "NET_RAW"],
+  "init": true,
+  "remoteUser": "node",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // **AI Agents**
+        "anthropic.claude-code",
+
+        // **General**
+        "redhat.vscode-yaml",
+        "bierner.markdown-preview-github-styles",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.profiles.linux": {
+          "fish": { "path": "fish" },
+          "bash": { "path": "bash", "icon": "terminal-bash" }
+        },
+        "extensions.ignoreRecommendations": true
+      }
+    }
+  },
+  "mounts": [
+    "source=devcontainer-images-sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    "source=devcontainer-images-sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
+    // Mount firewall script into the expected path
+    "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
+  ],
+  "containerEnv": {
+    "TZ": "${localEnv:TZ:America/Edmonton}",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    // Sandbox blocks OAuth login — inject token from host
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
+  },
+  // Plugins before firewall (network still open during postCreateCommand)
+  "postCreateCommand": "sudo chown -R node /home/node/.claude && bash /workspace/.devcontainer/init-plugins.sh",
+  // Firewall locks down the network
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
