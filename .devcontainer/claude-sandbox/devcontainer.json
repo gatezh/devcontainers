@@ -9,7 +9,9 @@
   // Capabilities required for iptables firewall setup
   "capAdd": ["NET_ADMIN", "NET_RAW"],
   "init": true,
+  "updateRemoteUserUID": true,
   "remoteUser": "node",
+  "otherPortsAttributes": { "onAutoForward": "silent" },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
   "customizations": {
@@ -29,7 +31,27 @@
           "fish": { "path": "fish" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
-        "extensions.ignoreRecommendations": true
+        "extensions.ignoreRecommendations": true,
+        // ── Formatter settings (customize per project) ──────────────────
+        // Change "editor.defaultFormatter" to match your tooling:
+        //   Biome: "biomejs.biome"  |  Prettier: "esbenp.prettier-vscode"
+        //   OXC:   "oxc.oxc-vscode" |  None: remove these three settings
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        // Show workspace folder name in window title
+        "window.title": "${localWorkspaceFolderBasename}",
+        // Sandbox visual identity — Claude Dark theme with coral status bar
+        "workbench.colorTheme": "Claude Dark",
+        "workbench.colorCustomizations": {
+          "statusBar.background": "#E8543E",
+          "statusBar.foreground": "#ffffff"
+        },
+        // Allow Claude Code to skip permission prompts in sandbox
+        "claudeCode.allowDangerouslySkipPermissions": true
       }
     }
   },
@@ -42,6 +64,7 @@
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
     // Sandbox blocks OAuth login — inject token from host
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },

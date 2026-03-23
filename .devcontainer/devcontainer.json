@@ -6,7 +6,9 @@
     "target": "default"
   },
   "init": true,
+  "updateRemoteUserUID": true,
   "remoteUser": "node",
+  "otherPortsAttributes": { "onAutoForward": "silent" },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
   "customizations": {
@@ -31,7 +33,19 @@
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
         // Suppress extension recommendation prompts
-        "extensions.ignoreRecommendations": true
+        "extensions.ignoreRecommendations": true,
+        // ── Formatter settings (customize per project) ──────────────────
+        // Change "editor.defaultFormatter" to match your tooling:
+        //   Biome: "biomejs.biome"  |  Prettier: "esbenp.prettier-vscode"
+        //   OXC:   "oxc.oxc-vscode" |  None: remove these three settings
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        // Show workspace folder name in window title
+        "window.title": "${localWorkspaceFolderBasename}"
       }
     }
   },
@@ -43,7 +57,8 @@
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
-    "CLAUDE_CONFIG_DIR": "/home/node/.claude"
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
   },
   // Initialize Claude Code plugins (runs once when container is created)
   "postCreateCommand": "sudo chown -R node /home/node/.claude && bash /workspace/.devcontainer/init-plugins.sh",
