@@ -19,6 +19,14 @@ ignored:
   # Anthropic Claude Code devcontainer pattern (anthropics/claude-code).
   - SC2034 # variable appears unused
 
+  # ralphex-fe entrypoint runs as root to handle APP_UID remapping,
+  # then drops to app user via gosu. No final USER directive is correct.
+  - DL3002 # last USER should not be root
+
+  # Dev tools (Claude Code) intentionally unpinned — images rebuild daily
+  # to always get latest. Pinning would defeat the purpose.
+  - DL3016 # pin versions in npm install
+
   # Pipes inside command substitutions (e.g. grep | cut) are intentional;
   # empty results are explicitly checked afterwards.
   - SC2312 # pipe in command substitution masks return value

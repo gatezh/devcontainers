@@ -109,7 +109,7 @@ Add to your project's `.devcontainer/devcontainer.json`:
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   // Runs before postStartCommand (firewall), so network is still available for browser downloads.
-  "postCreateCommand": "mise install && npx playwright install --only-shell",
+  "postCreateCommand": "mise install && bun install && npx playwright install --only-shell",
   // Firewall init — script is bind-mounted from the project
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"

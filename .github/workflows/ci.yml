@@ -29,7 +29,7 @@ jobs:
           - ralphex-fe/Dockerfile
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run hadolint
         uses: hadolint/hadolint-action@v3.0.0
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run actionlint
         uses: raven-actions/actionlint@v2
@@ -56,10 +56,10 @@ jobs:
       has-changes: ${{ steps.set-matrix.outputs.has-changes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check changed paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -142,7 +142,8 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
-  # ── Build changed images and verify installed tools ─────────────────
+  # ── Build changed images (amd64 only) and verify installed tools ────
+  # arm64 is tested on native runners at merge time — no QEMU emulation in CI.
   build-and-verify:
     name: Build · ${{ matrix.image }}
     needs: detect-changes
@@ -153,16 +154,13 @@ jobs:
       matrix: ${{ fromJSON(needs.detect-changes.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build amd64 image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -177,12 +175,3 @@ jobs:
           IMAGE_TAG: ${{ matrix.image }}:test
           VERIFY_CMD: ${{ matrix.verify }}
         run: docker run --rm --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
-
-      - name: Build arm64 image
-        uses: docker/build-push-action@v5
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/arm64
-          cache-from: type=gha,scope=${{ matrix.image }}-arm64
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}-arm64
