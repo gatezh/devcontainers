@@ -53,9 +53,12 @@ ENV APP_USER=app \
     DOCKER_GID=999 \
     TIME_ZONE=America/Chicago
 
-# Reserve GID 998 for ping to prevent conflicts (matches umputun/baseimage convention)
+# Reserve GID 998 for ping to prevent conflicts (matches umputun/baseimage convention).
+# docker group may already exist from docker.io package — use -f to avoid failure,
+# then ensure it has the expected GID via groupmod.
 RUN groupadd -g 998 ping \
-  && groupadd -g ${DOCKER_GID} docker \
+  && groupadd -f -g ${DOCKER_GID} docker \
+  && groupmod -g ${DOCKER_GID} docker \
   && useradd --no-log-init -m -s /bin/sh -u ${APP_UID} ${APP_USER} \
   && usermod -aG docker ${APP_USER} \
   && mkdir -p /srv /workspace \
