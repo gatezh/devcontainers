@@ -23,12 +23,14 @@ Dockerfiles for custom devcontainer images on GitHub Container Registry (ghcr.io
 - Always include `latest`
 - Devcontainer: `{tool}{version}-{variant}` (e.g., `bun1.3.5-alpine`)
 - Standalone: `{primary-version}` only (e.g., `0.11.0`)
+- Multi-tool images: `{tool1}{version}-{tool2}{version}` (e.g., `bun1.3.9-hugo0.156.0`)
 
 ## Code Style
 
 - 2-space indentation in JSON/YAML
 - Use comments in devcontainer.json (JSONC format)
 - Dockerfile instruction order: ARG → FROM → packages → user/permissions → tools → LABEL
+- For images with multiple binary downloads, use multi-stage parallel builds (see `ralphex-fe/Dockerfile`)
 
 ## Validation
 

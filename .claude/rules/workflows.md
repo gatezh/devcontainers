@@ -5,6 +5,23 @@ paths:
 
 # GitHub Actions Workflow Conventions
 
+## Build Approach
+
+Prefer `docker/github-builder` for build workflows — it builds platforms in parallel on native runners (no QEMU). See `build-ralphex-fe.yml` and `build-claude-code.yml` for examples.
+
+The older `reusable-docker-build.yml` uses sequential QEMU-emulated builds and is kept for legacy images.
+
+## Action Versions
+
+Use latest stable major versions. Current:
+- `actions/checkout@v6`
+- `docker/setup-qemu-action@v4`
+- `docker/setup-buildx-action@v4`
+- `docker/login-action@v4`
+- `docker/metadata-action@v6`
+- `docker/build-push-action@v7`
+- `dorny/paths-filter@v4`
+
 ## Triggers
 
 Devcontainer images:
@@ -19,7 +36,7 @@ on:
   workflow_dispatch:
 ```
 
-Standalone images:
+Standalone images (include support files):
 
 ```yaml
 on:
@@ -27,19 +44,13 @@ on:
     branches: [master]
     paths:
       - '{image-name}/Dockerfile'
+      - '{image-name}/files/**'
   workflow_dispatch:
 ```
 
-## Version Extraction
+## CI (Pre-merge)
 
-```yaml
-- name: Extract versions from Dockerfile
-  id: versions
-  run: |
-    DOCKERFILE="{image-name}/.devcontainer/Dockerfile"
-    VERSION=$(grep '^ARG {TOOL}_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
-    echo "{tool}=$VERSION" >> $GITHUB_OUTPUT
-```
+CI builds amd64 only (native) — no QEMU emulation. arm64 is tested on native runners at merge time.
 
 ## Multi-platform Build
 
