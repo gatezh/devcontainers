@@ -146,8 +146,8 @@ ENTRYPOINT ["/init.sh"]
 CMD ["/srv/ralphex"]
 
 # ── OCI labels ───────────────────────────────────────────────────────────────
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images"
-LABEL org.opencontainers.image.description="Ralphex-fe: Frontend development image with Bun, Hugo Extended, Playwright, and Claude Code on Debian"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="ralphex-fe"
-LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Ralphex-fe: Frontend development image with Bun, Hugo Extended, Playwright, and Claude Code on Debian" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="ralphex-fe" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
