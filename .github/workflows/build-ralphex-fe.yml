@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'ralphex-fe/Dockerfile'
+      - 'ralphex-fe/files/**'
   workflow_dispatch:
 
 concurrency:
@@ -28,22 +29,19 @@ jobs:
 
           BUN_VERSION=$(grep '^ARG BUN_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
           HUGO_VERSION=$(grep '^ARG HUGO_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
-          RALPHEX_VERSION=$(grep '^ARG RALPHEX_VERSION=' "$DOCKERFILE" | cut -d'=' -f2)
 
-          if [ -z "$BUN_VERSION" ] || [ -z "$HUGO_VERSION" ] || [ -z "$RALPHEX_VERSION" ]; then
+          if [ -z "$BUN_VERSION" ] || [ -z "$HUGO_VERSION" ]; then
             echo "Error: Failed to extract version(s) from Dockerfile"
             echo "  Bun: ${BUN_VERSION:-<empty>}"
             echo "  Hugo: ${HUGO_VERSION:-<empty>}"
-            echo "  Ralphex: ${RALPHEX_VERSION:-<empty>}"
             exit 1
           fi
 
-          echo "version-tag=bun${BUN_VERSION}-hugo${HUGO_VERSION}-ralphex${RALPHEX_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version-tag=bun${BUN_VERSION}-hugo${HUGO_VERSION}" >> "$GITHUB_OUTPUT"
 
           echo "Extracted versions:"
           echo "  Bun: $BUN_VERSION"
           echo "  Hugo: $HUGO_VERSION"
-          echo "  Ralphex: $RALPHEX_VERSION"
 
   build:
     needs: prepare
@@ -56,19 +54,16 @@ jobs:
       context: ralphex-fe
       dockerfile: ralphex-fe/Dockerfile
       version-tag: ${{ needs.prepare.outputs.version-tag }}
-      verify-command: 'bun --version && hugo version'
+      verify-command: 'bun --version && hugo version && python3 --version && go version && node --version'
       extra-verify-script: |
-        chromium-browser --no-sandbox --version && \
-        test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && \
-          echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || \
-          (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
-        test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && \
-          echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || \
-          (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
-        test "$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" = "1" && \
-          echo "OK: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1" || \
-          (echo "FAIL: got PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=$PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" && exit 1) && \
-        ls /usr/share/fonts/freefont/FreeSans.otf && \
-          echo "OK: freefont found" || \
-          (echo "FAIL: freefont not found" && exit 1)
+        test -x /srv/ralphex && echo "OK: ralphex binary at /srv/ralphex" || \
+          (echo "FAIL: /srv/ralphex not found or not executable" && exit 1) && \
+        test -f /init.sh && echo "OK: /init.sh entrypoint exists" || \
+          (echo "FAIL: /init.sh not found" && exit 1) && \
+        test -f /srv/init.sh && echo "OK: /srv/init.sh credential copier exists" || \
+          (echo "FAIL: /srv/init.sh not found" && exit 1) && \
+        id app && echo "OK: app user exists" || \
+          (echo "FAIL: app user not found" && exit 1) && \
+        test -d /home/app/.cache/ms-playwright && echo "OK: Playwright browser cache exists" || \
+          (echo "FAIL: Playwright browser cache missing at /home/app/.cache/ms-playwright" && exit 1)
     secrets: inherit
