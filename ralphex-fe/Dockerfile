@@ -56,7 +56,7 @@ ENV APP_USER=app \
 # Reserve GID 998 for ping to prevent conflicts (matches umputun/baseimage convention)
 RUN groupadd -g 998 ping \
   && groupadd -g ${DOCKER_GID} docker \
-  && useradd -m -s /bin/sh -u ${APP_UID} ${APP_USER} \
+  && useradd --no-log-init -m -s /bin/sh -u ${APP_UID} ${APP_USER} \
   && usermod -aG docker ${APP_USER} \
   && mkdir -p /srv /workspace \
   && chown -R ${APP_USER}:${APP_USER} /srv /workspace \
@@ -82,8 +82,10 @@ RUN set -eux; \
     RALPHEX_ARCH=$(echo "$ARCH" | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
     RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest \
       | jq -r '.tag_name' | sed 's/^v//'); \
-    curl -fsSL "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${RALPHEX_ARCH}.tar.gz" \
-      | tar -xz -C /srv ralphex; \
+    curl -fsSL -o /tmp/ralphex.tar.gz \
+      "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${RALPHEX_ARCH}.tar.gz"; \
+    tar -xzf /tmp/ralphex.tar.gz -C /srv ralphex; \
+    rm /tmp/ralphex.tar.gz; \
     chmod +x /srv/ralphex
 
 # ── Playwright (native Debian — no Alpine hacks needed) ──────────────────────
