@@ -10,7 +10,9 @@ ARG GIT_DELTA_VERSION=0.18.2
 ARG ZSH_IN_DOCKER_VERSION=1.2.0
 
 # Install basic development tools and iptables/ipset
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
   less \
@@ -24,8 +26,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   iproute2 \
   dnsutils \
   aggregate \
-  jq \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  jq
 
 # Ensure default bun user has access to /usr/local/share
 RUN mkdir -p /usr/local/share/bun-global && \
@@ -88,9 +89,8 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
   chmod 0440 /etc/sudoers.d/bun-firewall
 USER bun
 
-# OCI labels for container metadata and GitHub Package integration
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images"
-LABEL org.opencontainers.image.description="Claude Code development container - Bun environment with Claude Code CLI, firewall sandbox, and zsh"
-LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="devcontainer-claude-bun"
-LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Claude Code development container — Bun environment with Claude Code CLI, firewall sandbox, and zsh" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="devcontainer-claude-bun" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"

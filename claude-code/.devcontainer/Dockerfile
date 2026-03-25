@@ -11,6 +11,36 @@
 #   docker build --target sandbox -t claude-code:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Parallel download stages — BuildKit runs these concurrently
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
+FROM alpine:3.21 AS rtk-download
+RUN apk add --no-cache curl jq
+RUN set -eux; \
+    ARCH="$(uname -m)"; \
+    case "$ARCH" in \
+      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
+      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
+    esac; \
+    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
+      | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL -o /tmp/rtk.tar.gz \
+      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
+    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
+
+# ── ralphex (autonomous plan execution) ──────────────────────────────────
+FROM alpine:3.21 AS ralphex-download
+RUN apk add --no-cache curl jq
+RUN set -eux; \
+    ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
+    RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest \
+      | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL -o /tmp/ralphex.tar.gz \
+      "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
+    tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
+
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
 
@@ -27,7 +57,9 @@ ARG PLAYWRIGHT_VERSION=1.58.2
 # - jq: JSON processing (firewall script, onboarding patch)
 # - less: pager for git delta output
 # - sudo: privilege escalation for firewall setup
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
   fish \
@@ -36,8 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git \
   jq \
   less \
-  sudo \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  sudo
 
 # npm global directory with proper permissions for node user
 # Pre-create /lib to prevent "ENOENT" errors during npx commands
@@ -81,9 +112,11 @@ ENV VISUAL="code --wait"
 
 # ── Starship + Mise (install as root, configure as node) ───────────────────────
 USER root
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
 RUN curl https://mise.run | sh \
   && cp /root/.local/bin/mise /usr/local/bin/mise
+SHELL ["/bin/sh", "-c"]
 
 # Configure starship and fish shell.
 # Mise is installed as a tool manager — projects run `mise install` at container
@@ -97,27 +130,12 @@ RUN mkdir -p /home/node/.config/fish \
 ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 
-# ── Dev tools (always latest) ─────────────────────────────────────────────────
+# ── Dev tools (copied from parallel download stages) ─────────────────────────
 # rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
 # Like Claude Code itself, these are dev infrastructure — not project dependencies.
 # Downloaded from GitHub Releases; refreshed on each daily image rebuild.
-USER root
-RUN set -eux; \
-    ARCH="$(uname -m)"; \
-    # ── rtk ──
-    case "$ARCH" in \
-      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
-      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
-    esac; \
-    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest | jq -r '.tag_name' | sed 's/^v//'); \
-    curl -fsSL "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz" \
-      | tar -xz -C /usr/local/bin rtk; \
-    # ── ralphex ──
-    RALPHEX_ARCH=$(echo "$ARCH" | sed 's/x86_64/amd64/;s/aarch64/arm64/'); \
-    RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest | jq -r '.tag_name' | sed 's/^v//'); \
-    curl -fsSL "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${RALPHEX_ARCH}.tar.gz" \
-      | tar -xz -C /usr/local/bin ralphex
-USER node
+COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
 # ── Playwright (headless shell for browser testing) ───────────────────────────
 # Two-layer strategy for multi-project compatibility:
@@ -128,7 +146,9 @@ USER node
 #      at container creation to ensure the binary matches their @playwright/test.
 #      That command is idempotent: no-op when versions match, ~10s download if not.
 USER root
-RUN npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
 USER node
 RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell
 ENV PLAYWRIGHT_VERSION=${PLAYWRIGHT_VERSION}
@@ -142,7 +162,8 @@ ENV PLAYWRIGHT_VERSION=${PLAYWRIGHT_VERSION}
 # See: https://code.claude.com/docs/en/getting-started#install-with-npm
 # Auto-updates don't matter here — the image rebuilds daily.
 USER root
-RUN npm install -g @anthropic-ai/claude-code
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g @anthropic-ai/claude-code
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
@@ -161,29 +182,38 @@ USER node
 # arm64: system Chromium (Chrome for Testing has no ARM64 Linux builds)
 ARG AGENT_BROWSER_VERSION=latest
 USER root
-RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    npm install -g agent-browser@${AGENT_BROWSER_VERSION} \
   && ARCH=$(dpkg --print-architecture) \
   && if [ "$ARCH" = "amd64" ]; then \
        agent-browser install --with-deps; \
      else \
-       apt-get update && apt-get install -y --no-install-recommends chromium \
-       && apt-get clean && rm -rf /var/lib/apt/lists/*; \
+       apt-get update && apt-get install -y --no-install-recommends chromium; \
      fi \
   && chown -R node:node /usr/local/share/npm-global
 USER node
+
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="claude-code" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
 
 # ─── SANDBOX — network-restricted environment ─────────────────────────────────
 FROM base AS sandbox
 
 # Firewall packages (not needed in default target)
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
   iptables \
   ipset \
   iproute2 \
   dnsutils \
-  aggregate \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  aggregate
 
 # Firewall sudo rule for node user.
 # The init-firewall.sh script is NOT baked into the image — each project
@@ -193,3 +223,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall \
   && chmod 0440 /etc/sudoers.d/node-firewall
 USER node
+
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="claude-code-sandbox" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
