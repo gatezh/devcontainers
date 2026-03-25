@@ -47,16 +47,29 @@ The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd
 
 ### Default variant
 
-Add to your project's `.devcontainer/devcontainer.json`:
+Add these files to your project's `.devcontainer/` directory. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image — the image name stays in one place. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${devcontainerId}`, `${localEnv:...}`).
+
+`.devcontainer/docker-compose.yml`:
+
+```yaml
+services:
+  devcontainer:
+    image: ghcr.io/gatezh/devcontainer-images/claude-code:latest
+    pull_policy: always
+    volumes:
+      - ..:/workspace:cached
+```
+
+`.devcontainer/devcontainer.json`:
 
 ```jsonc
 {
   "name": "Local Development",
-  "image": "ghcr.io/gatezh/devcontainer-images/claude-code:latest",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
   "init": true,
   "remoteUser": "node",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
-  "workspaceFolder": "/workspace",
   // Named volumes persist node_modules, Claude config, and fish history across rebuilds.
   // Dirs are pre-created in the image with node:node ownership, so fresh volumes
   // inherit correct permissions via Docker volume population.
@@ -84,16 +97,29 @@ Add to your project's `.devcontainer/devcontainer.json`:
 
 > **No node_modules volumes** — the sandbox variant does not have passwordless sudo (only `sudo /usr/local/bin/init-firewall.sh` is allowed), so the `sudo chown` used in the default variant to fix volume ownership won't work. Let node_modules live in the bind mount instead.
 
+`.devcontainer/claude-sandbox/docker-compose.yml`:
+
+```yaml
+services:
+  devcontainer:
+    image: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest
+    pull_policy: always
+    volumes:
+      - ../..:/workspace:cached
+```
+
+`.devcontainer/claude-sandbox/devcontainer.json`:
+
 ```jsonc
 {
   "name": "Claude Code Sandbox",
-  "image": "ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
   // Capabilities required for iptables firewall setup
   "capAdd": ["NET_ADMIN", "NET_RAW"],
   "init": true,
   "remoteUser": "node",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
-  "workspaceFolder": "/workspace",
   "mounts": [
     "source=sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
     "source=sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
@@ -215,10 +241,13 @@ The sandbox `devcontainer.json` already injects this via `${localEnv:CLAUDE_CODE
 
 **Alternative — per-project `.env.local` file:**
 
-If you prefer file-based configuration over host env vars, add `runArgs` to the sandbox `devcontainer.json`:
+If you prefer file-based configuration over host env vars, add `env_file` to the sandbox `docker-compose.yml` and remove `CLAUDE_CODE_OAUTH_TOKEN` from `containerEnv` in `devcontainer.json`:
 
-```jsonc
-"runArgs": ["--env-file", ".devcontainer/claude-sandbox/.env.local"],
+```yaml
+services:
+  devcontainer:
+    env_file:
+      - .env.local
 ```
 
 Create `.env.local` from the template (git-ignored):
@@ -237,16 +266,18 @@ The `.env.example` template to check into your project:
 CLAUDE_CODE_OAUTH_TOKEN=your-token-here
 ```
 
-Add `.env.local` to `.gitignore`. Note: Docker will fail to start if `.env.local` doesn't exist when using `--env-file`.
+Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.local` doesn't exist when using `env_file` (set `required: false` in compose to make it optional).
 
 ### Complete file structure
 
 ```
 .devcontainer/
 ├── devcontainer.json              ← default devcontainer
+├── docker-compose.yml             ← default compose (image + pull_policy)
 ├── init-plugins.sh                ← Claude Code plugin setup (optional)
 └── claude-sandbox/
     ├── devcontainer.json          ← sandbox devcontainer
+    ├── docker-compose.yml         ← sandbox compose (image + pull_policy)
     ├── init-firewall.sh           ← firewall script (customize domain allowlist)
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
@@ -271,7 +302,7 @@ The image pre-creates these directories with `node:node` ownership so Docker's v
     └── database/node_modules/
 ```
 
-If your project has additional services, create volume mounts in `devcontainer.json` — Docker creates directories at container start. The `sudo chown` in `updateContentCommand` fixes ownership.
+If your project has additional services, add volume mounts in `devcontainer.json` `mounts` — Docker creates directories at container start. The `sudo chown` in `updateContentCommand` fixes ownership.
 
 ## Playwright Version Strategy
 
@@ -322,20 +353,23 @@ docker build --target default -t claude-code:local .devcontainer
 docker build --target sandbox -t claude-code-sandbox:local .devcontainer
 ```
 
-Then update your project's `devcontainer.json` to use the local tag:
+Then update your project's `docker-compose.yml` to use the local tag:
 
-```jsonc
-// Replace the GHCR reference:
-// "image": "ghcr.io/gatezh/devcontainer-images/claude-code:latest",
-// With the local build:
-"image": "claude-code:local",
+```yaml
+services:
+  devcontainer:
+    # Replace the GHCR reference:
+    # image: ghcr.io/gatezh/devcontainer-images/claude-code:latest
+    # With the local build:
+    image: claude-code:local
+    # pull_policy no longer needed for local images
 ```
 
-Everything else (`mounts`, `containerEnv`, `updateContentCommand`, etc.) stays the same — the local image is identical to the pre-built one.
+Everything else in `devcontainer.json` (mounts, containerEnv, lifecycle commands, etc.) stays the same — the local image is identical to the pre-built one.
 
 ### Extending the image for project-specific needs
 
-If you need to layer project-specific tools on top, create a thin Dockerfile in your project:
+If you need to layer project-specific tools on top, create a thin Dockerfile and update your compose file to build it:
 
 ```dockerfile
 # .devcontainer/Dockerfile
@@ -344,12 +378,14 @@ FROM ghcr.io/gatezh/devcontainer-images/claude-code:latest
 RUN npm install -g your-tool
 ```
 
-```jsonc
-// .devcontainer/devcontainer.json
-{
-  "build": { "dockerfile": "Dockerfile" },
-  // ... rest of config (same as Quick Start, minus the "image" key)
-}
+```yaml
+# .devcontainer/docker-compose.yml — replace `image` with `build`
+services:
+  devcontainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # ... rest stays the same (workspace volume, etc.)
 ```
 
 This pulls the pre-built image as a base layer (cached after first pull) and adds your customizations on top.

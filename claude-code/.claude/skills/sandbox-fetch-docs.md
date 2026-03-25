@@ -1,6 +1,8 @@
 ---
 name: sandbox-fetch-docs
 description: Use when needing to verify implementation against official library docs, check API contracts, or look up how a dependency works — especially after bugs caused by wrong assumptions about a library's API. Triggers on "check the docs", "verify against docs", "official documentation", "how does X API work", "canonical implementation".
+metadata:
+  author: Serge Gatezh
 ---
 
 # Fetch Documentation in Sandbox
