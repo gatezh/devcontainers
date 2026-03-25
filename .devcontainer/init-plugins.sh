@@ -25,7 +25,7 @@ claude plugin marketplace add umputun/ralphex || {
     echo "Note: ralphex marketplace may already be added or unavailable"
 }
 
-# Plugins for development workflow (code quality, web dev, analytics)
+# Plugins for development workflow (this repo is Dockerfiles/YAML, not frontend)
 PLUGINS=(
     "code-review@claude-plugins-official"
     "code-simplifier@claude-plugins-official"
@@ -33,10 +33,6 @@ PLUGINS=(
     "explanatory-output-style@claude-plugins-official"
     "claude-md-management@claude-plugins-official"
     "claude-code-setup@claude-plugins-official"
-    "frontend-design@claude-plugins-official"
-    "typescript-lsp@claude-plugins-official"
-    "playwright@claude-plugins-official"
-    "posthog@claude-plugins-official"
     "ralphex@ralphex"
 )
 

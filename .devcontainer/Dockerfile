@@ -3,21 +3,64 @@
 #   default — full dev environment with passwordless sudo
 #   sandbox — network-restricted environment with firewall packages
 #
-# rtk and ralphex fetch latest versions from GitHub releases at build time.
-# git-delta is pinned (upstream changed release asset naming in v0.19.0).
+# Mirrors claude-code/.devcontainer/Dockerfile patterns:
+#   - Parallel download stages for binary tools
+#   - apt/npm cache mounts for faster rebuilds
+#   - npm-global directory with proper permissions
 #
 # Build:
 #   docker build --target default -t devcontainer-images:default .
 #   docker build --target sandbox -t devcontainer-images:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ═════════════════════════════════════════════════════════════════════════════
+# Parallel download stages — BuildKit runs these concurrently
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
+FROM alpine:3.21 AS rtk-download
+RUN apk add --no-cache curl jq
+RUN set -eux; \
+    ARCH="$(uname -m)"; \
+    case "$ARCH" in \
+      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
+      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
+    esac; \
+    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
+      | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL -o /tmp/rtk.tar.gz \
+      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
+    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
+
+# ── ralphex (autonomous plan execution) ──────────────────────────────────
+FROM alpine:3.21 AS ralphex-download
+RUN apk add --no-cache curl jq
+RUN set -eux; \
+    ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
+    RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest \
+      | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL -o /tmp/ralphex.tar.gz \
+      "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
+    tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
+
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
 
 ARG GIT_DELTA_VERSION=0.18.2
 
-# System packages (each justified — see plan doc for rationale)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# System packages (each justified — see claude-code Dockerfile for rationale)
+# - ca-certificates: SSL/TLS for HTTPS connections
+# - curl: downloading tools and installers
+# - fish: interactive shell (built-in syntax highlighting, autosuggestions, completions)
+# - fzf: fuzzy finder (fish integration)
+# - gh: GitHub CLI
+# - git: version control
+# - jq: JSON processing (onboarding patch, firewall script)
+# - less: pager for git delta output
+# - sudo: privilege escalation (chown for named volumes, firewall setup)
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
   fish \
@@ -26,8 +69,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   git \
   jq \
   less \
-  sudo \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  sudo
+
+# npm global directory with proper permissions for node user
+# Pre-create /lib to prevent "ENOENT" errors during npx commands
+RUN mkdir -p /usr/local/share/npm-global/lib \
+  && chown -R node:node /usr/local/share/npm-global
 
 ENV DEVCONTAINER=true
 
@@ -39,84 +86,85 @@ WORKDIR /workspace
 
 # Install git-delta (pinned — v0.19.0 dropped arm64 .deb)
 RUN ARCH=$(dpkg --print-architecture) \
-  && curl -fsSL -o git-delta.deb \
+  && curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
     "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-  && dpkg -i git-delta.deb \
-  && rm git-delta.deb
-
-# Install rtk (latest release — token optimizer for Claude Code)
-# amd64: musl binary (no gnu variant published), arm64: gnu binary
-RUN ARCH=$(dpkg --print-architecture) \
-  && VERSION=$(curl -s https://api.github.com/repos/rtk-ai/rtk/releases/latest | jq -r .tag_name | sed 's/^v//') \
-  && if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then echo "ERROR: Failed to fetch rtk version (GitHub API rate limit?)" && exit 1; fi \
-  && case "${ARCH}" in \
-       amd64) RTK_ARCH='x86_64-unknown-linux-musl' ;; \
-       arm64) RTK_ARCH='aarch64-unknown-linux-gnu' ;; \
-       *) echo "Unsupported architecture: ${ARCH}" && exit 1 ;; \
-     esac \
-  && curl -fsSL -o rtk.tar.gz \
-    "https://github.com/rtk-ai/rtk/releases/download/v${VERSION}/rtk-${RTK_ARCH}.tar.gz" \
-  && tar -xzf rtk.tar.gz \
-  && install -m 755 rtk /usr/local/bin/rtk \
-  && rm -rf rtk rtk.tar.gz
-
-# Install ralphex (latest release — Claude Code skill manager)
-# Tarball includes completions/ dir — install fish completion for shell integration
-RUN ARCH=$(dpkg --print-architecture) \
-  && VERSION=$(curl -s https://api.github.com/repos/umputun/ralphex/releases/latest | jq -r .tag_name | sed 's/^v//') \
-  && if [ "$VERSION" = "null" ] || [ -z "$VERSION" ]; then echo "ERROR: Failed to fetch ralphex version (GitHub API rate limit?)" && exit 1; fi \
-  && curl -fsSL -o ralphex.tar.gz \
-    "https://github.com/umputun/ralphex/releases/download/v${VERSION}/ralphex_${VERSION}_linux_${ARCH}.tar.gz" \
-  && tar -xzf ralphex.tar.gz \
-  && install -m 755 ralphex /usr/local/bin/ralphex \
-  && mkdir -p /home/node/.config/fish/completions \
-  && cp completions/ralphex.fish /home/node/.config/fish/completions/ 2>/dev/null || true \
-  && rm -rf ralphex ralphex.tar.gz completions/
-
-# Fix ownership of .config created by ralphex completions install above
-RUN chown -R node:node /home/node/.config
+  && dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
+  && rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
 
+ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
+ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/usr/bin/fish
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
 
 # ── Starship prompt ──────────────────────────────────────────────────────────
 USER root
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
+SHELL ["/bin/sh", "-c"]
+
 USER node
 RUN mkdir -p /home/node/.config/fish \
   && starship preset no-runtime-versions -o /home/node/.config/starship.toml \
   && printf '%s\n' 'set -g fish_greeting' 'starship init fish | source' > /home/node/.config/fish/config.fish
 
+# ── Dev tools (copied from parallel download stages) ─────────────────────────
+# rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
+# Downloaded from GitHub Releases; refreshed on each image rebuild.
+COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
+
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
+# npm install (not native installer) to avoid rate-limiting in parallel builds.
+# See: claude-code/.devcontainer/Dockerfile for rationale.
 USER root
-RUN npm install -g @anthropic-ai/claude-code
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g @anthropic-ai/claude-code
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM base AS default
 
+# Passwordless sudo for node user — standard practice for devcontainer images.
+# Required by the canonical "sudo chown" pattern for named volume ownership.
+# See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 USER root
 RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
 
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Devcontainer for the devcontainer-images repo — full dev environment" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="devcontainer-images" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+
 # ─── SANDBOX — network-restricted environment ─────────────────────────────────
 FROM base AS sandbox
 
+# Firewall packages (not needed in default target)
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
   iptables \
   ipset \
   iproute2 \
   dnsutils \
-  aggregate \
-  && apt-get clean && rm -rf /var/lib/apt/lists/*
+  aggregate
 
-# Firewall sudo rule — the script itself is bind-mounted from claude-sandbox/
-RUN echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall \
-  && chmod 0440 /etc/sudoers.d/node-firewall
+# Passwordless sudo — needed for "sudo chown" on named volumes (postCreateCommand)
+# and for running the firewall script (postStartCommand).
+# Sandbox security comes from the network firewall, not sudo restrictions.
+RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
+  && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
+
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+      org.opencontainers.image.description="Devcontainer for the devcontainer-images repo — network-restricted sandbox" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.title="devcontainer-images-sandbox" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"

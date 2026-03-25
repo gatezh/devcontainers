@@ -44,11 +44,11 @@
         },
         // Show workspace folder name in window title
         "window.title": "${localWorkspaceFolderBasename}",
-        // Sandbox visual identity — Claude Dark theme with coral status bar
+        // Sandbox visual identity — Claude Dark theme with coral remote indicator
         "workbench.colorTheme": "Claude Dark",
         "workbench.colorCustomizations": {
-          "statusBar.background": "#E8543E",
-          "statusBar.foreground": "#ffffff"
+          "statusBarItem.remoteBackground": "#C15F3C",
+          "statusBarItem.remoteForeground": "#ffffff"
         },
         // Allow Claude Code to skip permission prompts in sandbox
         "claudeCode.allowDangerouslySkipPermissions": true
