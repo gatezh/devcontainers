@@ -186,6 +186,12 @@ git add .devcontainer/claude-sandbox/init-firewall.sh   # ensures git tracks +x 
 > xattr -d com.docker.grpcfuse.ownership .devcontainer/claude-sandbox/init-firewall.sh
 > ```
 
+### Sandbox-only: Claude Code skill for fetching docs
+
+The sandbox firewall blocks vendor doc sites, so Claude Code can't `WebFetch` or `WebSearch` as it normally would. The image includes a [sandbox-fetch-docs](.claude/skills/sandbox-fetch-docs.md) skill that teaches Claude Code how to look up library documentation using only allowed network paths (node_modules, raw.githubusercontent.com, GitHub Contents API, npm registry).
+
+Copy `.claude/skills/sandbox-fetch-docs.md` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+
 ### Sandbox Authentication
 
 The sandbox firewall blocks outbound traffic, so `claude login` (which opens a browser OAuth flow) won't work inside the container. Instead, generate a token on the host and inject it via environment variable.
@@ -244,6 +250,9 @@ Add `.env.local` to `.gitignore`. Note: Docker will fail to start if `.env.local
     ├── init-firewall.sh           ← firewall script (customize domain allowlist)
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
+.claude/
+└── skills/
+    └── sandbox-fetch-docs.md      ← teaches Claude Code to fetch docs within sandbox firewall
 ```
 
 ## Workspace Directory Layout
