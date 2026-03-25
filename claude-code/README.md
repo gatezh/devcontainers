@@ -82,6 +82,8 @@ Add to your project's `.devcontainer/devcontainer.json`:
 
 ### Sandbox variant
 
+> **No node_modules volumes** — the sandbox variant does not have passwordless sudo (only `sudo /usr/local/bin/init-firewall.sh` is allowed), so the `sudo chown` used in the default variant to fix volume ownership won't work. Let node_modules live in the bind mount instead.
+
 ```jsonc
 {
   "name": "Claude Code Sandbox",
@@ -171,7 +173,18 @@ Default-deny iptables firewall. The image provides the packages and sudo rule; t
 
 See the [devcontainer-claude-bun firewall script](../devcontainer-claude-bun/.devcontainer/init-firewall.sh) for a complete example.
 
-Mark as executable: `chmod +x init-firewall.sh`
+Mark as executable and ensure git tracks the executable bit:
+
+```bash
+chmod +x .devcontainer/claude-sandbox/init-firewall.sh
+git add .devcontainer/claude-sandbox/init-firewall.sh   # ensures git tracks +x (100755)
+```
+
+> **Troubleshooting (macOS):** If the firewall script fails with "command not found" despite correct permissions (`stat` shows `rwxr-xr-x`, git shows `100755`), stale Docker Desktop metadata may be overriding the file mode. Fix by removing the cached extended attribute:
+>
+> ```bash
+> xattr -d com.docker.grpcfuse.ownership .devcontainer/claude-sandbox/init-firewall.sh
+> ```
 
 ### Sandbox Authentication
 
@@ -259,6 +272,12 @@ The image uses a two-layer strategy so that any project can use any `@playwright
 |-------|------|-----------------|--------------------|
 | System deps (`install-deps`) | OS libraries (libgbm, libnss3, …) | Yes (needs root) | Stable across nearby versions |
 | Browser binary (`install --only-shell`) | Headless Chromium shell | Yes, as cache | Exact match required |
+
+**Prerequisite:** Your project must have `@playwright/test` in `devDependencies`. Without it, `npx` will prompt interactively to download the `playwright` package, which hangs container creation (no TTY). Pin it to the image's baked version (check `$PLAYWRIGHT_VERSION`) or your preferred version:
+
+```bash
+bun add -d @playwright/test    # or: npm install -D @playwright/test
+```
 
 **One-time project setup** — add this to your container creation command (`updateContentCommand` or `postCreateCommand`, as shown in [Quick Start](#quick-start)):
 
