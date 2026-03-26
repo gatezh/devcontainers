@@ -142,6 +142,8 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-im
       org.opencontainers.image.title="devcontainer-images" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
 
+CMD ["sleep", "infinity"]
+
 # ─── SANDBOX — network-restricted environment ─────────────────────────────────
 FROM base AS sandbox
 
@@ -168,3 +170,5 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-im
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="devcontainer-images-sandbox" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+
+CMD ["sleep", "infinity"]

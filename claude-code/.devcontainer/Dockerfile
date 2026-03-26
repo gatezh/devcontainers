@@ -217,13 +217,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   dnsutils \
   aggregate
 
-# Firewall sudo rule for node user.
-# The init-firewall.sh script is NOT baked into the image — each project
-# mounts its own script via bind mount in devcontainer.json:
-#   "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
-# This allows different projects to define their own domain allowlists.
-RUN echo "node ALL=(root) NOPASSWD: /usr/local/bin/init-firewall.sh" > /etc/sudoers.d/node-firewall \
-  && chmod 0440 /etc/sudoers.d/node-firewall
+# Passwordless sudo for node user — needed for:
+#   - "sudo chown" on named volumes (node_modules isolation)
+#   - "sudo /usr/local/bin/init-firewall.sh" (firewall setup)
+# Sandbox security comes from the network firewall, not sudo restrictions.
+# The firewall script is NOT baked into the image — each project mounts its
+# own script via bind mount in devcontainer.json to customize the domain allowlist.
+RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
+  && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \

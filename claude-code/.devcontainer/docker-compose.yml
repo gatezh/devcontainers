@@ -1,0 +1,6 @@
+services:
+  devcontainer:
+    image: ghcr.io/gatezh/devcontainer-images/claude-code:latest
+    pull_policy: always
+    volumes:
+      - ..:/workspace:cached

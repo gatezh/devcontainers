@@ -45,7 +45,13 @@
           "source.organizeImports": "explicit"
         },
         // Show workspace folder name in window title
-        "window.title": "${localWorkspaceFolderBasename}"
+        "window.title": "${localWorkspaceFolderBasename}",
+        // Visual identity — Claude Dark theme with coral remote indicator
+        "workbench.colorTheme": "Claude Dark",
+        "workbench.colorCustomizations": {
+          "statusBarItem.remoteBackground": "#C15F3C",
+          "statusBarItem.remoteForeground": "#ffffff"
+        }
       }
     }
   },
@@ -60,7 +66,11 @@
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "NODE_OPTIONS": "--max-old-space-size=4096"
   },
-  // Initialize Claude Code plugins (runs once when container is created)
-  "postCreateCommand": "sudo chown -R node /home/node/.claude && bash /workspace/.devcontainer/init-plugins.sh",
+  // Fix volume ownership — must complete before extensions install.
+  // Do NOT run claude CLI commands here: postCreateCommand runs before
+  // VS Code installs extensions, so claude commands race with the
+  // Claude Code extension's OAuth flow and can corrupt auth state.
+  // Run .devcontainer/init-plugins.sh manually after first login.
+  "postCreateCommand": "sudo chown -R node /home/node/.claude /home/node/.local/share/fish",
   "waitFor": "postCreateCommand"
 }
