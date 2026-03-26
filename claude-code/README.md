@@ -47,102 +47,23 @@ The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd
 
 ### Default variant
 
-Add these files to your project's `.devcontainer/` directory. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image — the image name stays in one place. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${devcontainerId}`, `${localEnv:...}`).
+Copy the example files into your project's `.devcontainer/` directory and customize as needed. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${devcontainerId}`, `${localEnv:...}`).
 
-`.devcontainer/docker-compose.yml`:
+Copy these to your project's `.devcontainer/`:
 
-```yaml
-services:
-  devcontainer:
-    image: ghcr.io/gatezh/devcontainer-images/claude-code:latest
-    pull_policy: always
-    volumes:
-      - ..:/workspace:cached
-```
+- [`docker-compose.yml`](examples/default/docker-compose.yml) — image reference with `pull_policy: always`
+- [`devcontainer.json`](examples/default/devcontainer.json) — full config with VS Code extensions, Claude Dark theme, fish shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-`.devcontainer/devcontainer.json`:
-
-```jsonc
-{
-  "name": "Local Development",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-  "init": true,
-  "remoteUser": "node",
-  // Named volumes persist node_modules, Claude config, and fish history across rebuilds.
-  // Dirs are pre-created in the image with node:node ownership, so fresh volumes
-  // inherit correct permissions via Docker volume population.
-  "mounts": [
-    "source=myproject-node-modules-${devcontainerId},target=/workspace/node_modules,type=volume",
-    "source=myproject-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    "source=myproject-fish-data-${devcontainerId},target=/home/node/.local/share/fish,type=volume"
-  ],
-  "containerEnv": {
-    "TZ": "${localEnv:TZ:America/Los_Angeles}",
-    "DEVCONTAINER": "true",
-    "NODE_OPTIONS": "--max-old-space-size=4096",
-    "CLAUDE_CONFIG_DIR": "/home/node/.claude"
-  },
-  // sudo chown fixes volume ownership — safety net in case Docker volume population didn't apply.
-  // mise install reads .mise.toml and installs project-specific tool versions.
-  // playwright install ensures the correct browser binary for the project's @playwright/test version
-  // (idempotent — skips download if the image's cached binary already matches).
-  "updateContentCommand": "sudo chown node /workspace/node_modules && sudo chown -R node /home/node/.claude && mise install && bun install && npx playwright install --only-shell",
-  "waitFor": "postCreateCommand"
-}
-```
+**Key settings included:** Claude Dark theme with coral remote indicator, fish + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/fish history volume mounts, and `updateContentCommand` for mise/bun/Playwright setup.
 
 ### Sandbox variant
 
-> **No node_modules volumes** — the sandbox variant does not have passwordless sudo (only `sudo /usr/local/bin/init-firewall.sh` is allowed), so the `sudo chown` used in the default variant to fix volume ownership won't work. Let node_modules live in the bind mount instead.
+Copy these to your project's `.devcontainer/claude-sandbox/`:
 
-`.devcontainer/claude-sandbox/docker-compose.yml`:
+- [`docker-compose.yml`](examples/sandbox/docker-compose.yml) — sandbox image reference
+- [`devcontainer.json`](examples/sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 
-```yaml
-services:
-  devcontainer:
-    image: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest
-    pull_policy: always
-    volumes:
-      - ../..:/workspace:cached
-```
-
-`.devcontainer/claude-sandbox/devcontainer.json`:
-
-```jsonc
-{
-  "name": "Claude Code Sandbox",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-  // Capabilities required for iptables firewall setup
-  "capAdd": ["NET_ADMIN", "NET_RAW"],
-  "init": true,
-  "remoteUser": "node",
-  "mounts": [
-    "source=sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
-    "source=sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    // Mount project's firewall script into the expected path.
-    // The image provides iptables/ipset packages and sudo rule but NOT the script itself.
-    "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
-  ],
-  "containerEnv": {
-    "TZ": "${localEnv:TZ:America/Edmonton}",
-    "DEVCONTAINER": "true",
-    "NODE_OPTIONS": "--max-old-space-size=4096",
-    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    // Required — the sandbox firewall blocks OAuth login, so the token must be
-    // injected from the host. See "Sandbox Authentication" section below.
-    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
-  },
-  // Runs before postStartCommand (firewall), so network is still available for browser downloads.
-  "postCreateCommand": "mise install && bun install && npx playwright install --only-shell",
-  // Firewall init — script is bind-mounted from the project
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
-  "waitFor": "postStartCommand"
-}
-```
+**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)). Both variants use the same node_modules volume isolation pattern.
 
 ## Project Setup Guide
 
@@ -150,45 +71,16 @@ Projects consuming these images need the following files in their repository.
 
 ### Required: `.mise.toml` (project root)
 
-Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image at latest:
-
-```toml
-# Pin runtime and build tools that affect project stability.
-# node is provided by the base image — needed for VS Code extensions
-# (OXC, Playwright, etc.) that spawn node. Do not add it here.
-[tools]
-bun = "1.3.8"
-hugo = "0.155.1"
-```
+Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image at latest. See [`examples/mise.toml`](examples/mise.toml) for a template.
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
-Claude Code plugin initialization. Runs once at container creation. Idempotent.
+Claude Code plugin initialization. Runs once at container creation. Idempotent. See [`examples/init-plugins.sh`](examples/init-plugins.sh) for a template.
+
 Wire it into `postCreateCommand` in your `devcontainer.json`:
 
 ```jsonc
 "postCreateCommand": "bash .devcontainer/init-plugins.sh"
-```
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-# Mark onboarding complete so claude CLI doesn't hang on interactive prompts
-if [ -f "$HOME/.claude/.claude.json" ]; then
-    jq '.hasCompletedOnboarding = true' "$HOME/.claude/.claude.json" > /tmp/.claude.json \
-        && mv /tmp/.claude.json "$HOME/.claude/.claude.json"
-else
-    mkdir -p "$HOME/.claude"
-    echo '{"hasCompletedOnboarding":true}' > "$HOME/.claude/.claude.json"
-fi
-
-# Install plugins (customize this list)
-for plugin in \
-    "frontend-design@claude-plugins-official" \
-    "code-review@claude-plugins-official"; do
-    claude plugin install "$plugin" 2>/dev/null || true
-done
 ```
 
 Mark as executable: `chmod +x init-plugins.sh`
@@ -197,7 +89,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 Default-deny iptables firewall. The image provides the packages and sudo rule; the project provides this script via bind mount. Customize the domain allowlist for your project.
 
-See the [devcontainer-claude-bun firewall script](../devcontainer-claude-bun/.devcontainer/init-firewall.sh) for a complete example.
+See the [repo's own sandbox firewall script](../.devcontainer/claude-sandbox/init-firewall.sh) for a complete example. The script should: preserve Docker internal DNS rules, allow DNS/SSH/localhost, fetch GitHub IP ranges via `curl -s https://api.github.com/meta`, resolve additional allowed domains (npm, Anthropic API, VS Code marketplace, etc.) via `dig`, set default DROP policies, allow established connections and the ipset allowlist, then verify by confirming `example.com` is blocked and `api.github.com` is reachable.
 
 Mark as executable and ensure git tracks the executable bit:
 
@@ -214,9 +106,9 @@ git add .devcontainer/claude-sandbox/init-firewall.sh   # ensures git tracks +x 
 
 ### Sandbox-only: Claude Code skill for fetching docs
 
-The sandbox firewall blocks vendor doc sites, so Claude Code can't `WebFetch` or `WebSearch` as it normally would. The image includes a [sandbox-fetch-docs](.claude/skills/sandbox-fetch-docs.md) skill that teaches Claude Code how to look up library documentation using only allowed network paths (node_modules, raw.githubusercontent.com, GitHub Contents API, npm registry).
+The sandbox firewall blocks vendor doc sites, so Claude Code can't `WebFetch` or `WebSearch` as it normally would. The image includes a [sandbox-fetch-docs](.claude/skills/sandbox-fetch-docs/SKILL.md) skill that teaches Claude Code how to look up library documentation using only allowed network paths (node_modules, raw.githubusercontent.com, GitHub Contents API, npm registry).
 
-Copy `.claude/skills/sandbox-fetch-docs.md` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+Copy `.claude/skills/sandbox-fetch-docs/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
 
 ### Sandbox Authentication
 
@@ -283,7 +175,8 @@ Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.l
     └── .env.local                 ← actual auth token (gitignored)
 .claude/
 └── skills/
-    └── sandbox-fetch-docs.md      ← teaches Claude Code to fetch docs within sandbox firewall
+    └── sandbox-fetch-docs/
+        └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
 ```
 
 ## Workspace Directory Layout

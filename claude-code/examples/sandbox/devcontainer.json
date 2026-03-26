@@ -1,0 +1,106 @@
+// For format details, see https://aka.ms/devcontainer.json
+{
+  "name": "Claude Code Sandbox",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  // Capabilities required for iptables firewall setup
+  "capAdd": ["NET_ADMIN", "NET_RAW"],
+  "init": true,
+  "updateRemoteUserUID": true,
+  "remoteUser": "node",
+  "otherPortsAttributes": { "onAutoForward": "silent" },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // **AI Agents**
+        // Claude Code - AI coding assistant with chat, inline edits, and terminal integration
+        "anthropic.claude-code",
+
+        // **Runtime**
+        // Bun - Bun runtime support (debugging, lockfile viewer, bundler integration)
+        "oven.bun-vscode",
+
+        // **Code Quality**
+        // OXC - Fast linter and formatter for JavaScript/TypeScript (Rust-based)
+        "oxc.oxc-vscode",
+
+        // **Tailwind**
+        // Tailwind CSS IntelliSense - autocomplete, syntax highlighting, linting for Tailwind classes
+        "bradlc.vscode-tailwindcss",
+        // Tailwind Fold - collapse long Tailwind class strings in the editor for readability
+        "stivo.tailwind-fold",
+
+        // **General**
+        // YAML - YAML language support (for workflows and docker-compose)
+        "redhat.vscode-yaml",
+        // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
+        "bierner.markdown-preview-github-styles",
+        // Docker - Dockerfile and Compose syntax, linting, and image management
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.profiles.linux": {
+          "fish": { "path": "fish" },
+          "bash": { "path": "bash", "icon": "terminal-bash" }
+        },
+        "extensions.ignoreRecommendations": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "oxc.oxc-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        "window.title": "${localWorkspaceFolderBasename}",
+        // Sandbox visual identity — Claude Dark theme with coral remote indicator
+        "workbench.colorTheme": "Claude Dark",
+        "workbench.colorCustomizations": {
+          "statusBarItem.remoteBackground": "#C15F3C",
+          "statusBarItem.remoteForeground": "#ffffff"
+        },
+        // Allow Claude Code to skip permission prompts in sandbox
+        "claudeCode.allowDangerouslySkipPermissions": true
+      }
+    }
+  },
+  // Named volumes keep node_modules OFF the host machine and persist across rebuilds.
+  // Each workspace with a package.json needs its own volume mount — without one,
+  // node_modules lands in the bind mount and shows up on the host filesystem.
+  // Dirs are pre-created in the image with node:node ownership, so fresh volumes
+  // inherit correct permissions via Docker volume population.
+  //
+  // Customize the monorepo mounts below to match your project structure.
+  // Remove any that don't exist in your project.
+  "mounts": [
+    // ── node_modules isolation (one per workspace) ─────────────────────
+    "source=sandbox-node-modules-root-${devcontainerId},target=/workspace/node_modules,type=volume",
+    "source=sandbox-node-modules-api-${devcontainerId},target=/workspace/services/api/node_modules,type=volume",
+    "source=sandbox-node-modules-app-${devcontainerId},target=/workspace/services/app/node_modules,type=volume",
+    "source=sandbox-node-modules-www-${devcontainerId},target=/workspace/services/www/node_modules,type=volume",
+    "source=sandbox-node-modules-shared-${devcontainerId},target=/workspace/packages/shared/node_modules,type=volume",
+    "source=sandbox-node-modules-database-${devcontainerId},target=/workspace/packages/database/node_modules,type=volume",
+    // ── Persistent config ──────────────────────────────────────────────
+    "source=sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
+    "source=sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    // ── Firewall script ────────────────────────────────────────────────
+    // The image provides iptables/ipset packages and sudo rule but NOT the script itself.
+    // Each project provides its own script via bind mount to customize the domain allowlist.
+    "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
+  ],
+  "containerEnv": {
+    "TZ": "${localEnv:TZ:America/Edmonton}",
+    "DEVCONTAINER": "true",
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    // Required — the sandbox firewall blocks OAuth login, so the token must be
+    // injected from the host. See "Sandbox Authentication" section in README.
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
+  },
+  // Runs before postStartCommand (firewall), so network is still available for browser downloads.
+  // The find command chowns all node_modules volume mount points in one pass.
+  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude && mise install && bun install && npx playwright install --only-shell",
+  // Firewall init — script is bind-mounted from the project
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
