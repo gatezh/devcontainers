@@ -44,6 +44,9 @@ if [ "${uid}" -eq 0 ]; then
     fi
 
     chown -R app:app /srv
+    # Always fix /home/app itself (non-recursive) so the app user can create
+    # subdirectories even when APP_UID is remapped and SKIP_HOME_CHOWN=1.
+    chown app:app /home/app
     if [ "${SKIP_HOME_CHOWN}" != "1" ]; then
         chown -R app:app /home/app
     fi

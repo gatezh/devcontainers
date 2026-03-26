@@ -127,8 +127,8 @@ ENV PATH="${PATH}:${GOROOT}/bin:${GOPATH}/bin"
 #   Adapted from: https://github.com/umputun/baseimage/blob/master/base.alpine/files/init.sh
 # /srv/init.sh — credential copier run before main command
 #   Source: https://github.com/umputun/ralphex/blob/master/scripts/internal/init-docker.sh
-COPY files/init.sh /init.sh
-COPY files/init-docker.sh /srv/init.sh
+COPY init.sh /init.sh
+COPY init-docker.sh /srv/init.sh
 RUN chmod +x /init.sh /srv/init.sh
 
 WORKDIR /workspace
