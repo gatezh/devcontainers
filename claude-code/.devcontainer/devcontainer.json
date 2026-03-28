@@ -67,24 +67,19 @@
     }
   },
   // Named volumes keep node_modules OFF the host machine and persist across rebuilds.
-  // Each workspace with a package.json needs its own volume mount — without one,
-  // node_modules lands in the bind mount and shows up on the host filesystem.
-  // Dirs are pre-created in the image with node:node ownership, so fresh volumes
-  // inherit correct permissions via Docker volume population.
-  //
-  // Customize the monorepo mounts below to match your project structure.
-  // Remove any that don't exist in your project.
+  // Uses ${localWorkspaceFolderBasename} so default and sandbox variants share volumes.
+  // Replace "myproject" with your project name (must match across both variants).
   "mounts": [
     // ── node_modules isolation (one per workspace) ─────────────────────
-    "source=myproject-node-modules-root-${devcontainerId},target=/workspace/node_modules,type=volume",
-    "source=myproject-node-modules-api-${devcontainerId},target=/workspace/services/api/node_modules,type=volume",
-    "source=myproject-node-modules-app-${devcontainerId},target=/workspace/services/app/node_modules,type=volume",
-    "source=myproject-node-modules-www-${devcontainerId},target=/workspace/services/www/node_modules,type=volume",
-    "source=myproject-node-modules-shared-${devcontainerId},target=/workspace/packages/shared/node_modules,type=volume",
-    "source=myproject-node-modules-database-${devcontainerId},target=/workspace/packages/database/node_modules,type=volume",
+    // Each workspace with a package.json needs its own volume mount.
+    // Without one, node_modules lands in the bind mount and shows up on the host.
+    "source=myproject-node-modules-root-${localWorkspaceFolderBasename},target=/workspace/node_modules,type=volume",
+    // ── Monorepo: uncomment and customize for your structure ──────────
+    // "source=myproject-node-modules-api-${localWorkspaceFolderBasename},target=/workspace/services/api/node_modules,type=volume",
+    // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume",
     // ── Persistent config ──────────────────────────────────────────────
-    "source=myproject-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    "source=myproject-fish-data-${devcontainerId},target=/home/node/.local/share/fish,type=volume"
+    "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
+    "source=myproject-fish-data-${localWorkspaceFolderBasename},target=/home/node/.local/share/fish,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
