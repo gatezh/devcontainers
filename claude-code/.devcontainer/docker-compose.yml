@@ -1,3 +1,5 @@
+# Change "myproject" to your project name — must be unique across projects
+name: myproject
 services:
   devcontainer:
     image: ghcr.io/gatezh/devcontainer-images/claude-code:latest

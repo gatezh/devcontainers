@@ -47,7 +47,9 @@ The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd
 
 ### Default variant
 
-Copy the example files into your project's `.devcontainer/` directory and customize as needed. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${devcontainerId}`, `${localEnv:...}`).
+Copy the example files into your project's `.devcontainer/` directory and customize as needed. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${localWorkspaceFolderBasename}`, `${localEnv:...}`).
+
+**After copying:** replace `myproject` with your project name in `docker-compose.yml` (the `name:` field) and `devcontainer.json` (volume mount prefixes). This must match across both variants if using the sandbox.
 
 Copy these to your project's `.devcontainer/`:
 
@@ -63,7 +65,9 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 - [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 
-**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)). Both variants use the same node_modules volume isolation pattern.
+**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)).
+
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and fish history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -160,6 +164,18 @@ CLAUDE_CODE_OAUTH_TOKEN=your-token-here
 
 Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.local` doesn't exist when using `env_file` (set `required: false` in compose to make it optional).
 
+### Recommended additional extensions
+
+The template includes core extensions (Claude Code, Bun, OXC, Tailwind, YAML, Docker, Markdown Preview). These are commonly added by consumer projects:
+
+| Extension | Purpose |
+|-----------|---------|
+| `streetsidesoftware.code-spell-checker` | Catch typos |
+| `christian-kohler.npm-intellisense` | Autocomplete npm imports |
+| `mattpocock.ts-error-translator` | Human-readable TS errors |
+| `eamodio.gitlens` | Git blame, history, annotations |
+| `ms-playwright.playwright` | Playwright test runner |
+
 ### Complete file structure
 
 ```
@@ -174,6 +190,7 @@ Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.l
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
 .claude/
+├── settings.json                  ← permission allowlists for common dev commands
 └── skills/
     └── sandbox-fetch-docs/
         └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
@@ -181,7 +198,7 @@ Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.l
 
 ## Workspace Directory Layout
 
-The image pre-creates these directories with `node:node` ownership so Docker's volume population seeds fresh named volumes with correct permissions:
+The image pre-creates a common monorepo directory structure with `node:node` ownership so Docker's volume population seeds fresh named volumes with correct permissions:
 
 ```
 /workspace/
@@ -195,7 +212,9 @@ The image pre-creates these directories with `node:node` ownership so Docker's v
     └── database/node_modules/
 ```
 
-If your project has additional services, add volume mounts in `devcontainer.json` `mounts` — Docker creates directories at container start. The `sudo chown` in `updateContentCommand` fixes ownership.
+The template only mounts root `node_modules` by default. For monorepo projects, uncomment and customize the additional volume mounts in `devcontainer.json` to match your structure. The pre-created directories ensure correct ownership when you add mounts.
+
+The `sudo find` in `updateContentCommand` chowns all `node_modules` directories in one pass, so additional mounts are handled automatically.
 
 ## Playwright Version Strategy
 

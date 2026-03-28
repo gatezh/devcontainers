@@ -1,3 +1,5 @@
+# Change "myproject" to match your default variant's project name
+name: myproject-sandbox
 services:
   devcontainer:
     image: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox:latest
