@@ -35,7 +35,31 @@
         // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
         "bierner.markdown-preview-github-styles",
         // Docker - Dockerfile and Compose syntax, linting, and image management
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+
+        // **Spelling**
+        // Code Spell Checker - catches typos in code and comments
+        "streetsidesoftware.code-spell-checker",
+
+        // **JavaScript / TypeScript**
+        // npm IntelliSense - autocomplete npm imports in import statements
+        "christian-kohler.npm-intellisense",
+        // TypeScript Error Translator - human-readable TS error messages
+        "mattpocock.ts-error-translator",
+
+        // **CSS / Colors**
+        // Color Info - preview CSS colors on hover
+        "bierner.color-info",
+        // Colorize - visualize CSS colors inline in the editor
+        "kamikillerto.vscode-colorize",
+
+        // **Frameworks**
+        // Drizzle ORM Snippets - code snippets for Drizzle ORM
+        "drizzle-team.drizzle-orm-snippets",
+
+        // **Testing**
+        // Playwright - run, debug, and generate Playwright tests from VS Code
+        "ms-playwright.playwright"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "fish",
@@ -56,13 +80,7 @@
           "source.organizeImports": "explicit"
         },
         // Show workspace folder name in window title
-        "window.title": "${localWorkspaceFolderBasename}",
-        // Visual identity — Claude Dark theme with coral remote indicator
-        "workbench.colorTheme": "Claude Dark",
-        "workbench.colorCustomizations": {
-          "statusBarItem.remoteBackground": "#C15F3C",
-          "statusBarItem.remoteForeground": "#ffffff"
-        }
+        "window.title": "${localWorkspaceFolderBasename}"
       }
     }
   },

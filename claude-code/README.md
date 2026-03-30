@@ -54,9 +54,9 @@ Copy the example files into your project's `.devcontainer/` directory and custom
 Copy these to your project's `.devcontainer/`:
 
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference with `pull_policy: always`
-- [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, Claude Dark theme, fish shell, OXC formatter, node_modules volume isolation, and lifecycle commands
+- [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, fish shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** Claude Dark theme with coral remote indicator, fish + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/fish history volume mounts, and `updateContentCommand` for mise/bun/Playwright setup.
+**Key settings included:** fish + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/fish history volume mounts, and `updateContentCommand` for mise/bun/Playwright setup.
 
 ### Sandbox variant
 
@@ -166,15 +166,11 @@ Add `.env.local` to `.gitignore`. Note: Docker Compose fails to start if `.env.l
 
 ### Recommended additional extensions
 
-The template includes core extensions (Claude Code, Bun, OXC, Tailwind, YAML, Docker, Markdown Preview). These are commonly added by consumer projects:
+The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Docker, Markdown Preview, spell checking, npm IntelliSense, TypeScript errors, CSS colors, Drizzle ORM, and Playwright. These are commonly added by consumer projects:
 
 | Extension | Purpose |
 |-----------|---------|
-| `streetsidesoftware.code-spell-checker` | Catch typos |
-| `christian-kohler.npm-intellisense` | Autocomplete npm imports |
-| `mattpocock.ts-error-translator` | Human-readable TS errors |
 | `eamodio.gitlens` | Git blame, history, annotations |
-| `ms-playwright.playwright` | Playwright test runner |
 
 ### Complete file structure
 
