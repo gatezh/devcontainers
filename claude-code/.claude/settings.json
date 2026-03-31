@@ -5,12 +5,32 @@
       "Bash(npx:*)",
       "Bash(git:*)",
       "Bash(mise:*)",
-      "Bash(gh:*)",
       "Bash(curl:*)",
       "Bash(ls:*)",
       "Bash(mkdir:*)",
       "Bash(cat:*)",
       "Bash(find:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read -r cmd; if echo \"$cmd\" | grep -qE 'git commit'; then cd /workspace && if ! bun run check 2>&1; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Lint/typecheck failed. Fix issues before committing.\"}}'; fi; fi; }",
+            "timeout": 30,
+            "statusMessage": "Running lint and typecheck..."
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read -r cmd; if echo \"$cmd\" | grep -qE 'gh pr create'; then cd /workspace && if ! (bun run check && bun run test && bun run build) 2>&1; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"CI checks failed (lint/test/build). Fix issues before opening PR.\"}}'; fi; fi; }",
+            "timeout": 300,
+            "statusMessage": "Running full CI checks (lint, test, build)..."
+          }
+        ]
+      }
     ]
   }
 }
