@@ -36,6 +36,16 @@ for plugin in "${PLUGINS[@]}"; do
     claude plugin install "$plugin" 2>/dev/null || true
 done
 
+# ── Playwright MCP: use Chromium on ARM64 (#64) ─────────────────────────────
+# @playwright/mcp defaults to --browser chrome, which has no Linux ARM64 builds.
+# Patch the plugin config to use chromium instead. No-op on AMD64.
+PLAYWRIGHT_MCP_CONFIG="$HOME/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/playwright/.mcp.json"
+if [ "$(uname -m)" = "aarch64" ] && [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
+    jq '.playwright.args = ["@playwright/mcp@latest", "--browser", "chromium"]' \
+        "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
+        && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
+fi
+
 # ── rtk init (token-optimized CLI proxy) ────────────────────────────────────
 # Configures rtk for the current workspace. Safe to run multiple times.
 # rtk is pre-installed in the devcontainer image.
