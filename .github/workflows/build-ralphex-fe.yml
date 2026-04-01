@@ -60,7 +60,7 @@ jobs:
       push: true
       context: ralphex-fe
       platforms: linux/amd64,linux/arm64
-      meta-images: ghcr.io/gatezh/ralphex-fe
+      meta-images: ghcr.io/gatezh/devcontainers/ralphex-fe
       meta-tags: |
         type=raw,value=latest
         type=raw,value=${{ needs.prepare.outputs.version-tag }}
@@ -92,8 +92,8 @@ jobs:
 
       - name: Verify tools
         run: |
-          docker pull ghcr.io/gatezh/ralphex-fe:latest
-          docker run --rm --entrypoint sh ghcr.io/gatezh/ralphex-fe:latest -c "
+          docker pull ghcr.io/gatezh/devcontainers/ralphex-fe:latest
+          docker run --rm --entrypoint sh ghcr.io/gatezh/devcontainers/ralphex-fe:latest -c "
             bun --version &&
             hugo version &&
             python3 --version &&

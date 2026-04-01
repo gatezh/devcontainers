@@ -149,7 +149,7 @@ jobs:
     if: ${{ needs.update-dockerfile.outputs.versions_updated == 'true' && inputs.update_only == false }}
     uses: ./.github/workflows/reusable-docker-build.yml
     with:
-      image-name: ralphex-fe
+      image-name: devcontainers/ralphex-fe
       context: ralphex-fe
       dockerfile: ralphex-fe/Dockerfile
       version-tag: bun${{ needs.update-dockerfile.outputs.bun_version }}-hugo${{ needs.update-dockerfile.outputs.hugo_version }}-ralphex${{ needs.update-dockerfile.outputs.ralphex_version }}

@@ -32,7 +32,7 @@ jobs:
       context: claude-code/.devcontainer
 
       platforms: linux/amd64,linux/arm64
-      meta-images: ghcr.io/gatezh/devcontainer-images/claude-code
+      meta-images: ghcr.io/gatezh/devcontainers/claude-code
       meta-tags: |
         type=raw,value=latest
         type=sha,prefix=
@@ -56,7 +56,7 @@ jobs:
       context: claude-code/.devcontainer
 
       platforms: linux/amd64,linux/arm64
-      meta-images: ghcr.io/gatezh/devcontainer-images/claude-code-sandbox
+      meta-images: ghcr.io/gatezh/devcontainers/claude-code-sandbox
       meta-tags: |
         type=raw,value=latest
         type=sha,prefix=
@@ -101,5 +101,5 @@ jobs:
 
       - name: Verify image
         run: |
-          docker pull ghcr.io/gatezh/devcontainer-images/${{ matrix.image-suffix }}:latest
-          docker run --rm ghcr.io/gatezh/devcontainer-images/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"
+          docker pull ghcr.io/gatezh/devcontainers/${{ matrix.image-suffix }}:latest
+          docker run --rm ghcr.io/gatezh/devcontainers/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"
