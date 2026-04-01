@@ -10,6 +10,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 - **[bun](./bun/README.md)** - Bun development container
 - **[claude-bun](./claude-bun/README.md)** - Claude Code development container with firewall sandbox
 - **[hugo-bun](./hugo-bun/README.md)** - Hugo Extended + Bun development container
+- **[hugo-bun-node](./hugo-bun-node/README.md)** - Hugo Extended + Bun + Node.js development container (Cloudflare Workers)
 
 ### Standalone Docker Images
 
@@ -93,6 +94,18 @@ Hugo development container with Bun runtime.
 ```json
 {
   "image": "ghcr.io/<username>/devcontainers/hugo-bun:latest"
+}
+```
+
+### hugo-bun-node
+
+Hugo development container with Bun runtime and Node.js LTS for Cloudflare Workers support.
+
+**Usage in other projects:**
+
+```json
+{
+  "image": "ghcr.io/<username>/devcontainers/hugo-bun-node:latest"
 }
 ```
 
