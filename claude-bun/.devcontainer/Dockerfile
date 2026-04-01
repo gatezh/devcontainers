@@ -89,8 +89,8 @@ RUN chmod +x /usr/local/bin/init-firewall.sh && \
   chmod 0440 /etc/sudoers.d/bun-firewall
 USER bun
 
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code development container — Bun environment with Claude Code CLI, firewall sandbox, and zsh" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="devcontainer-claude-bun" \
-      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+      org.opencontainers.image.title="claude-bun" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainers"

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# Devcontainer for the devcontainer-images repo — two build targets:
+# Devcontainer for the devcontainers repo — two build targets:
 #   default — full dev environment with passwordless sudo
 #   sandbox — network-restricted environment with firewall packages
 #
@@ -9,8 +9,8 @@
 #   - npm-global directory with proper permissions
 #
 # Build:
-#   docker build --target default -t devcontainer-images:default .
-#   docker build --target sandbox -t devcontainer-images:sandbox .
+#   docker build --target default -t devcontainers:default .
+#   docker build --target sandbox -t devcontainers:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -136,11 +136,11 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
 
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
-      org.opencontainers.image.description="Devcontainer for the devcontainer-images repo — full dev environment" \
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
+      org.opencontainers.image.description="Devcontainer for the devcontainers repo — full dev environment" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="devcontainer-images" \
-      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+      org.opencontainers.image.title="devcontainers" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 
 CMD ["sleep", "infinity"]
 
@@ -165,10 +165,10 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
 
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
-      org.opencontainers.image.description="Devcontainer for the devcontainer-images repo — network-restricted sandbox" \
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
+      org.opencontainers.image.description="Devcontainer for the devcontainers repo — network-restricted sandbox" \
       org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="devcontainer-images-sandbox" \
-      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+      org.opencontainers.image.title="devcontainers-sandbox" \
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 
 CMD ["sleep", "infinity"]

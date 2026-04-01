@@ -30,8 +30,8 @@ RUN set -eux; \
     hugo version
 
 # OCI labels for container metadata and GitHub Package integration
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers"
 LABEL org.opencontainers.image.description="Hugo Extended + Bun development container - multiplatform image for modern static site development"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="devcontainer-hugo-bun"
-LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.title="hugo-bun"
+LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainers"

@@ -195,11 +195,11 @@ RUN --mount=type=cache,target=/root/.npm \
   && chown -R node:node /usr/local/share/npm-global
 USER node
 
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code" \
-      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 
 CMD ["sleep", "infinity"]
 
@@ -227,10 +227,10 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
 
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images" \
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code-sandbox" \
-      org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+      org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 
 CMD ["sleep", "infinity"]

@@ -12,8 +12,8 @@ RUN apk add --no-cache \
     zsh
 
 # OCI labels for container metadata and GitHub Package integration
-LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers"
 LABEL org.opencontainers.image.description="Bun development container - multiplatform image for modern JavaScript/TypeScript development"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.title="devcontainer-bun"
-LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainer-images"
+LABEL org.opencontainers.image.title="bun"
+LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
