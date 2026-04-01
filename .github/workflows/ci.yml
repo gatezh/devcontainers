@@ -127,7 +127,7 @@ jobs:
             add_image "ralphex-fe" \
               "ralphex-fe" \
               "ralphex-fe/Dockerfile" \
-              "bun --version && hugo version && /srv/ralphex --version"
+              "bun --version && hugo version && /srv/ralphex --version && rtk --version"
           fi
 
           if [ "$INCLUDES" = "[]" ]; then

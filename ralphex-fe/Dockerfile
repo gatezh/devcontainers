@@ -43,6 +43,22 @@ RUN set -eux; \
     fi; \
     tar -xzf hugo.tar.gz -C /usr/local/bin/ hugo
 
+# ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────
+# Pattern from: .devcontainer/Dockerfile
+FROM alpine:3.21 AS rtk-download
+RUN apk add --no-cache curl jq
+RUN set -eux; \
+    ARCH="$(uname -m)"; \
+    case "$ARCH" in \
+      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
+      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
+    esac; \
+    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
+      | jq -r '.tag_name' | sed 's/^v//'); \
+    curl -fsSL -o /tmp/rtk.tar.gz \
+      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
+    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
+
 # ── Ralphex binary (latest from GitHub Releases) ────────────────────────────
 # Pattern from: claude-code/.devcontainer/Dockerfile
 FROM alpine:3.21 AS ralphex-download
@@ -117,6 +133,7 @@ COPY --from=go-download /usr/local/go /usr/local/go
 COPY --from=docker-download /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=hugo-download /usr/local/bin/hugo /usr/local/bin/hugo
 COPY --from=ralphex-download /usr/local/bin/ralphex /srv/ralphex
+COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
 
 ENV GOROOT=/usr/local/go \
     GOPATH=/home/app/go

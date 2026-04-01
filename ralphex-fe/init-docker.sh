@@ -27,6 +27,13 @@ if [ -d /mnt/claude ]; then
     fi
 
     chown -R app:app /home/app/.claude
+
+    # ── RTK: ensure rewrite hook is configured ─────────────────────────────
+    # Host mount usually brings the hook, but init idempotently to cover
+    # standalone usage (no host mount). Runs as app user for correct paths.
+    if command -v rtk >/dev/null 2>&1; then
+        gosu app rtk init -g --auto-patch 2>/dev/null || true
+    fi
 fi
 
 # copy credentials extracted from macOS keychain (mounted separately)

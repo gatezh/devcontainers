@@ -17,6 +17,7 @@ This is a standalone image, not a devcontainer.
 | Python 3 | system |
 | Playwright + Chromium | native Debian |
 | Claude Code CLI | latest |
+| RTK | latest (GitHub Releases) |
 | Ralphex | latest (GitHub Releases) |
 | Git, ripgrep, jq, curl, wget | system |
 
