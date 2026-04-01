@@ -2,7 +2,6 @@ ARG BUN_VERSION=1.3.9
 ARG DOCKER_VERSION=29.3.0
 ARG GO_VERSION=1.24.4
 ARG HUGO_VERSION=0.156.0
-ARG PLAYWRIGHT_VERSION=1.58.2
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -77,12 +76,13 @@ RUN set -eux; \
 FROM node:24-trixie-slim
 
 ARG BUN_VERSION
-ARG PLAYWRIGHT_VERSION
 
 # ── System packages ──────────────────────────────────────────────────────────
 # - ca-certificates: SSL/TLS for HTTPS connections
+# - chromium: system browser for @playwright/mcp (bypasses Playwright's version-coupled downloads)
 # - curl: downloading tools and installers
 # - dumb-init: PID 1 init for proper signal handling (used by /init.sh entrypoint)
+# - fonts-freefont-ttf: rendering fonts for headless Chromium screenshots
 # - fzf: fuzzy finder (interactive selection in Claude Code and shell)
 # - git: version control
 # - gosu: drop privileges to app user (Debian equivalent of Alpine's su-exec)
@@ -95,8 +95,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
+  chromium \
   curl \
   dumb-init \
+  fonts-freefont-ttf \
   fzf \
   git \
   gosu \
@@ -150,17 +152,6 @@ RUN chmod +x /init.sh /srv/init.sh
 
 WORKDIR /workspace
 
-# ── Playwright (Chromium only — headless testing for Claude Code via ralphex) ─
-# Only Chromium headless shell is needed; Firefox/WebKit skipped.
-#   1. System deps (install-deps) — heavy, needs root
-#   2. Browser binary (install --only-shell chromium) — Chromium headless shell only
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
-USER app
-RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell chromium
-USER root
-
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 # npm install (not native installer) to avoid rate-limiting in parallel Docker builds.
 # See: claude-code/.devcontainer/Dockerfile for rationale.
@@ -180,7 +171,8 @@ SHELL ["/bin/sh", "-c"]
 # ── Environment ──────────────────────────────────────────────────────────────
 ENV RALPHEX_DOCKER=1 \
     USE_BUILTIN_RIPGREP=0 \
-    PLAYWRIGHT_VERSION=${PLAYWRIGHT_VERSION}
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Ralphex web dashboard port
 EXPOSE 8080

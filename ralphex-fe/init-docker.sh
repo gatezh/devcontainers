@@ -16,12 +16,12 @@ if [ -d /mnt/claude ]; then
     for d in commands skills hooks agents plugins; do
         [ -d "/mnt/claude/$d" ] && cp -rL "/mnt/claude/$d" "/home/app/.claude/" 2>/dev/null || true
     done
-    # ── Playwright MCP: use Chromium on ARM64 (#64) ────────────────────────
-    # @playwright/mcp defaults to --browser chrome, which has no Linux ARM64 builds.
-    # Patch the plugin config to use chromium instead. No-op on AMD64.
+    # ── Playwright MCP: use system Chromium (#64, #67) ──────────────────────
+    # @playwright/mcp defaults to --browser chrome, which isn't installed in Docker.
+    # Point it at the system Chromium with --executable-path and --no-sandbox.
     PLAYWRIGHT_MCP_CONFIG="/home/app/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/playwright/.mcp.json"
-    if [ "$(uname -m)" = "aarch64" ] && [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
-        jq '.playwright.args = ["@playwright/mcp@latest", "--browser", "chromium"]' \
+    if [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
+        jq '.playwright.args = ["@playwright/mcp@latest", "--browser", "chromium", "--executable-path", "/usr/bin/chromium", "--no-sandbox"]' \
             "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
             && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
     fi
