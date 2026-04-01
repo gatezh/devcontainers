@@ -1,6 +1,6 @@
 # Repository Naming Unification Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Rename the repository from `devcontainer-images` to `devcontainers`, drop the `devcontainer-` prefix from image directories, and unify all image paths under `ghcr.io/gatezh/devcontainers/{name}`.
 
@@ -70,7 +70,7 @@
 - Rename: `devcontainer-hugo-bun/` → `hugo-bun/`
 - Rename: `devcontainer-hugo-bun-node/` → `hugo-bun-node/`
 
-- [ ] **Step 1: Rename directories with git mv**
+- [x] **Step 1: Rename directories with git mv**
 
 ```bash
 git mv devcontainer-bun bun
@@ -79,12 +79,12 @@ git mv devcontainer-hugo-bun hugo-bun
 git mv devcontainer-hugo-bun-node hugo-bun-node
 ```
 
-- [ ] **Step 2: Verify renames**
+- [x] **Step 2: Verify renames**
 
 Run: `ls -d bun claude-bun hugo-bun hugo-bun-node`
 Expected: all four directories listed
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A
@@ -101,7 +101,7 @@ git commit -m "refactor: rename image directories to drop devcontainer- prefix"
 - Rename: `.github/workflows/build-devcontainer-hugo-bun.yml` → `.github/workflows/build-hugo-bun.yml`
 - Rename: `.github/workflows/build-devcontainer-hugo-bun-node.yml` → `.github/workflows/build-hugo-bun-node.yml`
 
-- [ ] **Step 1: Rename workflow files with git mv**
+- [x] **Step 1: Rename workflow files with git mv**
 
 ```bash
 git mv .github/workflows/build-devcontainer-bun.yml .github/workflows/build-bun.yml
@@ -110,7 +110,7 @@ git mv .github/workflows/build-devcontainer-hugo-bun.yml .github/workflows/build
 git mv .github/workflows/build-devcontainer-hugo-bun-node.yml .github/workflows/build-hugo-bun-node.yml
 ```
 
-- [ ] **Step 2: Verify renames**
+- [x] **Step 2: Verify renames**
 
 Run: `ls .github/workflows/build-*.yml`
 Expected:
@@ -123,7 +123,7 @@ Expected:
 .github/workflows/build-ralphex-fe.yml
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A
@@ -139,7 +139,7 @@ The reusable workflow constructs `ghcr.io/{namespace}/{image-name}`. Since calle
 **Files:**
 - Modify: `.github/workflows/reusable-docker-build.yml`
 
-- [ ] **Step 1: Update the image-name input description**
+- [x] **Step 1: Update the image-name input description**
 
 In `.github/workflows/reusable-docker-build.yml`, change line 7:
 
@@ -153,7 +153,7 @@ In `.github/workflows/reusable-docker-build.yml`, change line 7:
         description: 'Image name including namespace (e.g. devcontainers/bun)'
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/reusable-docker-build.yml
@@ -167,7 +167,7 @@ git commit -m "refactor: update reusable workflow description for new naming"
 **Files:**
 - Modify: `.github/workflows/build-bun.yml`
 
-- [ ] **Step 1: Update workflow content**
+- [x] **Step 1: Update workflow content**
 
 Replace the entire content of `.github/workflows/build-bun.yml` with:
 
@@ -218,7 +218,7 @@ jobs:
     secrets: inherit
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/build-bun.yml
@@ -232,7 +232,7 @@ git commit -m "refactor: update build-bun workflow for new paths and naming"
 **Files:**
 - Modify: `.github/workflows/build-claude-bun.yml`
 
-- [ ] **Step 1: Update workflow content**
+- [x] **Step 1: Update workflow content**
 
 Replace the entire content of `.github/workflows/build-claude-bun.yml` with:
 
@@ -284,7 +284,7 @@ jobs:
     secrets: inherit
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/build-claude-bun.yml
@@ -298,7 +298,7 @@ git commit -m "refactor: update build-claude-bun workflow for new paths and nami
 **Files:**
 - Modify: `.github/workflows/build-hugo-bun.yml`
 
-- [ ] **Step 1: Update workflow content**
+- [x] **Step 1: Update workflow content**
 
 Replace the entire content of `.github/workflows/build-hugo-bun.yml` with:
 
@@ -350,7 +350,7 @@ jobs:
     secrets: inherit
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/build-hugo-bun.yml
@@ -364,7 +364,7 @@ git commit -m "refactor: update build-hugo-bun workflow for new paths and naming
 **Files:**
 - Modify: `.github/workflows/build-hugo-bun-node.yml`
 
-- [ ] **Step 1: Update workflow content**
+- [x] **Step 1: Update workflow content**
 
 Replace the entire content of `.github/workflows/build-hugo-bun-node.yml` with:
 
@@ -417,7 +417,7 @@ jobs:
     secrets: inherit
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/build-hugo-bun-node.yml
@@ -431,7 +431,7 @@ git commit -m "refactor: update build-hugo-bun-node workflow for new paths and n
 **Files:**
 - Modify: `.github/workflows/build-claude-code.yml`
 
-- [ ] **Step 1: Update all references**
+- [x] **Step 1: Update all references**
 
 In `.github/workflows/build-claude-code.yml`, make these replacements:
 
@@ -443,7 +443,7 @@ In `.github/workflows/build-claude-code.yml`, make these replacements:
 
 All occurrences: replace `devcontainer-images` with `devcontainers` in the image paths.
 
-- [ ] **Step 2: Verify the changes**
+- [x] **Step 2: Verify the changes**
 
 Run: `grep 'devcontainer-images' .github/workflows/build-claude-code.yml`
 Expected: no output (all replaced)
@@ -451,7 +451,7 @@ Expected: no output (all replaced)
 Run: `grep 'devcontainers/' .github/workflows/build-claude-code.yml`
 Expected: 4 lines with `ghcr.io/gatezh/devcontainers/claude-code` references
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add .github/workflows/build-claude-code.yml
@@ -465,7 +465,7 @@ git commit -m "refactor: update build-claude-code workflow image paths"
 **Files:**
 - Modify: `.github/workflows/build-ralphex-fe.yml`
 
-- [ ] **Step 1: Update image references**
+- [x] **Step 1: Update image references**
 
 In `.github/workflows/build-ralphex-fe.yml`, make these replacements:
 
@@ -473,7 +473,7 @@ In `.github/workflows/build-ralphex-fe.yml`, make these replacements:
 2. Line 95: `docker pull ghcr.io/gatezh/ralphex-fe:latest` → `docker pull ghcr.io/gatezh/devcontainers/ralphex-fe:latest`
 3. Line 96: `docker run --rm --entrypoint sh ghcr.io/gatezh/ralphex-fe:latest` → `docker run --rm --entrypoint sh ghcr.io/gatezh/devcontainers/ralphex-fe:latest`
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/build-ralphex-fe.yml
@@ -487,7 +487,7 @@ git commit -m "refactor: update build-ralphex-fe workflow to devcontainers names
 **Files:**
 - Modify: `.github/workflows/update-and-build-ralphex-fe.yml`
 
-- [ ] **Step 1: Update image-name in the reusable workflow call**
+- [x] **Step 1: Update image-name in the reusable workflow call**
 
 In `.github/workflows/update-and-build-ralphex-fe.yml`, line 152:
 
@@ -499,7 +499,7 @@ In `.github/workflows/update-and-build-ralphex-fe.yml`, line 152:
       image-name: devcontainers/ralphex-fe
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .github/workflows/update-and-build-ralphex-fe.yml
@@ -513,7 +513,7 @@ git commit -m "refactor: update update-and-build-ralphex-fe image name"
 **Files:**
 - Modify: `.github/workflows/ci.yml`
 
-- [ ] **Step 1: Update hadolint matrix paths**
+- [x] **Step 1: Update hadolint matrix paths**
 
 In `.github/workflows/ci.yml`, replace the hadolint matrix (lines 24-29):
 
@@ -535,7 +535,7 @@ In `.github/workflows/ci.yml`, replace the hadolint matrix (lines 24-29):
           - ralphex-fe/Dockerfile
 ```
 
-- [ ] **Step 2: Update path filters**
+- [x] **Step 2: Update path filters**
 
 In `.github/workflows/ci.yml`, replace the path filter section (lines 66-75):
 
@@ -565,7 +565,7 @@ In `.github/workflows/ci.yml`, replace the path filter section (lines 66-75):
               - 'ralphex-fe/**'
 ```
 
-- [ ] **Step 3: Update environment variable names and add_image calls**
+- [x] **Step 3: Update environment variable names and add_image calls**
 
 In `.github/workflows/ci.yml`, replace the set-matrix step's env block and conditionals (lines 80-131):
 
@@ -637,12 +637,12 @@ In `.github/workflows/ci.yml`, replace the set-matrix step's env block and condi
           fi
 ```
 
-- [ ] **Step 4: Verify no old references remain**
+- [x] **Step 4: Verify no old references remain**
 
 Run: `grep 'devcontainer-bun\|devcontainer-claude-bun\|devcontainer-hugo-bun' .github/workflows/ci.yml`
 Expected: no output
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/ci.yml
@@ -664,7 +664,7 @@ All Dockerfiles need `org.opencontainers.image.source` and `org.opencontainers.i
 - Modify: `ralphex-fe/Dockerfile` (lines 177-181)
 - Modify: `.devcontainer/Dockerfile` (lines 139-143, 168-172)
 
-- [ ] **Step 1: Update bun/.devcontainer/Dockerfile**
+- [x] **Step 1: Update bun/.devcontainer/Dockerfile**
 
 Replace the OCI labels (lines 15-19):
 
@@ -684,7 +684,7 @@ LABEL org.opencontainers.image.title="bun"
 LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 2: Update claude-bun/.devcontainer/Dockerfile**
+- [x] **Step 2: Update claude-bun/.devcontainer/Dockerfile**
 
 Replace the OCI labels (lines 92-96):
 
@@ -704,7 +704,7 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" 
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 3: Update hugo-bun/.devcontainer/Dockerfile**
+- [x] **Step 3: Update hugo-bun/.devcontainer/Dockerfile**
 
 Replace the OCI labels (lines 33-37):
 
@@ -724,7 +724,7 @@ LABEL org.opencontainers.image.title="hugo-bun"
 LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 4: Update hugo-bun-node/.devcontainer/Dockerfile**
+- [x] **Step 4: Update hugo-bun-node/.devcontainer/Dockerfile**
 
 Replace the OCI labels (lines 49-53):
 
@@ -744,7 +744,7 @@ LABEL org.opencontainers.image.title="hugo-bun-node"
 LABEL org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 5: Update claude-code/.devcontainer/Dockerfile (default target)**
+- [x] **Step 5: Update claude-code/.devcontainer/Dockerfile (default target)**
 
 Replace the OCI labels at lines 198-202:
 
@@ -764,7 +764,7 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" 
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 6: Update claude-code/.devcontainer/Dockerfile (sandbox target)**
+- [x] **Step 6: Update claude-code/.devcontainer/Dockerfile (sandbox target)**
 
 Replace the OCI labels at lines 230-234:
 
@@ -784,7 +784,7 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" 
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 7: Update ralphex-fe/Dockerfile**
+- [x] **Step 7: Update ralphex-fe/Dockerfile**
 
 Replace the OCI labels at lines 177-181:
 
@@ -804,7 +804,7 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" 
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
 ```
 
-- [ ] **Step 8: Update .devcontainer/Dockerfile (repo's own devcontainer)**
+- [x] **Step 8: Update .devcontainer/Dockerfile (repo's own devcontainer)**
 
 Replace `devcontainer-images` with `devcontainers` in all references. This file has:
 - Line 2 comment: `devcontainer-images repo` → `devcontainers repo`
@@ -814,7 +814,7 @@ Replace `devcontainer-images` with `devcontainers` in all references. This file 
 
 Replace all occurrences of `devcontainer-images` with `devcontainers` in this file.
 
-- [ ] **Step 9: Verify no old references remain in Dockerfiles**
+- [x] **Step 9: Verify no old references remain in Dockerfiles**
 
 Run: `grep -r 'devcontainer-images' bun/ claude-bun/ hugo-bun/ hugo-bun-node/ claude-code/ ralphex-fe/ .devcontainer/Dockerfile`
 Expected: no output
@@ -822,7 +822,7 @@ Expected: no output
 Run: `grep -r 'title="devcontainer-' bun/ claude-bun/ hugo-bun/ hugo-bun-node/`
 Expected: no output
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add bun/.devcontainer/Dockerfile claude-bun/.devcontainer/Dockerfile hugo-bun/.devcontainer/Dockerfile hugo-bun-node/.devcontainer/Dockerfile claude-code/.devcontainer/Dockerfile ralphex-fe/Dockerfile .devcontainer/Dockerfile
@@ -837,7 +837,7 @@ git commit -m "refactor: update OCI labels in all Dockerfiles for new repo name"
 - Modify: `claude-code/.devcontainer/docker-compose.yml`
 - Modify: `claude-code/.devcontainer/claude-sandbox/docker-compose.yml`
 
-- [ ] **Step 1: Update default docker-compose.yml**
+- [x] **Step 1: Update default docker-compose.yml**
 
 In `claude-code/.devcontainer/docker-compose.yml`, line 5:
 
@@ -849,7 +849,7 @@ In `claude-code/.devcontainer/docker-compose.yml`, line 5:
     image: ghcr.io/gatezh/devcontainers/claude-code:latest
 ```
 
-- [ ] **Step 2: Update sandbox docker-compose.yml**
+- [x] **Step 2: Update sandbox docker-compose.yml**
 
 In `claude-code/.devcontainer/claude-sandbox/docker-compose.yml`, line 5:
 
@@ -861,7 +861,7 @@ In `claude-code/.devcontainer/claude-sandbox/docker-compose.yml`, line 5:
     image: ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add claude-code/.devcontainer/docker-compose.yml claude-code/.devcontainer/claude-sandbox/docker-compose.yml
@@ -877,7 +877,7 @@ git commit -m "refactor: update docker-compose image references"
 - Modify: `.devcontainer/claude-sandbox/devcontainer.json` (volume name prefixes)
 - Modify: `.devcontainer/init-plugins.sh` (comment)
 
-- [ ] **Step 1: Update .devcontainer/devcontainer.json volume names**
+- [x] **Step 1: Update .devcontainer/devcontainer.json volume names**
 
 Replace `devcontainer-images` with `devcontainers` in volume source names:
 
@@ -893,7 +893,7 @@ Replace `devcontainer-images` with `devcontainers` in volume source names:
 "source=devcontainers-fish-data-${devcontainerId},target=/home/node/.local/share/fish,type=volume"
 ```
 
-- [ ] **Step 2: Update .devcontainer/claude-sandbox/devcontainer.json volume names**
+- [x] **Step 2: Update .devcontainer/claude-sandbox/devcontainer.json volume names**
 
 Replace `devcontainer-images` with `devcontainers` in volume source names:
 
@@ -907,7 +907,7 @@ Replace `devcontainer-images` with `devcontainers` in volume source names:
 "source=devcontainers-sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
 ```
 
-- [ ] **Step 3: Update .devcontainer/init-plugins.sh comment**
+- [x] **Step 3: Update .devcontainer/init-plugins.sh comment**
 
 ```bash
 # Old:
@@ -917,7 +917,7 @@ Replace `devcontainer-images` with `devcontainers` in volume source names:
 # Initialize Claude Code plugins for the devcontainers repo
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add .devcontainer/devcontainer.json .devcontainer/claude-sandbox/devcontainer.json .devcontainer/init-plugins.sh
@@ -937,7 +937,7 @@ git commit -m "refactor: update repo devcontainer config for new repo name"
 - Modify: `claude-code/README.md`
 - Modify: `ralphex-fe/README.md`
 
-- [ ] **Step 1: Update root README.md**
+- [x] **Step 1: Update root README.md**
 
 Replace all occurrences using these rules:
 - `devcontainer-images` (repo name) → `devcontainers`
@@ -958,7 +958,7 @@ Replace all occurrences using these rules:
 - Adding new image instructions: `devcontainer-myimage/` → `myimage/`
 - `build-devcontainer-{name}.yml` → `build-{name}.yml` (in "Adding a New Image")
 
-- [ ] **Step 2: Update bun/README.md**
+- [x] **Step 2: Update bun/README.md**
 
 Replace all occurrences:
 - `# devcontainer-bun` → `# bun`
@@ -966,14 +966,14 @@ Replace all occurrences:
 - `ghcr.io/myusername/devcontainer-bun:` → `ghcr.io/myusername/devcontainers/bun:`
 - `devcontainer-images repository` → `devcontainers repository` (in License section)
 
-- [ ] **Step 3: Update claude-bun/README.md**
+- [x] **Step 3: Update claude-bun/README.md**
 
 Replace all occurrences:
 - `# devcontainer-claude-bun` → `# claude-bun`
 - `ghcr.io/gatezh/devcontainer-claude-bun:` → `ghcr.io/gatezh/devcontainers/claude-bun:`
 - `devcontainer-images repository` → `devcontainers repository` (if present)
 
-- [ ] **Step 4: Update hugo-bun/README.md**
+- [x] **Step 4: Update hugo-bun/README.md**
 
 Replace all occurrences:
 - `# devcontainer-hugo-bun` → `# hugo-bun`
@@ -981,7 +981,7 @@ Replace all occurrences:
 - `ghcr.io/myusername/devcontainer-hugo-bun:` → `ghcr.io/myusername/devcontainers/hugo-bun:`
 - `devcontainer-images repository` → `devcontainers repository`
 
-- [ ] **Step 5: Update hugo-bun-node/README.md**
+- [x] **Step 5: Update hugo-bun-node/README.md**
 
 Replace all occurrences:
 - `# devcontainer-hugo-bun-node` → `# hugo-bun-node`
@@ -989,7 +989,7 @@ Replace all occurrences:
 - `ghcr.io/myusername/devcontainer-hugo-bun-node:` → `ghcr.io/myusername/devcontainers/hugo-bun-node:`
 - `devcontainer-images repository` → `devcontainers repository`
 
-- [ ] **Step 6: Update claude-code/README.md**
+- [x] **Step 6: Update claude-code/README.md**
 
 Replace all occurrences:
 - `ghcr.io/gatezh/devcontainer-images/claude-code` → `ghcr.io/gatezh/devcontainers/claude-code`
@@ -998,7 +998,7 @@ Replace all occurrences:
 - `git clone https://github.com/gatezh/devcontainer-images.git` → `git clone https://github.com/gatezh/devcontainers.git`
 - `cd devcontainer-images/claude-code` → `cd devcontainers/claude-code`
 
-- [ ] **Step 7: Update ralphex-fe/README.md**
+- [x] **Step 7: Update ralphex-fe/README.md**
 
 Replace:
 - `ghcr.io/gatezh/ralphex-fe:` → `ghcr.io/gatezh/devcontainers/ralphex-fe:`
@@ -1009,7 +1009,7 @@ Add a note near the top (after the first paragraph):
 > **Note:** This is not a devcontainer in the VS Code Dev Container spec sense (no `devcontainer.json`). It is a standalone Docker image used as a development environment for ralphex projects.
 ```
 
-- [ ] **Step 8: Verify no old references remain**
+- [x] **Step 8: Verify no old references remain**
 
 Run: `grep -r 'devcontainer-images' README.md bun/README.md claude-bun/README.md hugo-bun/README.md hugo-bun-node/README.md claude-code/README.md ralphex-fe/README.md`
 Expected: no output (except possibly the old plan file in docs/)
@@ -1017,7 +1017,7 @@ Expected: no output (except possibly the old plan file in docs/)
 Run: `grep -r 'ghcr.io/gatezh/devcontainer-bun\|ghcr.io/gatezh/devcontainer-claude-bun\|ghcr.io/gatezh/devcontainer-hugo-bun\|ghcr.io/gatezh/ralphex-fe' README.md bun/ claude-bun/ hugo-bun/ hugo-bun-node/ claude-code/ ralphex-fe/`
 Expected: no output
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add README.md bun/README.md claude-bun/README.md hugo-bun/README.md hugo-bun-node/README.md claude-code/README.md ralphex-fe/README.md
@@ -1034,7 +1034,7 @@ git commit -m "docs: update all READMEs for new repo name and image paths"
 - Modify: `.claude/rules/new-image.md`
 - Modify: `.claude/rules/workflows.md`
 
-- [ ] **Step 1: Update .claude/CLAUDE.md**
+- [x] **Step 1: Update .claude/CLAUDE.md**
 
 Replace the naming conventions section:
 
@@ -1066,7 +1066,7 @@ Dockerfiles for custom devcontainer images on GitHub Container Registry (ghcr.io
 Dockerfiles for custom devcontainer images on GitHub Container Registry (ghcr.io). Each image provides a development container for a specific environment. Published under `ghcr.io/gatezh/devcontainers/`.
 ```
 
-- [ ] **Step 2: Update .claude/rules/dockerfile.md**
+- [x] **Step 2: Update .claude/rules/dockerfile.md**
 
 Replace the OCI label template:
 
@@ -1086,7 +1086,7 @@ LABEL org.opencontainers.image.source="https://github.com/{owner}/devcontainers"
       org.opencontainers.image.url="https://github.com/{owner}/devcontainers"
 ```
 
-- [ ] **Step 3: Update .claude/rules/new-image.md**
+- [x] **Step 3: Update .claude/rules/new-image.md**
 
 Replace entire content:
 
@@ -1109,7 +1109,7 @@ Replace entire content:
 4. Update root `README.md` with new image entry
 ```
 
-- [ ] **Step 4: Update .claude/rules/workflows.md**
+- [x] **Step 4: Update .claude/rules/workflows.md**
 
 Update the trigger path patterns:
 
@@ -1129,7 +1129,7 @@ Update the trigger path patterns:
       - '{name}/files/**'
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .claude/CLAUDE.md .claude/rules/dockerfile.md .claude/rules/new-image.md .claude/rules/workflows.md
@@ -1140,7 +1140,7 @@ git commit -m "docs: update .claude/ config for new naming conventions"
 
 ### Task 17: Lint verification
 
-- [ ] **Step 1: Run hadolint on all Dockerfiles**
+- [x] **Step 1: Run hadolint on all Dockerfiles**
 
 ```bash
 hadolint bun/.devcontainer/Dockerfile
@@ -1154,7 +1154,7 @@ hadolint .devcontainer/Dockerfile
 
 Expected: all pass (OCI labels don't affect lint)
 
-- [ ] **Step 2: Run actionlint on workflows**
+- [x] **Step 2: Run actionlint on workflows**
 
 ```bash
 actionlint .github/workflows/build-bun.yml
@@ -1170,7 +1170,7 @@ actionlint .github/workflows/reusable-docker-build.yml
 
 Expected: all pass
 
-- [ ] **Step 3: Final grep for any missed old references**
+- [x] **Step 3: Final grep for any missed old references**
 
 ```bash
 grep -r 'devcontainer-images' --include='*.yml' --include='*.yaml' --include='*.md' --include='*.json' --include='*.jsonc' --include='Dockerfile' --include='*.sh' . | grep -v 'docs/superpowers/plans/' | grep -v '.git/'
@@ -1190,18 +1190,18 @@ Expected: no output
 
 This task is done by the user via the GitHub UI, NOT via code.
 
-- [ ] **Step 1: Rename repository on GitHub**
+- [x] **Step 1: Rename repository on GitHub**
 
 Go to `https://github.com/gatezh/devcontainer-images/settings` → Repository name → change to `devcontainers` → click "Rename".
 
 GitHub will automatically set up a redirect from the old URL. All existing git remotes using the old URL will continue to work, but should be updated.
 
-- [ ] **Step 2: Update local git remote**
+- [x] **Step 2: Update local git remote**
 
 ```bash
 git remote set-url github git@github.com:gatezh/devcontainers.git
 ```
 
-- [ ] **Step 3: Delete old GHCR packages (optional)**
+- [x] **Step 3: Delete old GHCR packages (optional)**
 
 Old packages at `ghcr.io/gatezh/devcontainer-bun`, `ghcr.io/gatezh/devcontainer-claude-bun`, etc. can be deleted from the GitHub Packages settings page once all consumers have migrated to the new paths.
