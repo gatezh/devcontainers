@@ -22,10 +22,10 @@ jobs:
       fail-fast: false
       matrix:
         dockerfile:
-          - devcontainer-bun/.devcontainer/Dockerfile
-          - devcontainer-claude-bun/.devcontainer/Dockerfile
-          - devcontainer-hugo-bun/.devcontainer/Dockerfile
-          - devcontainer-hugo-bun-node/.devcontainer/Dockerfile
+          - bun/.devcontainer/Dockerfile
+          - claude-bun/.devcontainer/Dockerfile
+          - hugo-bun/.devcontainer/Dockerfile
+          - hugo-bun-node/.devcontainer/Dockerfile
           - ralphex-fe/Dockerfile
     steps:
       - name: Checkout repository
@@ -63,24 +63,24 @@ jobs:
         id: filter
         with:
           filters: |
-            devcontainer-bun:
-              - 'devcontainer-bun/**'
-            devcontainer-claude-bun:
-              - 'devcontainer-claude-bun/**'
-            devcontainer-hugo-bun:
-              - 'devcontainer-hugo-bun/**'
-            devcontainer-hugo-bun-node:
-              - 'devcontainer-hugo-bun-node/**'
+            bun:
+              - 'bun/**'
+            claude-bun:
+              - 'claude-bun/**'
+            hugo-bun:
+              - 'hugo-bun/**'
+            hugo-bun-node:
+              - 'hugo-bun-node/**'
             ralphex-fe:
               - 'ralphex-fe/**'
 
       - name: Build matrix from changes
         id: set-matrix
         env:
-          CHANGED_BUN: ${{ steps.filter.outputs.devcontainer-bun }}
-          CHANGED_CLAUDE_BUN: ${{ steps.filter.outputs.devcontainer-claude-bun }}
-          CHANGED_HUGO_BUN: ${{ steps.filter.outputs.devcontainer-hugo-bun }}
-          CHANGED_HUGO_BUN_NODE: ${{ steps.filter.outputs.devcontainer-hugo-bun-node }}
+          CHANGED_BUN: ${{ steps.filter.outputs.bun }}
+          CHANGED_CLAUDE_BUN: ${{ steps.filter.outputs.claude-bun }}
+          CHANGED_HUGO_BUN: ${{ steps.filter.outputs.hugo-bun }}
+          CHANGED_HUGO_BUN_NODE: ${{ steps.filter.outputs.hugo-bun-node }}
           CHANGED_RALPHEX: ${{ steps.filter.outputs.ralphex-fe }}
         run: |
           INCLUDES="[]"
@@ -96,30 +96,30 @@ jobs:
           }
 
           if [ "$CHANGED_BUN" = "true" ]; then
-            add_image "devcontainer-bun" \
-              "devcontainer-bun/.devcontainer" \
-              "devcontainer-bun/.devcontainer/Dockerfile" \
+            add_image "bun" \
+              "bun/.devcontainer" \
+              "bun/.devcontainer/Dockerfile" \
               "bun --version"
           fi
 
           if [ "$CHANGED_CLAUDE_BUN" = "true" ]; then
-            add_image "devcontainer-claude-bun" \
-              "devcontainer-claude-bun/.devcontainer" \
-              "devcontainer-claude-bun/.devcontainer/Dockerfile" \
+            add_image "claude-bun" \
+              "claude-bun/.devcontainer" \
+              "claude-bun/.devcontainer/Dockerfile" \
               "bun --version"
           fi
 
           if [ "$CHANGED_HUGO_BUN" = "true" ]; then
-            add_image "devcontainer-hugo-bun" \
-              "devcontainer-hugo-bun/.devcontainer" \
-              "devcontainer-hugo-bun/.devcontainer/Dockerfile" \
+            add_image "hugo-bun" \
+              "hugo-bun/.devcontainer" \
+              "hugo-bun/.devcontainer/Dockerfile" \
               "bun --version && hugo version"
           fi
 
           if [ "$CHANGED_HUGO_BUN_NODE" = "true" ]; then
-            add_image "devcontainer-hugo-bun-node" \
-              "devcontainer-hugo-bun-node/.devcontainer" \
-              "devcontainer-hugo-bun-node/.devcontainer/Dockerfile" \
+            add_image "hugo-bun-node" \
+              "hugo-bun-node/.devcontainer" \
+              "hugo-bun-node/.devcontainer/Dockerfile" \
               "bun --version && hugo version && node --version"
           fi
 
