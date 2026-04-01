@@ -36,11 +36,11 @@ RUN set -eux; \
 FROM alpine:3.21 AS hadolint-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
-    ARCH="$(uname -m)"; \
+    ARCH="$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/')"; \
     HADOLINT_VERSION=$(curl -fsSL https://api.github.com/repos/hadolint/hadolint/releases/latest \
       | jq -r '.tag_name'); \
     curl -fsSL -o /usr/local/bin/hadolint \
-      "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-${ARCH}"; \
+      "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-linux-${ARCH}"; \
     chmod +x /usr/local/bin/hadolint
 
 # ── actionlint (GitHub Actions workflow linter) ────────────────────────
