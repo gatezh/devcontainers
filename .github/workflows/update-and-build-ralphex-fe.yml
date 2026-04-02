@@ -155,10 +155,10 @@ jobs:
       version-tag: bun${{ needs.update-dockerfile.outputs.bun_version }}-hugo${{ needs.update-dockerfile.outputs.hugo_version }}-ralphex${{ needs.update-dockerfile.outputs.ralphex_version }}
       verify-command: 'bun --version && hugo version'
       extra-verify-script: |
-        chromium-browser --no-sandbox --version && \
-        test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium-browser" && \
+        chromium --no-sandbox --version && \
+        test "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" = "/usr/bin/chromium" && \
           echo "OK: PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH is correct" || \
-          (echo "FAIL: expected /usr/bin/chromium-browser, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
+          (echo "FAIL: expected /usr/bin/chromium, got $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \
         test -x "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && \
           echo "OK: binary is executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" || \
           (echo "FAIL: binary not executable at $PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH" && exit 1) && \

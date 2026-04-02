@@ -104,6 +104,7 @@ jobs:
             id app &&
             test -f /init.sh &&
             test -f /srv/init.sh &&
-            test -d /home/app/.cache/ms-playwright &&
+            chromium --no-sandbox --version &&
+            test -x /usr/bin/chromium &&
             echo 'All checks passed'
           "

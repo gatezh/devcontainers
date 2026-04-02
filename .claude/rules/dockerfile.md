@@ -41,36 +41,32 @@ Minimal images should include: `ca-certificates`, `git`
 - **Downloads**: Use download-then-extract (two commands) instead of `curl | tar` pipes — prevents masked failures under `/bin/sh`
 - **Parallel downloads**: For images with multiple binary tool downloads, use multi-stage builds — BuildKit runs independent stages concurrently. See `ralphex-fe/Dockerfile` for the pattern.
 
-## Playwright on Debian
+## Playwright / Chromium in Docker
 
-Use the two-layer strategy (Chromium only for headless testing):
+Use system Chromium instead of Playwright-managed browsers. This avoids version coupling
+between `@playwright/mcp` (which uses alpha `playwright-core` builds) and cached browser binaries.
 
+**Debian (Trixie):**
 ```dockerfile
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    npx -y playwright@${PLAYWRIGHT_VERSION} install-deps chromium
-USER app
-RUN npx -y playwright@${PLAYWRIGHT_VERSION} install --only-shell chromium
-USER root
+# Install in the apt-get block:
+chromium fonts-freefont-ttf
+
+# Set env vars:
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 ```
 
-## Alpine Playwright Support
+**Alpine:**
+```dockerfile
+RUN apk add --no-cache chromium ttf-freefont
 
-Do NOT use `playwright install` on Alpine — the bundled Chromium requires glibc.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+```
 
-Instead:
-1. Install system Chromium: `apk add --no-cache chromium ttf-freefont`
-2. Set env vars (single `ENV` instruction to minimize layers):
-   ```dockerfile
-   ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
-   ```
-3. In `playwright.config.ts`, wire up `executablePath`:
-   ```typescript
-   launchOptions: {
-     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-   }
-   ```
-4. Projects install only `@playwright/test` — never run `playwright install`
-5. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` is a project convention; Playwright does NOT read it automatically
+Note: Binary is `chromium` on Debian Trixie, `chromium-browser` on Alpine and older Debian.
+
+**For `@playwright/mcp`**, use `--executable-path` and `--no-sandbox` in the MCP config args.
+
+**`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`** is a project convention; Playwright does NOT read it automatically.
+Use it in `playwright.config.ts` via `process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` if needed.
