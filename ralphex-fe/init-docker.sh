@@ -30,9 +30,9 @@ if [ -d /mnt/claude ]; then
 
     # ── RTK: ensure rewrite hook is configured ─────────────────────────────
     # Host mount usually brings the hook, but init idempotently to cover
-    # standalone usage (no host mount). Runs as app user for correct paths.
+    # standalone usage (no host mount). --hook-only avoids workspace artifacts.
     if command -v rtk >/dev/null 2>&1; then
-        gosu app rtk init -g --auto-patch 2>/dev/null || true
+        gosu app rtk init -g --hook-only --auto-patch 2>/dev/null || true
     fi
 fi
 

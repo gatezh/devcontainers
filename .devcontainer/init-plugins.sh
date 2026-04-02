@@ -44,9 +44,10 @@ for plugin in "${PLUGINS[@]}"; do
     }
 done
 
-# Initialize rtk global hook for Claude Code (auto-rewrite mode)
+# Initialize rtk global hook for Claude Code (auto-rewrite mode).
+# --hook-only: installs only the PreToolUse rewrite hook, no workspace artifacts.
 echo "Initializing rtk (token optimizer)..."
-rtk init -g --auto-patch || {
+rtk init -g --hook-only --auto-patch || {
     echo "Note: rtk init may have already been configured or rtk not available"
 }
 

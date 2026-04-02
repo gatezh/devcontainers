@@ -47,10 +47,10 @@ if [ "$(uname -m)" = "aarch64" ] && [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
 fi
 
 # ── rtk init (token-optimized CLI proxy) ────────────────────────────────────
-# Configures rtk for the current workspace. Safe to run multiple times.
-# rtk is pre-installed in the devcontainer image.
+# Global hook-first mode: installs only the PreToolUse rewrite hook to ~/.claude/,
+# no workspace artifacts (CLAUDE.md, .rtk/). Safe to run multiple times.
 if command -v rtk &>/dev/null; then
-    rtk init 2>/dev/null || true
+    rtk init -g --hook-only --auto-patch 2>/dev/null || true
 fi
 
 # ── agent-browser skill ─────────────────────────────────────────────────────
