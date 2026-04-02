@@ -120,10 +120,10 @@ ENV APP_USER=app \
     DOCKER_GID=999 \
     TIME_ZONE=America/Chicago
 
-# Reserve GID 998 for ping to prevent conflicts (matches umputun/baseimage convention).
-# -f: exit successfully if GID already exists (systemd takes 998 when chromium is installed).
+# Create groups for ping (GID 998) and docker (GID 999) matching umputun/baseimage convention.
+# -f: exit successfully if GID already exists (chromium's systemd dep may claim these GIDs).
 RUN groupadd -f -g 998 ping \
-  && groupadd -g ${DOCKER_GID} docker \
+  && groupadd -f -g ${DOCKER_GID} docker \
   && useradd --no-log-init -m -s /bin/sh -u ${APP_UID} ${APP_USER} \
   && usermod -aG docker ${APP_USER} \
   && mkdir -p /srv /workspace \
