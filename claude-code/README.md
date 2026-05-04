@@ -126,6 +126,20 @@ Both image variants ship system chromium and the `/usr/local/bin/patch-playwrigh
 
 Copy `.claude/skills/sandbox-playwright/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
 
+### Recommended: Claude Code skill for upstream sync
+
+To keep your project's `.devcontainer/` and bundled `.claude/skills/` in step with this repo, copy the [devcontainer-upstream-sync](.claude/skills/devcontainer-upstream-sync/SKILL.md) skill into your project's `.claude/skills/` directory. The skill audits drift, helps adopt missed changes, drafts upstream issues for shared bugs, and self-updates when this skill's `version:` bumps.
+
+```bash
+mkdir -p .claude/skills/devcontainer-upstream-sync
+curl -sSL https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md \
+  > .claude/skills/devcontainer-upstream-sync/SKILL.md
+git add .claude/skills/devcontainer-upstream-sync/SKILL.md
+```
+
+After the one-time copy, the skill manages its own updates.
+
+
 ### Sandbox Authentication
 
 The sandbox firewall blocks outbound traffic, so `claude login` (which opens a browser OAuth flow) won't work inside the container. Instead, generate a token on the host and inject it via environment variable.
@@ -202,8 +216,10 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 └── skills/
     ├── sandbox-fetch-docs/
     │   └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
-    └── sandbox-playwright/
-        └── SKILL.md               ← teaches Claude Code to drive Playwright MCP + @playwright/test
+    ├── sandbox-playwright/
+    │   └── SKILL.md               ← teaches Claude Code to drive Playwright MCP + @playwright/test
+    └── devcontainer-upstream-sync/
+        └── SKILL.md               ← keeps project's .devcontainer/ + skills synced with this repo
 ```
 
 ## Workspace Directory Layout
