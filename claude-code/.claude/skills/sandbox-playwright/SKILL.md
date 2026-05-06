@@ -1,10 +1,11 @@
 ---
 name: sandbox-playwright
 description: Use when verifying UI changes in a real browser, taking screenshots of the running app, clicking or typing into the dev server to confirm behavior, or running the project's E2E suite — in THIS devcontainer. Triggers on "check in a browser", "take a screenshot", "verify the UI", "click that button", "open the page", "run e2e tests", or whenever about to say "Playwright isn't available".
+compatibility: Designed for the gatezh/devcontainers claude-code image (system chromium at /usr/bin/chromium, PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH preset, playwright MCP plugin enabled). Not applicable outside that devcontainer.
 metadata:
   author: Serge Gatezh
   url: https://github.com/gatezh
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Playwright in This Sandbox
@@ -66,7 +67,9 @@ Every concrete fact in this section must come from the project at invocation tim
 
 3. **Prefer `browser_snapshot` over `browser_take_screenshot`.** The a11y snapshot is cheap and diff-able and usually enough. Screenshots are for when the user asked visually, or when CSS/layout itself is the thing being verified.
 
-4. **`browser_close` when done.** The MCP session keeps one browser alive across calls; leaving it open leaks cookies, auth, and route into later tasks.
+4. **When you do screenshot, write to `.playwright-mcp/`.** Pass `filename: ".playwright-mcp/<name>.png"` — never a bare filename. The MCP resolves relative filenames against the repo root, so `filename: "page.png"` lands in `/workspace` and leaves untracked artifacts in `git status`. `.playwright-mcp/` is already git-ignored and is where the MCP drops its console logs and page snapshots, so screenshots belong alongside them. (You'll see this dir in `.gitignore` next to `playwright-report/` and `.playwright/`.)
+
+5. **`browser_close` when done.** The MCP session keeps one browser alive across calls; leaving it open leaks cookies, auth, and route into later tasks.
 
 ## MCP tool quick reference
 
@@ -91,6 +94,7 @@ All tools are registered with the prefix `mcp__plugin_playwright_playwright__`.
 | `bun add @playwright/test` or any "reinstall Playwright" attempt | Already installed. Reinstalling risks an unintended version bump and violates the "no unauthorized installs" rule in the project's CLAUDE.md. |
 | Spawn your own `bun run dev` | The user keeps one running; Playwright's `webServer` reuses it (`reuseExistingServer: true`). A duplicate port-collides. |
 | Hardcode a port (`5173`, `5179`, etc.) in URLs, examples, or docs | Discover it per Step 3. Different projects use different env-var conventions (`APP_PORT`, `PORT`, `VITE_PORT`, …) and the user may override the default. |
+| Pass a bare `filename` (e.g. `"page.png"`) to `browser_take_screenshot` | The MCP resolves it against the repo root, dropping untracked PNGs into `/workspace`. Use `".playwright-mcp/<name>.png"` — it's already git-ignored. |
 | Run `npx playwright install` when a Vitest/Storybook test fails with `Executable doesn't exist at /home/node/.cache/ms-playwright/...` | The image deliberately ships system Chromium at `/usr/bin/chromium` and sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`. The fix is to wire `launchOptions.executablePath` in `vitest.config.ts` (`provider: playwright({ launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH } })`), not to download a Playwright-managed binary. |
 | Call `mcp__plugin_playwright_playwright__browser_*` without `ToolSearch` first | Deferred tools — raw invocation returns `InputValidationError` because the parameter schema hasn't been loaded. |
 | Navigate to non-localhost, non-GitHub, non-npm URLs and expect them to work | The devcontainer firewall (see `.claude/rules/devcontainer.md`) blocks arbitrary external domains. Localhost is fine. |
