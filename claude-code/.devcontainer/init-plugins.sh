@@ -59,7 +59,8 @@ done
 # ── Playwright MCP: route every cached .mcp.json to system chromium ─────────
 # Universal across arches (no Chrome stable binary in either default or sandbox).
 # The patch binary is baked into the image (see Dockerfile #87) and also runs
-# from postStartCommand to catch plugin auto-updates between sessions (#85).
+# from postStartCommand (#85) and a Claude Code SessionStart hook (#98) — the
+# hook is what closes the gap when the plugin auto-updates mid-container-run.
 /usr/local/bin/patch-playwright-mcp
 
 # ── rtk init (token-optimized CLI proxy) ────────────────────────────────────
