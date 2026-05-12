@@ -6,6 +6,7 @@ on:
     paths:
       - "claude-code/.devcontainer/Dockerfile"
       - "claude-code/.devcontainer/*.sh"
+      - "claude-code/.devcontainer/managed-settings.json"
   schedule:
     - cron: '13 11 * * *'
   workflow_dispatch:
@@ -76,19 +77,19 @@ jobs:
       matrix:
         include:
           - image-suffix: claude-code
-            verify-command: "bun --version || true && claude --version && mise --version && fish --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium"
+            verify-command: "bun --version || true && claude --version && mise --version && fish --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && jq -e '.hooks.SessionStart[0].hooks[0].command == \"/usr/local/bin/patch-playwright-mcp\"' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium"
             runner: ubuntu-24.04
             arch: amd64
           - image-suffix: claude-code
-            verify-command: "bun --version || true && claude --version && mise --version && fish --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium"
+            verify-command: "bun --version || true && claude --version && mise --version && fish --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && jq -e '.hooks.SessionStart[0].hooks[0].command == \"/usr/local/bin/patch-playwright-mcp\"' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium"
             runner: ubuntu-24.04-arm
             arch: arm64
           - image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && fish --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp"
+            verify-command: "claude --version && mise --version && fish --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && jq -e '.hooks.SessionStart[0].hooks[0].command == \"/usr/local/bin/patch-playwright-mcp\"' /etc/claude-code/managed-settings.json >/dev/null"
             runner: ubuntu-24.04
             arch: amd64
           - image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && fish --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp"
+            verify-command: "claude --version && mise --version && fish --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && jq -e '.hooks.SessionStart[0].hooks[0].command == \"/usr/local/bin/patch-playwright-mcp\"' /etc/claude-code/managed-settings.json >/dev/null"
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}

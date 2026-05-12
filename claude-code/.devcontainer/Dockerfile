@@ -140,9 +140,17 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # ── Playwright MCP patch script ──────────────────────────────────────────────
 # Universal logic with no project-specific config — bake into the image so
 # consumer projects don't carry a copy. Invoked from postCreateCommand
-# (init-plugins.sh) and postStartCommand (devcontainer.json) to re-patch
-# plugin auto-updates between sessions. See issue #87.
+# (init-plugins.sh), postStartCommand (devcontainer.json), and the Claude Code
+# SessionStart hook (managed-settings.json below) — the hook closes the gap
+# where the plugin auto-updates mid-container-run. See issues #87, #98.
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
+
+# ── Claude Code managed settings ─────────────────────────────────────────────
+# Image-policy settings at the Linux managed location (highest precedence,
+# outside any volume mount). Wires patch-playwright-mcp as a SessionStart hook
+# so cache dirs created by mid-session plugin auto-updates get patched before
+# the next session reads them. See issue #98.
+COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
 # Using npm instead of the native installer (curl claude.ai/install.sh | bash).

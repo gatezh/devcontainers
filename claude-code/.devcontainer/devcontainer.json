@@ -111,10 +111,10 @@
   // Chromium is baked into the image via apt — no playwright install step needed.
   // Projects' playwright.config.ts should use process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
   "updateContentCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude && mise install && bun install",
-  // Re-patch the Playwright MCP plugin's .mcp.json on every start.
-  // Plugin auto-updates between sessions create new cache dirs whose .mcp.json
-  // points at /opt/google/chrome/chrome (which we don't ship). Without this,
-  // MCP silently breaks until the next image rebuild. See issues #85, #87.
+  // Re-patch the Playwright MCP plugin's .mcp.json on every start. Defense in
+  // depth alongside the SessionStart hook in /etc/claude-code/managed-settings.json,
+  // which handles the case where the plugin auto-updates mid-container-run.
+  // See issues #85, #87, #98.
   "postStartCommand": "/usr/local/bin/patch-playwright-mcp",
   "waitFor": "postCreateCommand"
 }

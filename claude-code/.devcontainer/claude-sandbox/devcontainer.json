@@ -124,9 +124,9 @@
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
   "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude && mise install && bun install",
   // Firewall init (bind-mounted from project) + re-patch the Playwright MCP
-  // plugin's .mcp.json. The patch runs on every start so plugin auto-updates
-  // between sessions don't leave MCP pointing at the missing chrome channel.
-  // See issues #85, #87.
+  // plugin's .mcp.json. The patch is defense in depth alongside the SessionStart
+  // hook in /etc/claude-code/managed-settings.json, which handles the case where
+  // the plugin auto-updates mid-container-run. See issues #85, #87, #98.
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh && /usr/local/bin/patch-playwright-mcp",
   "waitFor": "postStartCommand"
 }
