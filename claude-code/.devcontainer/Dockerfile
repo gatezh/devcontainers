@@ -149,8 +149,16 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 # Image-policy settings at the Linux managed location (highest precedence,
 # outside any volume mount). Wires patch-playwright-mcp as a SessionStart hook
 # so cache dirs created by mid-session plugin auto-updates get patched before
-# the next session reads them. See issue #98.
-COPY --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+# the next session reads them. See issues #98, #101.
+#
+# Pre-create /etc/claude-code as root: BuildKit applies COPY --chmod to any
+# parent directories it auto-creates, which would leave the dir at mode 0644
+# (no execute bit, not traversable). Creating it explicitly avoids that and
+# makes the file readable for the node user at runtime.
+USER root
+RUN mkdir -p /etc/claude-code
+COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+USER node
 
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
 # Using npm instead of the native installer (curl claude.ai/install.sh | bash).
