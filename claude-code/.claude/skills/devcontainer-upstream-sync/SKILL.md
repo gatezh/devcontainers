@@ -4,7 +4,7 @@ description: Use to audit a project's .devcontainer/ and bundled .claude/skills/
 metadata:
   author: Serge Gatezh
   url: https://github.com/gatezh
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Devcontainer Upstream Sync
@@ -70,7 +70,7 @@ but don't, and includes files that shouldn't be tracked.
 | `.claude/skills/sandbox-playwright/SKILL.md` | `claude-code/.claude/skills/sandbox-playwright/SKILL.md` | framework-track |
 | `.claude/skills/devcontainer-upstream-sync/SKILL.md` | `claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md` | framework-track |
 | `.claude/settings.json` | `claude-code/.claude/settings.json` | starter-customize |
-| `mise.toml` | `claude-code/mise.toml` | starter-customize |
+| `.mise.toml` | `claude-code/mise.toml` | starter-customize |
 
 ### Bucket meanings
 
@@ -105,7 +105,7 @@ When adopting an upstream change, preserve these per-project patterns:
 5. **`init-firewall.sh` allowlist** and **`init-plugins.sh` plugin
    list** — never auto-overwrite. Surface upstream's recipe; ask
    before adopting.
-6. **`mise.toml` versions.** Versions may legitimately lead or lag
+6. **`.mise.toml` versions.** Versions may legitimately lead or lag
    upstream. Surface; ask.
 
 ## Conventions
@@ -125,11 +125,20 @@ Walk the manifest, fetch each upstream file, diff, classify, report.
 ```sh
 # Per-row commands (run for each manifest row):
 curl -sSL "https://raw.githubusercontent.com/gatezh/devcontainers/master/${UPSTREAM_PATH}" -o /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream
-diff -u "${LOCAL_PATH}" /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream || true
+if [ ! -e "${LOCAL_PATH}" ]; then
+  echo "LOCAL_MISSING"
+else
+  diff -u "${LOCAL_PATH}" /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream || true
+fi
 ```
 
 Classification rules per row:
 
+- Local file does not exist → **local-missing**. For `framework-track`,
+  treat as drift-needs-adopt (file should exist; copy upstream). For
+  `starter-customize` or `exemplar`, surface and ask — the project may
+  legitimately not use that file (e.g. a project that pins tool
+  versions elsewhere has no `.mise.toml`).
 - Diff is empty → **clean** (or `clean (after project-name substitution)`).
 - Diff is non-empty AND row is `framework-track`:
   - If every hunk maps to a customization-preservation pattern → **intentional-customization**.
@@ -144,6 +153,7 @@ Report format (one row per manifest entry):
 ✓ .devcontainer/claude-sandbox/devcontainer.json    framework-track    clean
 ✓ .devcontainer/devcontainer.json                   framework-track    intentional-customization (Hugo extensions, hostname)
 ⚠ .devcontainer/claude-sandbox/init-firewall.sh     exemplar           template-divergence: see Workflow 2
+⚠ .mise.toml                                        starter-customize  local-missing (project may not use mise)
 ✗ .claude/skills/sandbox-playwright/SKILL.md        framework-track    drift-needs-adopt: 3 hunks
 ```
 
