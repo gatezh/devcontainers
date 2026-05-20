@@ -22,6 +22,7 @@ fi
 MARKETPLACES=(
     "anthropics/claude-plugins-official"
     "umputun/ralphex"
+    "GoogleChrome/modern-web-guidance"
 )
 
 for marketplace in "${MARKETPLACES[@]}"; do
@@ -46,6 +47,7 @@ PLUGINS=(
     "claude-code-setup@claude-plugins-official"
     "posthog@claude-plugins-official"
     "ralphex@ralphex"
+    "modern-web-guidance@googlechrome"
 )
 
 for plugin in "${PLUGINS[@]}"; do

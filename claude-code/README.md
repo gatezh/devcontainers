@@ -93,6 +93,27 @@ Wire into `devcontainer.json`:
 
 Mark as executable: `chmod +x init-plugins.sh`
 
+#### Bundled plugins
+
+`init-plugins.sh` registers three marketplaces and installs the following plugins:
+
+| Marketplace | Plugin | Purpose |
+|---|---|---|
+| `anthropics/claude-plugins-official` | `frontend-design` | Production-grade UI/UX scaffolding |
+| `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
+| `anthropics/claude-plugins-official` | `typescript-lsp` | TypeScript language-server tooling |
+| `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
+| `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via `patch-playwright-mcp`) |
+| `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
+| `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
+| `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
+| `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
+| `anthropics/claude-plugins-official` | `posthog` | PostHog product-analytics & LLM-traces skills |
+| `umputun/ralphex` | `ralphex` | Autonomous plan execution |
+| `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
+
+To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
+
 > **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same daily-rebuild + `pull_policy: always` channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/init-firewall.sh`
