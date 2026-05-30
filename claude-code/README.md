@@ -95,7 +95,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 #### Bundled plugins
 
-`init-plugins.sh` registers three marketplaces and installs the following plugins:
+`init-plugins.sh` registers four marketplaces and installs the following plugins:
 
 | Marketplace | Plugin | Purpose |
 |---|---|---|
@@ -111,6 +111,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `posthog` | PostHog product-analytics & LLM-traces skills |
 | `umputun/ralphex` | `ralphex` | Autonomous plan execution |
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
+| `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 

@@ -23,6 +23,7 @@ MARKETPLACES=(
     "anthropics/claude-plugins-official"
     "umputun/ralphex"
     "GoogleChrome/modern-web-guidance"
+    "AgriciDaniel/claude-seo"
 )
 
 for marketplace in "${MARKETPLACES[@]}"; do
@@ -48,6 +49,7 @@ PLUGINS=(
     "posthog@claude-plugins-official"
     "ralphex@ralphex"
     "modern-web-guidance@googlechrome"
+    "claude-seo@agricidaniel-claude-seo"
 )
 
 for plugin in "${PLUGINS[@]}"; do
