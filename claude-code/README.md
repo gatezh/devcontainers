@@ -17,7 +17,7 @@ Projects consume these pre-built images and control their own tool versions via 
 |-------|------|-----|
 | OS | `node:24-trixie-slim` + system packages | Node is needed during the build (Playwright, npm globals) |
 | Shell | Fish, Starship, fzf | Built-in syntax highlighting, autosuggestions, completions |
-| Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps | Standard dev utilities |
+| Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | rtk, ralphex | Always-latest from GitHub Releases | Dev infrastructure (like Claude Code) — no version pinning needed in projects |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |

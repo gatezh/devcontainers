@@ -55,6 +55,13 @@ ARG GIT_DELTA_VERSION=0.18.2
 # - git: version control
 # - jq: JSON processing (firewall script, onboarding patch)
 # - less: pager for git delta output
+# - openssh-client: provides ssh-keygen, needed for SSH-format commit signing
+#   (gpg.format=ssh + commit.gpgsign=true, copied in via VS Code's
+#   dev.containers.copyGitConfig); also restores ssh/ssh-add. git only
+#   *Recommends* it, so --no-install-recommends drops it unless listed here.
+#   Hard-depends on libfido2, so FIDO2 hardware keys (YubiKey sk-ssh-ed25519)
+#   sign too. Must be in base: the sandbox firewall blocks deb.debian.org, so
+#   it can't be added at runtime (same reasoning as chromium). See issue #110.
 # - sudo: privilege escalation for firewall setup
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -67,6 +74,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   git \
   jq \
   less \
+  openssh-client \
   sudo
 
 # npm global directory with proper permissions for node user
