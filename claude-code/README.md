@@ -48,13 +48,13 @@ The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd
 
 ### Default variant
 
-Copy the example files into your project's `.devcontainer/` directory and customize as needed. Docker Compose with `pull_policy: always` ensures "Rebuild Without Cache" always pulls the latest image. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${localWorkspaceFolderBasename}`, `${localEnv:...}`).
+Copy the example files into your project's `.devcontainer/` directory and customize as needed. A host-side `initializeCommand` in `devcontainer.json` pulls the prebuilt image before the container is built, so "Rebuild Without Cache" always layers on the latest image. All other config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${localWorkspaceFolderBasename}`, `${localEnv:...}`).
 
 **After copying:** replace `myproject` with your project name in `docker-compose.yml` (the `name:` field) and `devcontainer.json` (volume mount prefixes). This must match across both variants if using the sandbox.
 
 Copy these to your project's `.devcontainer/`:
 
-- [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference with `pull_policy: always`
+- [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, fish shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
 **Key settings included:** fish + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/fish history volume mounts, and `updateContentCommand` for mise/bun setup.
@@ -114,7 +114,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
-> **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same daily-rebuild + `pull_policy: always` channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
+> **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same daily-rebuild + `initializeCommand` image-pull channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/init-firewall.sh`
 
@@ -224,11 +224,11 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 ```
 .devcontainer/
 ├── devcontainer.json              ← default devcontainer
-├── docker-compose.yml             ← default compose (image + pull_policy)
+├── docker-compose.yml             ← default compose (image reference)
 ├── init-plugins.sh                ← Claude Code plugin setup (optional)
 └── claude-sandbox/
     ├── devcontainer.json          ← sandbox devcontainer
-    ├── docker-compose.yml         ← sandbox compose (image + pull_policy)
+    ├── docker-compose.yml         ← sandbox compose (image reference)
     ├── init-firewall.sh           ← firewall script (customize domain allowlist)
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
@@ -431,10 +431,9 @@ services:
     # image: ghcr.io/gatezh/devcontainers/claude-code:latest
     # With the local build:
     image: claude-code:local
-    # pull_policy no longer needed for local images
 ```
 
-Everything else in `devcontainer.json` (mounts, containerEnv, lifecycle commands, etc.) stays the same — the local image is identical to the pre-built one.
+Everything else in `devcontainer.json` (mounts, containerEnv, lifecycle commands, etc.) stays the same — the local image is identical to the pre-built one. The `initializeCommand` still points at the GHCR image, but `|| exit 0` means a failed pull won't block the open; you can remove it to skip the now-unnecessary pull.
 
 ### Extending the image for project-specific needs
 
