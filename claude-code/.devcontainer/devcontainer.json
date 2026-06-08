@@ -4,6 +4,12 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
+  // Pull the prebuilt image on the HOST before the build, so "Rebuild Without
+  // Cache" always layers on the freshest base. Replaces `pull_policy: always` in
+  // docker-compose.yml, which breaks on Linux/WSL2 when `updateRemoteUserUID`
+  // builds a local-only image (issue #109). `|| exit 0` keeps offline/outage opens
+  // working (valid in POSIX sh and Windows cmd.exe). Keep in sync with the compose image.
+  "initializeCommand": "docker pull ghcr.io/gatezh/devcontainers/claude-code:latest || exit 0",
   "init": true,
   "updateRemoteUserUID": true,
   "remoteUser": "node",
