@@ -11,10 +11,6 @@ on:
         description: 'New Hugo version (e.g., 0.155.3). Leave empty to keep current.'
         required: false
         type: string
-      ralphex_version:
-        description: 'Ralphex version / Docker image tag (e.g., 0.11.0). Leave empty to keep current.'
-        required: false
-        type: string
       update_only:
         description: 'Only update Dockerfile without building image'
         required: false
@@ -39,7 +35,6 @@ jobs:
       versions_updated: ${{ steps.update.outputs.updated }}
       bun_version: ${{ steps.update.outputs.bun_version }}
       hugo_version: ${{ steps.update.outputs.hugo_version }}
-      ralphex_version: ${{ steps.update.outputs.ralphex_version }}
 
     steps:
       - name: Checkout repository
@@ -52,49 +47,41 @@ jobs:
         env:
           INPUT_BUN_VERSION: ${{ inputs.bun_version }}
           INPUT_HUGO_VERSION: ${{ inputs.hugo_version }}
-          INPUT_RALPHEX_VERSION: ${{ inputs.ralphex_version }}
         run: |
           # Read current versions
           CURRENT_BUN=$(grep '^ARG BUN_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
           CURRENT_HUGO=$(grep '^ARG HUGO_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
-          CURRENT_RALPHEX=$(grep '^ARG RALPHEX_VERSION=' "${{ env.DOCKERFILE_PATH }}" | cut -d'=' -f2)
 
-          if [ -z "$CURRENT_BUN" ] || [ -z "$CURRENT_HUGO" ] || [ -z "$CURRENT_RALPHEX" ]; then
+          if [ -z "$CURRENT_BUN" ] || [ -z "$CURRENT_HUGO" ]; then
             echo "Error: Failed to extract current version(s) from Dockerfile"
             echo "  Bun: ${CURRENT_BUN:-<empty>}"
             echo "  Hugo: ${CURRENT_HUGO:-<empty>}"
-            echo "  Ralphex: ${CURRENT_RALPHEX:-<empty>}"
             exit 1
           fi
 
           echo "Current versions:"
           echo "  Bun: $CURRENT_BUN"
           echo "  Hugo: $CURRENT_HUGO"
-          echo "  Ralphex: $CURRENT_RALPHEX"
 
           # Use input values or fall back to current Dockerfile values
           NEW_BUN=${INPUT_BUN_VERSION:-$CURRENT_BUN}
           NEW_HUGO=${INPUT_HUGO_VERSION:-$CURRENT_HUGO}
-          NEW_RALPHEX=${INPUT_RALPHEX_VERSION:-$CURRENT_RALPHEX}
 
           echo ""
           echo "Target versions:"
           echo "  Bun: $NEW_BUN"
           echo "  Hugo: $NEW_HUGO"
-          echo "  Ralphex: $NEW_RALPHEX"
 
           # Update versions in Dockerfile (GNU sed syntax for Linux)
           # Use | as delimiter to avoid breakage if version strings contain /
           sed -i "s|^ARG BUN_VERSION=.*|ARG BUN_VERSION=$NEW_BUN|" "${{ env.DOCKERFILE_PATH }}"
           sed -i "s|^ARG HUGO_VERSION=.*|ARG HUGO_VERSION=$NEW_HUGO|" "${{ env.DOCKERFILE_PATH }}"
-          sed -i "s|^ARG RALPHEX_VERSION=.*|ARG RALPHEX_VERSION=$NEW_RALPHEX|" "${{ env.DOCKERFILE_PATH }}"
 
           # Verify changes
           echo ""
           echo "Updated versions in Dockerfile:"
           grep '^ARG BUN_VERSION=' "${{ env.DOCKERFILE_PATH }}"
           grep '^ARG HUGO_VERSION=' "${{ env.DOCKERFILE_PATH }}"
-          grep '^ARG RALPHEX_VERSION=' "${{ env.DOCKERFILE_PATH }}"
 
           # Check if anything changed
           if git diff --quiet "${{ env.DOCKERFILE_PATH }}"; then
@@ -108,7 +95,6 @@ jobs:
           {
             echo "bun_version=$NEW_BUN"
             echo "hugo_version=$NEW_HUGO"
-            echo "ralphex_version=$NEW_RALPHEX"
           } >> "$GITHUB_OUTPUT"
 
       - name: Commit and push changes
@@ -116,7 +102,6 @@ jobs:
         env:
           BUN_VERSION: ${{ steps.update.outputs.bun_version }}
           HUGO_VERSION: ${{ steps.update.outputs.hugo_version }}
-          RALPHEX_VERSION: ${{ steps.update.outputs.ralphex_version }}
           GITHUB_ACTOR: ${{ github.actor }}
           ACTOR_ID: ${{ github.actor_id }}
         run: |
@@ -127,7 +112,7 @@ jobs:
 
           # [skip ci] prevents build-ralphex-fe.yml from triggering a duplicate build
           git commit \
-            -m "chore(ralphex-fe): update versions to Bun ${BUN_VERSION}, Hugo ${HUGO_VERSION}, Ralphex ${RALPHEX_VERSION} [skip ci]" \
+            -m "chore(ralphex-fe): update versions to Bun ${BUN_VERSION}, Hugo ${HUGO_VERSION} [skip ci]" \
             -m "Updated via GitHub Actions workflow dispatch." \
             -m "Co-Authored-By: ${GITHUB_ACTOR} <${ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com>"
 
@@ -152,7 +137,7 @@ jobs:
       image-name: devcontainers/ralphex-fe
       context: ralphex-fe
       dockerfile: ralphex-fe/Dockerfile
-      version-tag: bun${{ needs.update-dockerfile.outputs.bun_version }}-hugo${{ needs.update-dockerfile.outputs.hugo_version }}-ralphex${{ needs.update-dockerfile.outputs.ralphex_version }}
+      version-tag: bun${{ needs.update-dockerfile.outputs.bun_version }}-hugo${{ needs.update-dockerfile.outputs.hugo_version }}
       verify-command: 'bun --version && hugo version'
       extra-verify-script: |
         chromium --no-sandbox --version && \
