@@ -111,9 +111,10 @@ ARG defaults are set to the **current** latest versions at implementation time
 (resolved with the same API/registry calls the Dockerfiles use today), so the
 first post-merge build produces an image equivalent to today's.
 
-### B. `renovate.json5` (new, repo root)
+### B. `.github/renovate.json5` (new)
 
-Uses JSON5 (comments allowed, matching the repo's JSONC style). Contents:
+Placed under `.github/` to keep the repo root clean (a standard Renovate config
+location). Uses JSON5 (comments allowed, matching the repo's JSONC style). Contents:
 
 - `extends: ["config:recommended"]`.
 - One **custom manager** (regex) matching the `# renovate:` annotation + the
@@ -227,7 +228,7 @@ Everything else in this design is code on this branch.
 
 - `claude-code/.devcontainer/Dockerfile` (pin 4 → 3 tools + agent-browser; comments)
 - `ralphex-fe/Dockerfile` (pin rtk/ralphex/claude-code; comments)
-- `renovate.json5` (new)
+- `.github/renovate.json5` (new)
 - `.github/workflows/ci.yml` (add claude-code, both targets; `target` matrix field)
 - `.github/workflows/build-claude-code.yml` (remove `schedule:`)
 - `.github/workflows/build-ralphex-fe.yml` (remove `schedule:`)
