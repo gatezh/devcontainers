@@ -629,20 +629,40 @@ Replace with:
 so it's baked into the image and flows through the same Renovate-triggered rebuild + `initializeCommand` image-pull channel as the rest of the image.
 ```
 
-- [ ] **Step 4: Confirm no stale wording remains**
+- [ ] **Step 4: Correct the stale comment in `.hadolint.yaml`**
+
+The `DL3016` ignore block still asserts the old daily-rebuild rationale. The ignore rule stays (other images may still install npm tools unpinned), but the comment is now inaccurate.
+
+Find:
+
+```yaml
+  # Dev tools (Claude Code) intentionally unpinned — images rebuild daily
+  # to always get latest. Pinning would defeat the purpose.
+  - DL3016 # pin versions in npm install
+```
+
+Replace with:
+
+```yaml
+  # Dev tools (e.g. Claude Code) are installed via npm; some images pin the
+  # version via a Renovate-managed ARG, others intentionally don't.
+  - DL3016 # pin versions in npm install
+```
+
+- [ ] **Step 5: Confirm no stale wording remains**
 
 Run:
 ```bash
 grep -rniE 'rebuilds? daily|daily (image )?rebuild' \
   README.md claude-code/README.md ralphex-fe/README.md \
-  claude-code/.devcontainer/Dockerfile ralphex-fe/Dockerfile
+  claude-code/.devcontainer/Dockerfile ralphex-fe/Dockerfile .hadolint.yaml
 ```
 Expected: no matches (exit 1).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add README.md claude-code/README.md
+git add README.md claude-code/README.md .hadolint.yaml
 git commit -m "docs: describe Renovate-driven rebuilds instead of daily cron"
 ```
 
