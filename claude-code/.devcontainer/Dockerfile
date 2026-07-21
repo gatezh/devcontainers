@@ -16,27 +16,29 @@
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 FROM alpine:3.21 AS rtk-download
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl
+# renovate: datasource=github-releases depName=rtk-ai/rtk
+ARG RTK_VERSION=0.43.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
       x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
       aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
     esac; \
-    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
-      | jq -r '.tag_name' | sed 's/^v//'); \
     curl -fsSL -o /tmp/rtk.tar.gz \
       "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
     tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 FROM alpine:3.21 AS ralphex-download
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl
+# renovate: datasource=github-releases depName=umputun/ralphex
+ARG RALPHEX_VERSION=1.6.0
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
-    RALPHEX_VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest \
-      | jq -r '.tag_name' | sed 's/^v//'); \
     curl -fsSL -o /tmp/ralphex.tar.gz \
       "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
@@ -141,7 +143,7 @@ ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
 # rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
 # Like Claude Code itself, these are dev infrastructure — not project dependencies.
-# Downloaded from GitHub Releases; refreshed on each daily image rebuild.
+# Downloaded from GitHub Releases at Renovate-pinned versions (see .github/renovate.json5).
 COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
@@ -175,12 +177,15 @@ USER node
 # npm is deprecated for interactive users but still supported "for compatibility
 # reasons" — Docker/CI parallel builds are exactly that reason.
 # See: https://code.claude.com/docs/en/getting-started#install-with-npm
-# Auto-updates don't matter here — the image rebuilds daily.
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5);
+# a bump PR triggers a rebuild.
 #
 # Install as the node user so all files land with node ownership from the start.
 # A later `chown -R` in another layer would duplicate every file (overlayfs
 # treats an ownership change as a rewrite), adding hundreds of MB.
-RUN npm install -g @anthropic-ai/claude-code
+# renovate: datasource=npm depName=@anthropic-ai/claude-code
+ARG CLAUDE_CODE_VERSION=2.1.216
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM base AS default
@@ -222,7 +227,9 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # agent-browser: headless browser automation for AI agents.
 # Uses the apt-installed chromium above (via AGENT_BROWSER_EXECUTABLE_PATH).
 # Installed as the node user (see claude-code install above for rationale).
-ARG AGENT_BROWSER_VERSION=latest
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
+# renovate: datasource=npm depName=agent-browser
+ARG AGENT_BROWSER_VERSION=0.32.3
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
