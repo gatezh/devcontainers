@@ -42,7 +42,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds daily at 5am MT (11:00 UTC) using native runners for both amd64 and arm64 (no QEMU emulation). Each rebuild picks up the latest Claude Code and agent-browser. Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -114,7 +114,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
-> **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same daily-rebuild + `initializeCommand` image-pull channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
+> **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same Renovate-triggered rebuild + `initializeCommand` image-pull channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/init-firewall.sh`
 

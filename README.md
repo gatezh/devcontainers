@@ -40,7 +40,7 @@ image-name/
 
 ### claude-code
 
-Shared devcontainer base image for Claude Code projects. Two variants from a single multi-stage Dockerfile: **default** (full dev environment with agent-browser) and **sandbox** (network-restricted with iptables firewall). Projects consume pre-built images and control tool versions via `.mise.toml`. Rebuilds daily to pick up latest Claude Code.
+Shared devcontainer base image for Claude Code projects. Two variants from a single multi-stage Dockerfile: **default** (full dev environment with agent-browser) and **sandbox** (network-restricted with iptables firewall). Projects consume pre-built images and control tool versions via `.mise.toml`. Rebuilds when its pinned tools receive a new release (managed by Renovate), not on a schedule.
 
 **Usage in other projects:**
 

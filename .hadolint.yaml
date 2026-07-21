@@ -23,8 +23,8 @@ ignored:
   # then drops to app user via gosu. No final USER directive is correct.
   - DL3002 # last USER should not be root
 
-  # Dev tools (Claude Code) intentionally unpinned — images rebuild daily
-  # to always get latest. Pinning would defeat the purpose.
+  # Dev tools (e.g. Claude Code) are installed via npm; some images pin the
+  # version via a Renovate-managed ARG, others intentionally don't.
   - DL3016 # pin versions in npm install
 
   # Pipes inside command substitutions (e.g. grep | cut) are intentional;
