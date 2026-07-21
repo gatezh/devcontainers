@@ -42,7 +42,7 @@ RUN set -eux; \
     fi; \
     tar -xzf hugo.tar.gz -C /usr/local/bin/ hugo
 
-# ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────────────────────────────
+# ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────
 # Pattern from: .devcontainer/Dockerfile
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 FROM alpine:3.21 AS rtk-download

@@ -2,6 +2,10 @@
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   extends: ['config:recommended'],
 
+  // Only the custom regex manager below — do NOT let the built-in dockerfile /
+  // github-actions managers open PRs for base images or action pins (out of scope).
+  enabledManagers: ['custom.regex'],
+
   // Pin + auto-update the four dev tools these images used to pull from
   // "latest" at build time. Replaces the old daily rebuild cron: a Renovate
   // bump PR (auto-merged on green CI) triggers the existing push-based image
@@ -21,7 +25,7 @@
       // rtk / ralphex release tags look like "v0.43.0"; strip the leading "v"
       // so the datasource version matches the bare ARG value ("0.43.0").
       matchDatasources: ['github-releases'],
-      extractVersion: '^v(?<version>.*)$',
+      extractVersion: '^v?(?<version>.+)$',
     },
     {
       // Group the four tools into one PR and auto-merge once CI passes.
