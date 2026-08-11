@@ -7,11 +7,6 @@ on:
     paths:
       - 'ralphex-fe/Dockerfile'
       - 'ralphex-fe/*.sh'
-  schedule:
-    # Daily rebuild to bake in the latest ralphex and rtk releases, which the
-    # Dockerfile pulls from GitHub "latest" at build time. Offset from
-    # build-claude-code.yml's 11:13 to avoid hitting the GitHub API at the same minute.
-    - cron: '41 11 * * *'
   workflow_dispatch:
 
 permissions:
