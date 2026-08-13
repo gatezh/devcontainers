@@ -7,8 +7,6 @@ on:
       - "claude-code/.devcontainer/Dockerfile"
       - "claude-code/.devcontainer/*.sh"
       - "claude-code/.devcontainer/managed-settings.json"
-  schedule:
-    - cron: '13 11 * * *'
   workflow_dispatch:
 
 permissions:

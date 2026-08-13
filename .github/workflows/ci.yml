@@ -24,6 +24,7 @@ jobs:
         dockerfile:
           - bun/.devcontainer/Dockerfile
           - claude-bun/.devcontainer/Dockerfile
+          - claude-code/.devcontainer/Dockerfile
           - hugo-bun/.devcontainer/Dockerfile
           - hugo-bun-node/.devcontainer/Dockerfile
           - ralphex-fe/Dockerfile
@@ -67,6 +68,8 @@ jobs:
               - 'bun/**'
             claude-bun:
               - 'claude-bun/**'
+            claude-code:
+              - 'claude-code/**'
             hugo-bun:
               - 'hugo-bun/**'
             hugo-bun-node:
@@ -79,6 +82,7 @@ jobs:
         env:
           CHANGED_BUN: ${{ steps.filter.outputs.bun }}
           CHANGED_CLAUDE_BUN: ${{ steps.filter.outputs.claude-bun }}
+          CHANGED_CLAUDE_CODE: ${{ steps.filter.outputs.claude-code }}
           CHANGED_HUGO_BUN: ${{ steps.filter.outputs.hugo-bun }}
           CHANGED_HUGO_BUN_NODE: ${{ steps.filter.outputs.hugo-bun-node }}
           CHANGED_RALPHEX: ${{ steps.filter.outputs.ralphex-fe }}
@@ -86,13 +90,14 @@ jobs:
           INCLUDES="[]"
 
           add_image() {
-            local image="$1" context="$2" dockerfile="$3" verify="$4"
+            local image="$1" context="$2" dockerfile="$3" verify="$4" target="${5:-}"
             INCLUDES=$(echo "$INCLUDES" | jq -c \
               --arg img "$image" \
               --arg ctx "$context" \
               --arg df "$dockerfile" \
               --arg v "$verify" \
-              '. + [{"image":$img,"context":$ctx,"dockerfile":$df,"verify":$v}]')
+              --arg tgt "$target" \
+              '. + [{"image":$img,"context":$ctx,"dockerfile":$df,"verify":$v,"target":$tgt}]')
           }
 
           if [ "$CHANGED_BUN" = "true" ]; then
@@ -107,6 +112,19 @@ jobs:
               "claude-bun/.devcontainer" \
               "claude-bun/.devcontainer/Dockerfile" \
               "bun --version"
+          fi
+
+          if [ "$CHANGED_CLAUDE_CODE" = "true" ]; then
+            add_image "claude-code" \
+              "claude-code/.devcontainer" \
+              "claude-code/.devcontainer/Dockerfile" \
+              "bun --version || true && claude --version && mise --version && fish --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium" \
+              "default"
+            add_image "claude-code-sandbox" \
+              "claude-code/.devcontainer" \
+              "claude-code/.devcontainer/Dockerfile" \
+              "claude --version && mise --version && fish --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp" \
+              "sandbox"
           fi
 
           if [ "$CHANGED_HUGO_BUN" = "true" ]; then
@@ -164,6 +182,7 @@ jobs:
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           platforms: linux/amd64
           load: true
           tags: ${{ matrix.image }}:test

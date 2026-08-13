@@ -44,30 +44,32 @@ RUN set -eux; \
 
 # ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────
 # Pattern from: .devcontainer/Dockerfile
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 FROM alpine:3.21 AS rtk-download
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl
+# renovate: datasource=github-releases depName=rtk-ai/rtk
+ARG RTK_VERSION=0.43.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
       x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
       aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
     esac; \
-    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
-      | jq -r '.tag_name' | sed 's/^v//'); \
     curl -fsSL -o /tmp/rtk.tar.gz \
       "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
     tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
 
-# ── Ralphex binary (latest from GitHub Releases) ────────────────────────────
+# ── Ralphex binary (pinned; Renovate-managed) ───────────────────────────────
 # Pattern from: claude-code/.devcontainer/Dockerfile
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 FROM alpine:3.21 AS ralphex-download
-RUN apk add --no-cache curl jq
+RUN apk add --no-cache curl
+# renovate: datasource=github-releases depName=umputun/ralphex
+ARG RALPHEX_VERSION=1.6.0
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
-    VERSION=$(curl -fsSL https://api.github.com/repos/umputun/ralphex/releases/latest \
-      | jq -r '.tag_name' | sed 's/^v//'); \
     curl -fsSL -o /tmp/ralphex.tar.gz \
-      "https://github.com/umputun/ralphex/releases/download/v${VERSION}/ralphex_${VERSION}_linux_${ARCH}.tar.gz"; \
+      "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -156,8 +158,11 @@ WORKDIR /workspace
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 # npm install (not native installer) to avoid rate-limiting in parallel Docker builds.
 # See: claude-code/.devcontainer/Dockerfile for rationale.
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
+# renovate: datasource=npm depName=@anthropic-ai/claude-code
+ARG CLAUDE_CODE_VERSION=2.1.216
 RUN --mount=type=cache,target=/root/.npm \
-    npm install -g @anthropic-ai/claude-code
+    npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ── Bun ──────────────────────────────────────────────────────────────────────
 ENV BUN_INSTALL=/usr/local/bun
