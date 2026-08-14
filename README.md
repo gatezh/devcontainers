@@ -161,6 +161,14 @@ that merge rebuilds the affected images. No upstream release means no PR and no 
 grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
 issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
 
+> **Setup requirement — the Mend app must be in Interactive mode.** Installing the Renovate app
+> with "All repositories" makes Mend default the repo to **Silent** mode (`dryRun=lookup`), where
+> it scans and shows updates in the [developer portal](https://developer.mend.io/) but opens no
+> PRs and creates no issues — not even the Dependency Dashboard, and not even a config-warning
+> issue. The symptom is a correct config that appears to do nothing. Fix it in the portal under
+> *Repo Engine Settings → Dependency Updates (Renovate)*; setting `mode` in `renovate.json5`
+> cannot override it, because `dryRun` takes precedence over `mode`.
+
 ### Via GitHub UI
 
 Some images have automated update workflows that allow you to update dependency versions without manually editing Dockerfiles:
