@@ -152,6 +152,15 @@ Images from this repository are built and published to GitHub Container Registry
 
 ## Updating Image Versions
 
+### Automatically, via Renovate
+
+The agent tooling in the `claude-code` and `ralphex-fe` images — `rtk`, `ralphex`, the Claude Code
+CLI, and `agent-browser` — is pinned as `ARG`s carrying `# renovate:` annotations. Renovate watches
+their releases and opens a single grouped bump PR when one ships; CI verifies it, it auto-merges, and
+that merge rebuilds the affected images. No upstream release means no PR and no rebuild. Scope and
+grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
+issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
+
 ### Via GitHub UI
 
 Some images have automated update workflows that allow you to update dependency versions without manually editing Dockerfiles:
