@@ -161,13 +161,22 @@ that merge rebuilds the affected images. No upstream release means no PR and no 
 grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
 issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
 
-> **Setup requirement — the Mend app must be in Interactive mode.** Installing the Renovate app
-> with "All repositories" makes Mend default the repo to **Silent** mode (`dryRun=lookup`), where
-> it scans and shows updates in the [developer portal](https://developer.mend.io/) but opens no
-> PRs and creates no issues — not even the Dependency Dashboard, and not even a config-warning
-> issue. The symptom is a correct config that appears to do nothing. Fix it in the portal under
-> *Repo Engine Settings → Dependency Updates (Renovate)*; setting `mode` in `renovate.json5`
-> cannot override it, because `dryRun` takes precedence over `mode`.
+> **Setup requirement — Mend portal toggles.** Installing the Renovate app with "All repositories"
+> makes Mend default the repo to **Silent mode** (`dryRun=lookup`), where it scans and shows updates
+> in the [developer portal](https://developer.mend.io/) but opens no PRs and creates no issues — not
+> even the Dependency Dashboard, and not even a config-warning issue. The symptom is a correct
+> config that appears to do nothing. In the portal, under *Repo Engine Settings → Dependency
+> Updates*, set:
+>
+> | Toggle | Value |
+> |--------|-------|
+> | Silent mode | **off** |
+> | Automated PRs | **on** |
+> | Require config file | on — with an all-repositories install, this is what keeps Renovate off repos that have no config |
+> | Create onboarding PRs | off — this repo already has a config, so no onboarding PR is needed |
+>
+> Setting `mode` in `renovate.json5` cannot substitute for the Silent-mode toggle, because `dryRun`
+> takes precedence over `mode` and is admin-level.
 
 ### Via GitHub UI
 
