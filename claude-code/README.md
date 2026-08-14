@@ -19,7 +19,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Shell | Fish, Starship, fzf | Built-in syntax highlighting, autosuggestions, completions |
 | Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
-| rtk, ralphex | Always-latest from GitHub Releases | Dev infrastructure (like Claude Code) — no version pinning needed in projects |
+| rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
 **Both targets:** system Chromium + `fonts-freefont-ttf` (used by Playwright and the Playwright MCP plugin via `/usr/bin/chromium`)
@@ -76,7 +76,7 @@ Projects consuming these images need the following files in their repository.
 
 ### Required: `.mise.toml` (project root)
 
-Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image at latest. See [`mise.toml`](mise.toml) for a template.
+Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image, which tracks their releases for you. See [`mise.toml`](mise.toml) for a template.
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
@@ -405,7 +405,13 @@ cat ~/.claude/plugins/cache/claude-plugins-official/playwright/*/.mcp.json
 | Arg | Default | Description |
 |-----|---------|-------------|
 | `GIT_DELTA_VERSION` | `0.18.2` | git-delta version |
-| `AGENT_BROWSER_VERSION` | `latest` | agent-browser version (default target only) |
+| `RTK_VERSION` | `0.43.0` | rtk version (Renovate-managed) |
+| `RALPHEX_VERSION` | `1.6.0` | ralphex version (Renovate-managed) |
+| `CLAUDE_CODE_VERSION` | `2.1.216` | Claude Code CLI version (Renovate-managed) |
+| `AGENT_BROWSER_VERSION` | `0.32.3` | agent-browser version, default target only (Renovate-managed) |
+
+The four Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback
 

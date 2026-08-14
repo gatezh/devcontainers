@@ -16,10 +16,14 @@ This is a standalone image, not a devcontainer.
 | Go | for Hugo Modules |
 | Python 3 | system |
 | Playwright + Chromium | native Debian |
-| Claude Code CLI | latest |
-| RTK | latest (GitHub Releases) |
-| Ralphex | latest (GitHub Releases) |
+| Claude Code CLI | 2.1.216 (pinned) |
+| RTK | 0.43.0 (pinned) |
+| Ralphex | 1.6.0 (pinned) |
 | Git, ripgrep, jq, curl, wget | system |
+
+The pinned versions live as `ARG`s in the Dockerfile and are kept current by Renovate — see
+[Automatic Rebuilds](#automatic-rebuilds). Bun and Hugo are bumped manually via the
+`update-and-build-ralphex-fe.yml` workflow.
 
 ## Usage
 
@@ -62,6 +66,18 @@ docker build -t ralphex-fe:test ralphex-fe/
 - `bun{VERSION}-hugo{VERSION}` — version-specific tag (e.g., `bun1.3.9-hugo0.156.0`)
 
 Note: this image deviates from the standalone convention of a single primary version tag because it bundles multiple independently-versioned tools.
+
+## Automatic Rebuilds
+
+The image rebuilds when one of its pinned tools — Claude Code, rtk, or ralphex — publishes a
+new release: Renovate opens a version-bump PR against the `ARG`s in the Dockerfile, CI verifies
+it, it auto-merges, and that merge triggers the build. No upstream release means no rebuild —
+there is no longer a daily cron. Manual rebuilds run from the "Run workflow" button on
+**Build ralphex-fe** in the Actions tab.
+
+Because the version tag is derived from Bun and Hugo only, an agent-tool bump refreshes
+`latest` and *overwrites* the existing `bun{VERSION}-hugo{VERSION}` tag rather than creating a
+new one. Pull `latest` if you want the current agent tools.
 
 ## Architecture / Provenance
 

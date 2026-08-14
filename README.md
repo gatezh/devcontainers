@@ -152,6 +152,32 @@ Images from this repository are built and published to GitHub Container Registry
 
 ## Updating Image Versions
 
+### Automatically, via Renovate
+
+The agent tooling in the `claude-code` and `ralphex-fe` images — `rtk`, `ralphex`, the Claude Code
+CLI, and `agent-browser` — is pinned as `ARG`s carrying `# renovate:` annotations. Renovate watches
+their releases and opens a single grouped bump PR when one ships; CI verifies it, it auto-merges, and
+that merge rebuilds the affected images. No upstream release means no PR and no rebuild. Scope and
+grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
+issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
+
+> **Setup requirement — Mend portal toggles.** Installing the Renovate app with "All repositories"
+> makes Mend default the repo to **Silent mode** (`dryRun=lookup`), where it scans and shows updates
+> in the [developer portal](https://developer.mend.io/) but opens no PRs and creates no issues — not
+> even the Dependency Dashboard, and not even a config-warning issue. The symptom is a correct
+> config that appears to do nothing. In the portal, under *Repo Engine Settings → Dependency
+> Updates*, set:
+>
+> | Toggle | Value |
+> |--------|-------|
+> | Silent mode | **off** |
+> | Automated PRs | **on** |
+> | Require config file | on — with an all-repositories install, this is what keeps Renovate off repos that have no config |
+> | Create onboarding PRs | off — this repo already has a config, so no onboarding PR is needed |
+>
+> Setting `mode` in `renovate.json5` cannot substitute for the Silent-mode toggle, because `dryRun`
+> takes precedence over `mode` and is admin-level.
+
 ### Via GitHub UI
 
 Some images have automated update workflows that allow you to update dependency versions without manually editing Dockerfiles:
