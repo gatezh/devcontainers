@@ -20,7 +20,7 @@
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=0.43.0
+ARG RTK_VERSION=0.48.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
@@ -36,7 +36,7 @@ RUN set -eux; \
 FROM alpine:3.21 AS ralphex-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=umputun/ralphex
-ARG RALPHEX_VERSION=1.6.0
+ARG RALPHEX_VERSION=1.6.1
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
     curl -fsSL -o /tmp/ralphex.tar.gz \
@@ -184,7 +184,7 @@ USER node
 # A later `chown -R` in another layer would duplicate every file (overlayfs
 # treats an ownership change as a rewrite), adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.216
+ARG CLAUDE_CODE_VERSION=2.1.263
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
@@ -229,7 +229,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # Installed as the node user (see claude-code install above for rationale).
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.32.3
+ARG AGENT_BROWSER_VERSION=0.36.0
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
