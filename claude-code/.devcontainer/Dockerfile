@@ -184,7 +184,7 @@ USER node
 # A later `chown -R` in another layer would duplicate every file (overlayfs
 # treats an ownership change as a rewrite), adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.269
+ARG CLAUDE_CODE_VERSION=2.1.270
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
