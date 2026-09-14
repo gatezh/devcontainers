@@ -20,7 +20,7 @@
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=0.48.0
+ARG RTK_VERSION=0.49.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
