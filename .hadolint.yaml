@@ -15,9 +15,6 @@ ignored:
   # and curl -f already fails on HTTP errors.
   - DL4006 # set SHELL option -o pipefail before RUN with pipe
 
-  # SNIPPET variable in devcontainer-claude-bun follows the official
-  # Anthropic Claude Code devcontainer pattern (anthropics/claude-code).
-  - SC2034 # variable appears unused
 
   # ralphex-fe entrypoint runs as root to handle APP_UID remapping,
   # then drops to app user via gosu. No final USER directive is correct.

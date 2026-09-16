@@ -110,7 +110,7 @@ jobs:
             add_image "claude-bun" \
               "claude-bun/.devcontainer" \
               "claude-bun/.devcontainer/Dockerfile" \
-              "bun --version && gh --version"
+              "bun --version && gh --version && zsh --version"
           fi
 
           if [ "$CHANGED_CLAUDE_CODE" = "true" ]; then

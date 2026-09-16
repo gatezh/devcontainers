@@ -6,6 +6,11 @@
 
 **Architecture:** Multi-stage Dockerfile following `claude-code/.devcontainer/Dockerfile` pattern: shared `base` stage with all common tooling, then `default` (passwordless sudo) and `sandbox` (firewall packages + restricted sudo) targets. rtk and ralphex fetch latest release at build time. git-delta is pinned (v0.19.0 dropped arm64 .deb and changed naming).
 
+> **Partly superseded.** Fish and Starship were replaced by zsh + oh-my-zsh +
+> powerlevel10k, and git-delta was removed from every image. The Dockerfile
+> excerpts below still show the original fish/starship blocks. See
+> `.devcontainer/Dockerfile` for the current shape.
+
 **Tech Stack:** Docker multi-stage builds, Node 24 LTS (trixie-slim), Fish shell + Starship prompt, iptables (sandbox), Claude Code plugins
 
 ---

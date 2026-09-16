@@ -98,6 +98,7 @@ jobs:
             hugo version &&
             python3 --version &&
             go version &&
+            docker --version &&
             node --version &&
             /srv/ralphex --version &&
             claude --version &&

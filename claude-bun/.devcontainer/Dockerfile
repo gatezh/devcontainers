@@ -35,9 +35,10 @@ RUN mkdir -p /usr/local/share/bun-global && \
 
 ARG USERNAME=bun
 
-# Persist bash history
-RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-  && mkdir /commandhistory \
+# Shared history volume mount point. Despite the .bash_history name — kept so
+# existing /commandhistory volumes don't lose their history — zsh is what writes
+# here, via HISTFILE below. bash history is not persisted in this image.
+RUN mkdir /commandhistory \
   && touch /commandhistory/.bash_history \
   && chown -R $USERNAME /commandhistory
 
@@ -68,10 +69,25 @@ ENV HOME=/home/bun
 ENV BUN_INSTALL=/home/bun/.bun
 ENV PATH="$BUN_INSTALL/bin:$PATH"
 
-# Set the default shell to zsh rather than sh
-ENV SHELL=/bin/zsh
+# Set the default shell to zsh rather than sh (/usr/bin/zsh, matching the other
+# images; /bin/zsh is the same binary via usrmerge)
+ENV SHELL=/usr/bin/zsh
 
-# Default powerline10k theme
+# zsh + oh-my-zsh + powerlevel10k.
+#
+# Supply chain: ZSH_IN_DOCKER_VERSION pins only this ~190-line wrapper. The
+# wrapper then curls oh-my-zsh's install.sh from master and clones powerlevel10k
+# at HEAD -- both unpinned, both executed at build time, and its inner curl has
+# no -f, so an upstream 5xx body would be run as shell. Accepted deliberately
+# for shell tooling; pin both refs to commit SHAs if that trade stops being
+# acceptable.
+#
+# The installer's .zshrc template hardcodes en_US.UTF-8 and TERM=xterm. With -x
+# we skip its locale-gen, and the slim base ships only C/C.utf8/POSIX — so the
+# en_US export leaves glibc in the C locale and mangles multibyte I/O. TERM=xterm
+# likewise clobbers the xterm-256color the terminal provides, dropping colour
+# support to 8. Rewrite both: C.UTF-8 is a real UTF-8 locale needing no extra
+# package, and dropping the TERM line lets the terminal decide.
 RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
       "https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh" \
   && sh /tmp/zsh-in-docker.sh \
@@ -79,7 +95,13 @@ RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
   -p fzf \
   -a "export HISTFILE=/commandhistory/.bash_history" \
   -x \
-  && rm /tmp/zsh-in-docker.sh
+  && rm /tmp/zsh-in-docker.sh \
+  && sed -i \
+       -e "s|^export LANG=.*|export LANG='C.UTF-8'|" \
+       -e "s|^export LC_ALL=.*|export LC_ALL='C.UTF-8'|" \
+       -e "/^export LANGUAGE=/d" \
+       -e "/^export TERM=xterm$/d" \
+       "$HOME/.zshrc"
 
 # Install Claude Code globally using bun (run as root to avoid EACCES linking)
 USER root

@@ -18,7 +18,8 @@
   "mounts": [
     // Keep node_modules out of a host machine
     "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
-    // Persist bash history between container rebuilds
+    // Persist shell history between container rebuilds. zsh writes here
+    // (HISTFILE in the Dockerfile); the volume name is legacy.
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
     // Persist Claude Code configuration between container rebuilds
     "source=claude-code-config-${devcontainerId},target=/home/bun/.claude,type=volume"
