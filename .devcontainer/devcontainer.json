@@ -27,9 +27,9 @@
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
-          "fish": { "path": "fish" },
+          "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
         // Suppress extension recommendation prompts
@@ -58,8 +58,8 @@
   "mounts": [
     // Persist Claude Code configuration between container rebuilds
     "source=devcontainers-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    // Persist fish shell history between container rebuilds
-    "source=devcontainers-fish-data-${devcontainerId},target=/home/node/.local/share/fish,type=volume"
+    // Persist zsh history between container rebuilds
+    "source=devcontainers-zsh-history-${devcontainerId},target=/commandhistory,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
@@ -71,6 +71,6 @@
   // VS Code installs extensions, so claude commands race with the
   // Claude Code extension's OAuth flow and can corrupt auth state.
   // Run .devcontainer/init-plugins.sh manually after first login.
-  "postCreateCommand": "sudo chown -R node /home/node/.claude /home/node/.local/share/fish",
+  "postCreateCommand": "sudo chown -R node /home/node/.claude /commandhistory",
   "waitFor": "postCreateCommand"
 }

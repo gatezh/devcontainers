@@ -1,6 +1,8 @@
 # renovate: datasource=npm depName=bun
 ARG BUN_VERSION=1.4.2
+# renovate: datasource=github-tags depName=docker/cli
 ARG DOCKER_VERSION=29.3.0
+# renovate: datasource=golang-version depName=go
 ARG GO_VERSION=1.24.4
 # renovate: datasource=github-releases depName=gohugoio/hugo
 ARG HUGO_VERSION=0.166.0

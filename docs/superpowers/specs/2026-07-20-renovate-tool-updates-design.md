@@ -29,6 +29,12 @@ version** — no more time-based rebuilds.
 
 ## Non-goals
 
+> **Partly superseded.** `Go`, `Docker` and the `hugo-bun-node` musl `Node`
+> build were later brought under Renovate, alongside `gh` and `zsh-in-docker`;
+> `git-delta` was removed from every image. `Bun`, `Hugo` and base images remain
+> out of scope as written below. See `.github/renovate.json5` for the current
+> package list.
+
 - Managing `Bun` / `Hugo` / `Go` / `Docker` / `git-delta` / base images with
   Renovate (explicitly out of scope — they stay as they are today, including the
   manual `update-and-build-ralphex-fe.yml` version-bump path).

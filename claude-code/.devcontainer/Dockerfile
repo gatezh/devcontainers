@@ -46,17 +46,19 @@ RUN set -eux; \
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
 
-ARG GIT_DELTA_VERSION=0.18.2
+# renovate: datasource=github-releases depName=cli/cli
+ARG GH_VERSION=2.100.0
+# renovate: datasource=github-releases depName=deluan/zsh-in-docker
+ARG ZSH_IN_DOCKER_VERSION=1.2.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
 # - curl: downloading tools and installers
-# - fish: interactive shell (built-in syntax highlighting, autosuggestions, completions)
-# - fzf: fuzzy finder (fish integration via fzf.fish or built-in)
-# - gh: GitHub CLI
+# - fzf: fuzzy finder (zsh key-bindings + completion sourced into .zshrc)
+# - gh: GitHub CLI (installed from upstream .deb below, not apt)
 # - git: version control
 # - jq: JSON processing (firewall script, onboarding patch)
-# - less: pager for git delta output
+# - less: pager for git and other CLI output
 # - openssh-client: provides ssh-keygen, needed for SSH-format commit signing
 #   (gpg.format=ssh + commit.gpgsign=true, copied in via VS Code's
 #   dev.containers.copyGitConfig); also restores ssh/ssh-add. git only
@@ -70,14 +72,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
-  fish \
   fzf \
-  gh \
   git \
   jq \
   less \
   openssh-client \
-  sudo
+  sudo \
+  zsh
 
 # npm global directory with proper permissions for node user
 # Pre-create /lib to prevent "ENOENT" errors during npx commands
@@ -98,45 +99,56 @@ RUN mkdir -p /workspace/node_modules \
   /workspace/packages/shared/node_modules \
   /workspace/packages/database/node_modules \
   /home/node/.claude \
-  /home/node/.local/share/fish \
-  && chown -R node:node /workspace /home/node/.claude /home/node/.local
+  /home/node/.local \
+  /commandhistory \
+  && chown -R node:node /workspace /home/node/.claude /home/node/.local /commandhistory
 
 WORKDIR /workspace
 
-# Install git-delta (better git diffs)
+# gh (GitHub CLI) — installed from the upstream .deb, not apt: Debian trixie
+# freezes gh at 2.46.0 (Apr 2024). Version kept current by Renovate.
+# Must stay AFTER the apt block: the .deb depends on git, and dpkg -i does not
+# resolve dependencies — it fails loudly ("dependency problems") if git is absent.
 RUN ARCH=$(dpkg --print-architecture) \
-  && curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-    "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-  && dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-  && rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+  && curl -fsSL -o "gh_${GH_VERSION}_linux_${ARCH}.deb" \
+    "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" \
+  && dpkg -i "gh_${GH_VERSION}_linux_${ARCH}.deb" \
+  && rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
 
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
-ENV SHELL=/usr/bin/fish
+ENV SHELL=/usr/bin/zsh
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
 
-# ── Starship + Mise (install as root, configure as node) ───────────────────────
+# ── Mise (install as root) ────────────────────────────────────────────────────
+# Mise is installed as a tool manager — projects run `mise install` at container
+# creation to install their specific tool versions from .mise.toml.
+# Node is NOT installed via mise — it's provided by the base image; mise shims
+# would shadow the base image's npx, breaking global npm-installed CLIs.
 USER root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
 RUN curl https://mise.run | sh \
   && cp /root/.local/bin/mise /usr/local/bin/mise \
   && rm -rf /root/.local
 SHELL ["/bin/sh", "-c"]
 
-# Configure starship and fish shell.
-# Mise is installed as a tool manager — projects run `mise install` at container
-# creation to install their specific tool versions from .mise.toml.
-# Node is NOT installed via mise — it's provided by the base image; mise shims
-# would shadow the base image's npx, breaking global npm-installed CLIs.
+# ── zsh + oh-my-zsh + powerlevel10k ──────────────────────────────────────────
+# -x skips the script's own dependency install: zsh already comes from the apt
+# block above with --no-install-recommends, which also avoids dragging in
+# locales-all. Runs as node so oh-my-zsh lands in /home/node.
 USER node
-RUN mkdir -p /home/node/.config/fish \
-  && starship preset no-runtime-versions -o /home/node/.config/starship.toml \
-  && printf '%s\n' 'set -g fish_greeting' 'starship init fish | source' > /home/node/.config/fish/config.fish
+RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
+      "https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh" \
+  && sh /tmp/zsh-in-docker.sh \
+  -p git \
+  -p fzf \
+  -a "export HISTFILE=/commandhistory/.zsh_history" \
+  -x \
+  && rm /tmp/zsh-in-docker.sh
 ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 

@@ -41,5 +41,5 @@ jobs:
       context: claude-bun/.devcontainer
       dockerfile: claude-bun/.devcontainer/Dockerfile
       version-tag: ${{ needs.prepare.outputs.version-tag }}
-      verify-command: 'bun --version'
+      verify-command: 'bun --version && gh --version && zsh --version'
     secrets: inherit

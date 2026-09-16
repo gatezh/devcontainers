@@ -16,8 +16,8 @@ Projects consume these pre-built images and control their own tool versions via 
 | Layer | What | Why |
 |-------|------|-----|
 | OS | `node:24-trixie-slim` + system packages | Node is needed during the build (Playwright, npm globals) |
-| Shell | Fish, Starship, fzf | Built-in syntax highlighting, autosuggestions, completions |
-| Tools | git-delta, gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
+| Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
+| Tools | gh CLI, jq, nano, vim, wget, unzip, less, man-db, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
@@ -55,9 +55,9 @@ Copy the example files into your project's `.devcontainer/` directory and custom
 Copy these to your project's `.devcontainer/`:
 
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
-- [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, fish shell, OXC formatter, node_modules volume isolation, and lifecycle commands
+- [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** fish + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/fish history volume mounts, and `updateContentCommand` for mise/bun setup.
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history volume mounts, and `updateContentCommand` for mise/bun setup.
 
 ### Sandbox variant
 
@@ -68,7 +68,7 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 
 **Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and fish history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and zsh history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -404,13 +404,14 @@ cat ~/.claude/plugins/cache/claude-plugins-official/playwright/*/.mcp.json
 
 | Arg | Default | Description |
 |-----|---------|-------------|
-| `GIT_DELTA_VERSION` | `0.18.2` | git-delta version |
-| `RTK_VERSION` | `0.43.0` | rtk version (Renovate-managed) |
-| `RALPHEX_VERSION` | `1.6.0` | ralphex version (Renovate-managed) |
-| `CLAUDE_CODE_VERSION` | `2.1.216` | Claude Code CLI version (Renovate-managed) |
-| `AGENT_BROWSER_VERSION` | `0.32.3` | agent-browser version, default target only (Renovate-managed) |
+| `RTK_VERSION` | `0.49.0` | rtk version (Renovate-managed) |
+| `RALPHEX_VERSION` | `1.7.0` | ralphex version (Renovate-managed) |
+| `CLAUDE_CODE_VERSION` | `2.1.273` | Claude Code CLI version (Renovate-managed) |
+| `AGENT_BROWSER_VERSION` | `0.37.1` | agent-browser version, default target only (Renovate-managed) |
+| `GH_VERSION` | `2.100.0` | GitHub CLI version — installed from the upstream `.deb`, not apt (Renovate-managed) |
+| `ZSH_IN_DOCKER_VERSION` | `1.2.0` | zsh + oh-my-zsh + powerlevel10k installer (Renovate-managed) |
 
-The four Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The six Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback

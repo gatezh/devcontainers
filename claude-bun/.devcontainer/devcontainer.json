@@ -7,9 +7,7 @@
     "args": {
       "TZ": "${localEnv:TZ:America/Edmonton}",
       "BUN_VERSION": "1.3.5",
-      "CLAUDE_CODE_VERSION": "latest",
-      "GIT_DELTA_VERSION": "0.18.2",
-      "ZSH_IN_DOCKER_VERSION": "1.2.0"
+      "CLAUDE_CODE_VERSION": "latest"
     }
   },
   // Required for firewall configuration

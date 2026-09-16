@@ -6,8 +6,10 @@ ARG TZ=UTC
 ENV TZ="$TZ"
 
 ARG CLAUDE_CODE_VERSION=latest
-ARG GIT_DELTA_VERSION=0.18.2
+# renovate: datasource=github-releases depName=deluan/zsh-in-docker
 ARG ZSH_IN_DOCKER_VERSION=1.2.0
+# renovate: datasource=github-releases depName=cli/cli
+ARG GH_VERSION=2.100.0
 
 # Install basic development tools and iptables/ipset
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -20,7 +22,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   sudo \
   fzf \
   zsh \
-  gh \
   iptables \
   ipset \
   iproute2 \
@@ -49,11 +50,15 @@ RUN mkdir -p /workspace /home/bun/.claude /home/bun/.bun && \
 
 WORKDIR /workspace
 
+# gh (GitHub CLI) — installed from the upstream .deb, not apt: Debian trixie
+# freezes gh at 2.46.0 (Apr 2024). Version kept current by Renovate.
+# Must stay AFTER the apt block: the .deb depends on git, and dpkg -i does not
+# resolve dependencies — it fails loudly ("dependency problems") if git is absent.
 RUN ARCH=$(dpkg --print-architecture) && \
-  curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-    "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-  dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" && \
-  rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+  curl -fsSL -o "gh_${GH_VERSION}_linux_${ARCH}.deb" \
+    "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" && \
+  dpkg -i "gh_${GH_VERSION}_linux_${ARCH}.deb" && \
+  rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
 
 # Set up non-root user
 USER bun
@@ -67,13 +72,14 @@ ENV PATH="$BUN_INSTALL/bin:$PATH"
 ENV SHELL=/bin/zsh
 
 # Default powerline10k theme
-RUN sh -c "$(curl -fsSL https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh)" -- \
+RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
+      "https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh" \
+  && sh /tmp/zsh-in-docker.sh \
   -p git \
   -p fzf \
-  -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
-  -a "source /usr/share/doc/fzf/examples/completion.zsh" \
-  -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
-  -x
+  -a "export HISTFILE=/commandhistory/.bash_history" \
+  -x \
+  && rm /tmp/zsh-in-docker.sh
 
 # Install Claude Code globally using bun (run as root to avoid EACCES linking)
 USER root
