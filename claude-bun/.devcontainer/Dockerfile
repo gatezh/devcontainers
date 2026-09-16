@@ -72,6 +72,8 @@ ENV PATH="$BUN_INSTALL/bin:$PATH"
 # Set the default shell to zsh rather than sh (/usr/bin/zsh, matching the other
 # images; /bin/zsh is the same binary via usrmerge)
 ENV SHELL=/usr/bin/zsh
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 # zsh + oh-my-zsh + powerlevel10k.
 #
@@ -82,12 +84,19 @@ ENV SHELL=/usr/bin/zsh
 # for shell tooling; pin both refs to commit SHAs if that trade stops being
 # acceptable.
 #
-# The installer's .zshrc template hardcodes en_US.UTF-8 and TERM=xterm. With -x
-# we skip its locale-gen, and the slim base ships only C/C.utf8/POSIX — so the
-# en_US export leaves glibc in the C locale and mangles multibyte I/O. TERM=xterm
-# likewise clobbers the xterm-256color the terminal provides, dropping colour
-# support to 8. Rewrite both: C.UTF-8 is a real UTF-8 locale needing no extra
-# package, and dropping the TERM line lets the terminal decide.
+# The template opens with a preamble of env exports we don't want: en_US.UTF-8
+# (which -x never generates — the slim bases carry only C/C.utf8/POSIX, so glibc
+# falls back to C and mangles multibyte I/O) and a TERM that overrides whatever
+# the terminal provides, cutting colour support from 256 to 8.
+#
+# Delete the whole preamble rather than matching individual lines. v1.2.0 wrote
+# `export TERM=xterm`; v1.2.1 writes `[ -z "$TERM" ] && export TERM=xterm` inside
+# an UNQUOTED heredoc, so $TERM expands at build time (unset) to `[ -z "" ] && ...`
+# — always true, and invisible to a pattern anchored on the old text. Cutting to
+# the `##### Zsh/Oh-my-Zsh Configuration` marker is stable across both. The grep
+# guard matters: without it a marker rename would make sed delete the whole file.
+# Locale now comes from ENV above, which also covers sh/bash, lifecycle commands
+# and the VS Code server — not just interactive zsh.
 RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
       "https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh" \
   && sh /tmp/zsh-in-docker.sh \
@@ -96,12 +105,8 @@ RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
   -a "export HISTFILE=/commandhistory/.bash_history" \
   -x \
   && rm /tmp/zsh-in-docker.sh \
-  && sed -i \
-       -e "s|^export LANG=.*|export LANG='C.UTF-8'|" \
-       -e "s|^export LC_ALL=.*|export LC_ALL='C.UTF-8'|" \
-       -e "/^export LANGUAGE=/d" \
-       -e "/^export TERM=xterm$/d" \
-       "$HOME/.zshrc"
+  && grep -q '^##### Zsh/Oh-my-Zsh Configuration' "$HOME/.zshrc" \
+  && sed -i '/^##### Zsh\/Oh-my-Zsh Configuration/,$!d' "$HOME/.zshrc"
 
 # Install Claude Code globally using bun (run as root to avoid EACCES linking)
 USER root

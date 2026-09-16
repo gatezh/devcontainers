@@ -110,19 +110,19 @@ jobs:
             add_image "claude-bun" \
               "claude-bun/.devcontainer" \
               "claude-bun/.devcontainer/Dockerfile" \
-              "bun --version && gh --version && zsh --version"
+              "bun --version && gh --version && zsh --version && zsh -ic 'printenv LC_ALL' | grep -qx C.UTF-8 && TERM=zsh-verify-sentinel zsh -ic 'printenv TERM' | grep -qx zsh-verify-sentinel"
           fi
 
           if [ "$CHANGED_CLAUDE_CODE" = "true" ]; then
             add_image "claude-code" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "bun --version || true && claude --version && mise --version && zsh --version && gh --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium" \
+              "bun --version || true && claude --version && mise --version && zsh --version && gh --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && zsh -ic 'printenv LC_ALL' | grep -qx C.UTF-8 && TERM=zsh-verify-sentinel zsh -ic 'printenv TERM' | grep -qx zsh-verify-sentinel" \
               "default"
             add_image "claude-code-sandbox" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "claude --version && mise --version && zsh --version && gh --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp" \
+              "claude --version && mise --version && zsh --version && gh --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && zsh -ic 'printenv LC_ALL' | grep -qx C.UTF-8 && TERM=zsh-verify-sentinel zsh -ic 'printenv TERM' | grep -qx zsh-verify-sentinel" \
               "sandbox"
           fi
 

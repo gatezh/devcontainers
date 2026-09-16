@@ -41,5 +41,5 @@ jobs:
       context: claude-bun/.devcontainer
       dockerfile: claude-bun/.devcontainer/Dockerfile
       version-tag: ${{ needs.prepare.outputs.version-tag }}
-      verify-command: 'bun --version && gh --version && zsh --version'
+      verify-command: "bun --version && gh --version && zsh --version && zsh -ic 'printenv LC_ALL' | grep -qx C.UTF-8 && TERM=zsh-verify-sentinel zsh -ic 'printenv TERM' | grep -qx zsh-verify-sentinel"
     secrets: inherit

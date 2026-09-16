@@ -23,8 +23,8 @@
   packageRules: [
     {
       // Most GitHub tags carry a leading "v" ("v0.48.0", "v29.8.1"); strip it so the
-      // datasource version matches the bare ARG value ("0.48.0"). Harmless for the
-      // ones that don't (dandavison/delta-style bare tags pass through unchanged).
+      // datasource version matches the bare ARG value ("0.48.0"). A tag with no "v"
+      // passes through unchanged, so this is safe to apply datasource-wide.
       matchDatasources: ['github-releases', 'github-tags'],
       extractVersion: '^v?(?<version>.+)$',
     },

@@ -7,7 +7,7 @@ Claude Code development container based on the [official Anthropic devcontainer 
 - **Bun runtime** (slim Debian-based image) for fast JavaScript/TypeScript execution
 - **Claude Code CLI** pre-installed globally via `bun add -g`
 - **Security by design** with custom firewall restricting network access to necessary services only
-- **Developer-friendly tools**: git, ZSH with Powerlevel10k theme, fzf, vim, nano
+- **Developer-friendly tools**: git, gh CLI, ZSH with oh-my-zsh + Powerlevel10k, fzf, jq
 - **VS Code integration** with pre-configured extensions (Claude Code, Bun, Biome, Tailwind CSS)
 - **Session persistence** for command history and Claude configuration between restarts
 - **Multi-platform support** (linux/amd64, linux/arm64)
