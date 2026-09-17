@@ -409,9 +409,10 @@ cat ~/.claude/plugins/cache/claude-plugins-official/playwright/*/.mcp.json
 | `CLAUDE_CODE_VERSION` | `2.1.273` | Claude Code CLI version (Renovate-managed) |
 | `AGENT_BROWSER_VERSION` | `0.37.1` | agent-browser version, default target only (Renovate-managed) |
 | `GH_VERSION` | `2.100.0` | GitHub CLI version — installed from the upstream `.deb`, not apt (Renovate-managed) |
-| `ZSH_IN_DOCKER_VERSION` | `1.2.0` | zsh + oh-my-zsh + powerlevel10k installer (Renovate-managed) |
+| `OH_MY_ZSH_REF` | commit SHA | oh-my-zsh, pinned by commit — **not** Renovate-managed, bump deliberately |
+| `POWERLEVEL10K_REF` | commit SHA | powerlevel10k, pinned by commit — **not** Renovate-managed, bump deliberately |
 
-The six Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The five Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback

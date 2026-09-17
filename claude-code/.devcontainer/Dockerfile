@@ -17,6 +17,23 @@
 
 # ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
+# ── oh-my-zsh + powerlevel10k ─────────────────────────────────
+# Pinned to commit SHAs and fetched as tarballs. Neither project tags usefully --
+# oh-my-zsh has no tags at all, and powerlevel10k's last release predates its
+# current master by years -- so a SHA is the only real pin. Bump deliberately:
+# auto-adopting upstream shell-framework changes is what repeatedly broke this
+# image, and a prompt theme does not need a 3-day release cadence.
+FROM alpine:3.21 AS ohmyzsh-download
+RUN apk add --no-cache curl tar
+ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
+ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
+RUN set -eux; \
+    mkdir -p /omz/custom/themes/powerlevel10k; \
+    curl -fsSL "https://github.com/ohmyzsh/ohmyzsh/archive/${OH_MY_ZSH_REF}.tar.gz" \
+      | tar -xz -C /omz --strip-components=1; \
+    curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
+      | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
+
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
@@ -48,8 +65,6 @@ FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
 ARG GH_VERSION=2.100.0
-# renovate: datasource=github-releases depName=deluan/zsh-in-docker
-ARG ZSH_IN_DOCKER_VERSION=1.2.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -121,8 +136,12 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/usr/bin/zsh
+# Only LANG, and only C.UTF-8 — what the official images do (ruby sets exactly
+# this; node/debian/python set nothing). LC_ALL would override every LC_* category
+# and silently defeat a consuming project's containerEnv. TERM is deliberately
+# unset: no official image sets it, an image ENV beats the tty value `docker exec -t`
+# supplies, and tput/clear failing without a terminal is correct behaviour.
 ENV LANG=C.UTF-8
-ENV LC_ALL=C.UTF-8
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
 
@@ -139,40 +158,33 @@ RUN curl https://mise.run | sh \
 SHELL ["/bin/sh", "-c"]
 
 # ── zsh + oh-my-zsh + powerlevel10k ──────────────────────────────────────────
-# Supply chain: ZSH_IN_DOCKER_VERSION pins only this ~190-line wrapper. The
-# wrapper then curls oh-my-zsh's install.sh from master and clones powerlevel10k
-# at HEAD -- both unpinned, both executed at build time, and its inner curl has
-# no -f, so an upstream 5xx body would be run as shell. These bumps auto-merge
-# and publish to ghcr.io unreviewed. Accepted deliberately for shell tooling;
-# pin both refs to commit SHAs if that trade stops being acceptable.
-#
-# -x skips the script's own dependency install: zsh already comes from the apt
-# block above with --no-install-recommends, which also avoids dragging in
-# locales-all. Runs as node so oh-my-zsh lands in /home/node.
+# Written as node: $HOME during RUN follows USER, so this must not run as root.
 USER node
-# The template opens with a preamble of env exports we don't want: en_US.UTF-8
-# (which -x never generates — the slim bases carry only C/C.utf8/POSIX, so glibc
-# falls back to C and mangles multibyte I/O) and a TERM that overrides whatever
-# the terminal provides, cutting colour support from 256 to 8.
-#
-# Delete the whole preamble rather than matching individual lines. v1.2.0 wrote
-# `export TERM=xterm`; v1.2.1 writes `[ -z "$TERM" ] && export TERM=xterm` inside
-# an UNQUOTED heredoc, so $TERM expands at build time (unset) to `[ -z "" ] && ...`
-# — always true, and invisible to a pattern anchored on the old text. Cutting to
-# the `##### Zsh/Oh-my-Zsh Configuration` marker is stable across both. The grep
-# guard matters: without it a marker rename would make sed delete the whole file.
-# Locale now comes from ENV above, which also covers sh/bash, lifecycle commands
-# and the VS Code server — not just interactive zsh.
-RUN curl -fsSL -o /tmp/zsh-in-docker.sh \
-      "https://github.com/deluan/zsh-in-docker/releases/download/v${ZSH_IN_DOCKER_VERSION}/zsh-in-docker.sh" \
-  && sh /tmp/zsh-in-docker.sh \
-  -p git \
-  -p fzf \
-  -a "export HISTFILE=/commandhistory/.zsh_history" \
-  -x \
-  && rm /tmp/zsh-in-docker.sh \
-  && grep -q '^##### Zsh/Oh-my-Zsh Configuration' "$HOME/.zshrc" \
-  && sed -i '/^##### Zsh\/Oh-my-Zsh Configuration/,$!d' "$HOME/.zshrc"
+# oh-my-zsh tree is COPYed from the parallel download stage above, so the final
+# image needs no git or curl for it and nothing is fetched at build time here.
+COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
+
+# .zshrc is written here rather than by an installer, so nothing upstream can
+# inject env overrides (locale/TERM) that then have to be patched back out.
+# The wizard flag matters: without a POWERLEVEL9K_* config powerlevel10k starts
+# its interactive configurator on first shell, which blocks a container.
+# $HOME and $ZSH are single-quoted on purpose: they must reach .zshrc
+# unexpanded so zsh resolves them at runtime, not at build time.
+# hadolint ignore=SC2016
+RUN printf '%s\n' \
+      'export ZSH="$HOME/.oh-my-zsh"' \
+      'ZSH_THEME="powerlevel10k/powerlevel10k"' \
+      'plugins=(git fzf)' \
+      "zstyle ':omz:update' mode disabled" \
+      'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' \
+      'export HISTFILE=/commandhistory/.zsh_history' \
+      'source $ZSH/oh-my-zsh.sh' \
+      'POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_last' \
+      'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs status)' \
+      'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=()' \
+      'POWERLEVEL9K_STATUS_OK=false' \
+      'POWERLEVEL9K_STATUS_CROSS=true' \
+      > "$HOME/.zshrc"
 ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 

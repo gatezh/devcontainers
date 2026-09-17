@@ -30,7 +30,8 @@ version** — no more time-based rebuilds.
 ## Non-goals
 
 > **Partly superseded.** `Go`, `Docker` and the `hugo-bun-node` musl `Node`
-> build were later brought under Renovate, alongside `gh` and `zsh-in-docker`;
+> build were later brought under Renovate, alongside `gh`; oh-my-zsh and
+> powerlevel10k are pinned by commit SHA and deliberately left unmanaged;
 > `git-delta` was removed from every image. `Bun`, `Hugo` and base images remain
 > out of scope as written below. See `.github/renovate.json5` for the current
 > package list.

@@ -47,7 +47,6 @@
         '@anthropic-ai/claude-code',
         'agent-browser',
         'cli/cli',            // gh — upstream .deb; apt's trixie build is frozen at 2.46.0
-        'deluan/zsh-in-docker',
         'docker/cli',         // docker CLI static binary (download.docker.com).
                               // github-tags, NOT github-releases: moby/moby tags its
                               // releases 'docker-v29.8.0', which extractVersion cannot
