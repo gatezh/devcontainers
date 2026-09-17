@@ -40,7 +40,7 @@ Common categories: `**Claude Code**`, `**Bun**`, `**Code Quality**` (OXC), `**Gi
 
 ```jsonc
 "settings": {
-  "terminal.integrated.defaultProfile.linux": "fish",
+  "terminal.integrated.defaultProfile.linux": "zsh",
   "extensions.ignoreRecommendations": true
 }
 ```

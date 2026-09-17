@@ -74,9 +74,9 @@
         "SamiHindi.claude-theme-sami-hindi"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
-          "fish": { "path": "fish" },
+          "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
         "extensions.ignoreRecommendations": true,
@@ -111,7 +111,7 @@
     // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume",
     // ── Persistent config ──────────────────────────────────────────────
     "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
-    "source=myproject-fish-data-${localWorkspaceFolderBasename},target=/home/node/.local/share/fish,type=volume",
+    "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
     // ── Firewall script ────────────────────────────────────────────────
     // The image provides iptables/ipset packages and sudo rule but NOT the script itself.
     // Each project provides its own script via bind mount to customize the domain allowlist.
@@ -128,7 +128,7 @@
   },
   // The find command chowns all node_modules volume mount points in one pass.
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
-  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude && mise install && bun install",
+  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory && mise install && bun install",
   // Firewall init (bind-mounted from project) + re-patch the Playwright MCP
   // plugin's .mcp.json. The patch is defense in depth alongside the SessionStart
   // hook in /etc/claude-code/managed-settings.json, which handles the case where

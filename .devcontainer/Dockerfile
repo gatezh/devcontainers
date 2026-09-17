@@ -18,6 +18,23 @@
 # ═════════════════════════════════════════════════════════════════════════════
 
 # ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
+# ── oh-my-zsh + powerlevel10k ─────────────────────────────────
+# Pinned to commit SHAs and fetched as tarballs. Neither project tags usefully --
+# oh-my-zsh has no tags at all, and powerlevel10k's last release predates its
+# current master by years -- so a SHA is the only real pin. Bump deliberately:
+# auto-adopting upstream shell-framework changes is what repeatedly broke this
+# image, and a prompt theme does not need a 3-day release cadence.
+FROM alpine:3.21 AS ohmyzsh-download
+RUN apk add --no-cache curl tar
+ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
+ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
+RUN set -eux; \
+    mkdir -p /omz/custom/themes/powerlevel10k; \
+    curl -fsSL "https://github.com/ohmyzsh/ohmyzsh/archive/${OH_MY_ZSH_REF}.tar.gz" \
+      | tar -xz -C /omz --strip-components=1; \
+    curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
+      | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
+
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
@@ -68,30 +85,29 @@ RUN set -eux; \
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
 
-ARG GIT_DELTA_VERSION=0.18.2
+# renovate: datasource=github-releases depName=cli/cli
+ARG GH_VERSION=2.100.0
 
 # System packages (each justified — see claude-code Dockerfile for rationale)
 # - ca-certificates: SSL/TLS for HTTPS connections
 # - curl: downloading tools and installers
-# - fish: interactive shell (built-in syntax highlighting, autosuggestions, completions)
-# - fzf: fuzzy finder (fish integration)
-# - gh: GitHub CLI
+# - fzf: fuzzy finder; zsh integration comes from the oh-my-zsh fzf plugin
 # - git: version control
 # - jq: JSON processing (onboarding patch, firewall script)
-# - less: pager for git delta output
+# - less: pager for git and other CLI output
 # - sudo: privilege escalation (chown for named volumes, firewall setup)
+# - zsh: interactive shell; oh-my-zsh + powerlevel10k configured below
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
-  fish \
   fzf \
-  gh \
   git \
   jq \
   less \
-  sudo
+  sudo \
+  zsh
 
 # npm global directory with proper permissions for node user
 # Pre-create /lib to prevent "ENOENT" errors during npx commands
@@ -101,37 +117,64 @@ RUN mkdir -p /usr/local/share/npm-global/lib \
 ENV DEVCONTAINER=true
 
 # Create workspace and config directories with proper ownership
-RUN mkdir -p /workspace /home/node/.claude /home/node/.local/share/fish \
-  && chown -R node:node /workspace /home/node/.claude /home/node/.local
+RUN mkdir -p /workspace /home/node/.claude /home/node/.local /commandhistory \
+  && chown -R node:node /workspace /home/node/.claude /home/node/.local /commandhistory
 
 WORKDIR /workspace
 
-# Install git-delta (pinned — v0.19.0 dropped arm64 .deb)
+# gh (GitHub CLI) — installed from the upstream .deb, not apt: Debian trixie
+# freezes gh at 2.46.0 (Apr 2024). Version kept current by Renovate.
+# Must stay AFTER the apt block: the .deb depends on git, and dpkg -i does not
+# resolve dependencies — it fails loudly ("dependency problems") if git is absent.
 RUN ARCH=$(dpkg --print-architecture) \
-  && curl -fsSL -o "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-    "https://github.com/dandavison/delta/releases/download/${GIT_DELTA_VERSION}/git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-  && dpkg -i "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb" \
-  && rm "git-delta_${GIT_DELTA_VERSION}_${ARCH}.deb"
+  && curl -fsSL -o "gh_${GH_VERSION}_linux_${ARCH}.deb" \
+    "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" \
+  && dpkg -i "gh_${GH_VERSION}_linux_${ARCH}.deb" \
+  && rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
 
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
-ENV SHELL=/usr/bin/fish
+ENV SHELL=/usr/bin/zsh
+# Only LANG, and only C.UTF-8 — what the official images do (ruby sets exactly
+# this; node/debian/python set nothing). LC_ALL would override every LC_* category
+# and silently defeat a consuming project's containerEnv. TERM is deliberately
+# unset: no official image sets it, an image ENV beats the tty value `docker exec -t`
+# supplies, and tput/clear failing without a terminal is correct behaviour.
+ENV LANG=C.UTF-8
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
 
-# ── Starship prompt ──────────────────────────────────────────────────────────
-USER root
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl -sS https://starship.rs/install.sh | sh -s -- --yes
-SHELL ["/bin/sh", "-c"]
-
+# ── zsh + oh-my-zsh + powerlevel10k ──────────────────────────────────────────
+# Written as node: $HOME during RUN follows USER, so this must not run as root.
 USER node
-RUN mkdir -p /home/node/.config/fish \
-  && starship preset no-runtime-versions -o /home/node/.config/starship.toml \
-  && printf '%s\n' 'set -g fish_greeting' 'starship init fish | source' > /home/node/.config/fish/config.fish
+# oh-my-zsh tree is COPYed from the parallel download stage above, so the final
+# image needs no git or curl for it and nothing is fetched at build time here.
+COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
+
+# .zshrc is written here rather than by an installer, so nothing upstream can
+# inject env overrides (locale/TERM) that then have to be patched back out.
+# The wizard flag matters: without a POWERLEVEL9K_* config powerlevel10k starts
+# its interactive configurator on first shell, which blocks a container.
+# $HOME and $ZSH are single-quoted on purpose: they must reach .zshrc
+# unexpanded so zsh resolves them at runtime, not at build time.
+# hadolint ignore=SC2016
+RUN printf '%s\n' \
+      'export ZSH="$HOME/.oh-my-zsh"' \
+      'ZSH_THEME="powerlevel10k/powerlevel10k"' \
+      'plugins=(git fzf)' \
+      "zstyle ':omz:update' mode disabled" \
+      'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' \
+      'export HISTFILE=/commandhistory/.zsh_history' \
+      'source $ZSH/oh-my-zsh.sh' \
+      'POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_last' \
+      'POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(user dir vcs status)' \
+      'POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=()' \
+      'POWERLEVEL9K_STATUS_OK=false' \
+      'POWERLEVEL9K_STATUS_CROSS=true' \
+      > "$HOME/.zshrc"
 
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
 # rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).

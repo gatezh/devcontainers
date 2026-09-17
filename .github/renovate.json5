@@ -22,13 +22,14 @@
 
   packageRules: [
     {
-      // rtk / ralphex release tags look like "v0.43.0"; strip the leading "v"
-      // so the datasource version matches the bare ARG value ("0.43.0").
-      matchDatasources: ['github-releases'],
+      // Most GitHub tags carry a leading "v" ("v0.48.0", "v29.8.1"); strip it so the
+      // datasource version matches the bare ARG value ("0.48.0"). A tag with no "v"
+      // passes through unchanged, so this is safe to apply datasource-wide.
+      matchDatasources: ['github-releases', 'github-tags'],
       extractVersion: '^v?(?<version>.+)$',
     },
     {
-      // Group the four tools into one PR and auto-merge once CI passes.
+      // Group the tracked tools into one PR and auto-merge once CI passes.
       //
       // Relies on Renovate's default platformAutomerge:true — GitHub's native
       // auto-merge merges on green with no second Renovate run. The previous
@@ -45,8 +46,15 @@
         'umputun/ralphex',
         '@anthropic-ai/claude-code',
         'agent-browser',
+        'cli/cli',            // gh — upstream .deb; apt's trixie build is frozen at 2.46.0
+        'docker/cli',         // docker CLI static binary (download.docker.com).
+                              // github-tags, NOT github-releases: moby/moby tags its
+                              // releases 'docker-v29.8.0', which extractVersion cannot
+                              // parse, so every candidate is silently discarded.
+        'go',                 // ralphex-fe Go toolchain (go.dev)
+        'node',               // hugo-bun-node musl build; base-image node is NOT managed here
       ],
-      groupName: 'devcontainer agent tools',
+      groupName: 'devcontainer tools',
       automerge: true,
 
       // These bumps merge unreviewed and publish straight to ghcr.io, so let a
@@ -72,6 +80,13 @@
       groupName: 'ralphex-fe toolchain',
       automerge: true,
       minimumReleaseAge: '3 days',
+    },
+    {
+      // hugo-bun-node installs Node from the unofficial musl builds — its base
+      // image (oven/bun:*-alpine) ships no node at all. The image is Node 24 LTS
+      // by design, so major bumps stay a deliberate call, not a Renovate PR.
+      matchDatasources: ['node-version'],
+      allowedVersions: '^24',
     },
   ],
 }

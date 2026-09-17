@@ -3,6 +3,7 @@ ARG BUN_VERSION=1.3.8
 FROM oven/bun:${BUN_VERSION}-alpine
 
 ARG HUGO_VERSION=0.155.1
+# renovate: datasource=node-version depName=node
 ARG NODE_VERSION=24.13.0
 
 # Platform architecture (automatically set by Docker based on build platform)

@@ -26,9 +26,9 @@
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "fish",
+        "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
-          "fish": { "path": "fish" },
+          "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
         "extensions.ignoreRecommendations": true,
@@ -57,7 +57,7 @@
   },
   "mounts": [
     "source=devcontainers-sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    "source=devcontainers-sandbox-fish-${devcontainerId},target=/home/node/.local/share/fish,type=volume",
+    "source=devcontainers-sandbox-zsh-history-${devcontainerId},target=/commandhistory,type=volume",
     // Mount firewall script into the expected path
     "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
   ],
@@ -69,7 +69,7 @@
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   // Plugins before firewall (network still open during postCreateCommand)
-  "postCreateCommand": "sudo chown -R node /home/node/.claude && bash /workspace/.devcontainer/init-plugins.sh",
+  "postCreateCommand": "sudo chown -R node /home/node/.claude /commandhistory && bash /workspace/.devcontainer/init-plugins.sh",
   // Firewall locks down the network
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
