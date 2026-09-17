@@ -18,11 +18,8 @@
 # ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
-# Pinned to commit SHAs and fetched as tarballs. Neither project tags usefully --
-# oh-my-zsh has no tags at all, and powerlevel10k's last release predates its
-# current master by years -- so a SHA is the only real pin. Bump deliberately:
-# auto-adopting upstream shell-framework changes is what repeatedly broke this
-# image, and a prompt theme does not need a 3-day release cadence.
+# Pinned by commit SHA: neither project tags usefully, and auto-adopting
+# shell-framework changes has broken this image before. Bump deliberately.
 FROM alpine:3.21 AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
@@ -73,13 +70,9 @@ ARG GH_VERSION=2.100.0
 # - git: version control
 # - jq: JSON processing (firewall script, onboarding patch)
 # - less: pager for git and other CLI output
-# - openssh-client: provides ssh-keygen, needed for SSH-format commit signing
-#   (gpg.format=ssh + commit.gpgsign=true, copied in via VS Code's
-#   dev.containers.copyGitConfig); also restores ssh/ssh-add. git only
-#   *Recommends* it, so --no-install-recommends drops it unless listed here.
-#   Hard-depends on libfido2, so FIDO2 hardware keys (YubiKey sk-ssh-ed25519)
-#   sign too. Must be in base: the sandbox firewall blocks deb.debian.org, so
-#   it can't be added at runtime (same reasoning as chromium). See issue #110.
+# - openssh-client: ssh-keygen for SSH-format commit signing (and FIDO2 keys via
+#   libfido2). git only Recommends it, so --no-install-recommends drops it. Must be
+#   in base — the sandbox firewall blocks deb.debian.org at runtime. See #110.
 # - sudo: privilege escalation for firewall setup
 # - zsh: interactive shell; oh-my-zsh + powerlevel10k configured below
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -102,11 +95,10 @@ RUN mkdir -p /usr/local/share/npm-global/lib \
 
 ENV DEVCONTAINER=true
 
-# Create workspace, Claude config, and node_modules volume mount points.
-# Pre-creating these dirs with node ownership ensures Docker's volume
-# population seeds fresh named volumes with correct permissions.
-# Standard monorepo layout shared across projects.
-# See: https://docs.docker.com/engine/storage/volumes/#populate-a-volume-using-a-container
+# Volume mount points, pre-created node-owned so Docker seeds fresh named volumes
+# with correct ownership. The XDG dirs matter for the same reason: a volume mounted
+# at a nested path (consumers still declare *-fish-data at ~/.local/share/fish)
+# makes Docker invent the missing parent as root, locking mise out of its data dir.
 RUN mkdir -p /workspace/node_modules \
   /workspace/services/api/node_modules \
   /workspace/services/app/node_modules \
@@ -114,16 +106,18 @@ RUN mkdir -p /workspace/node_modules \
   /workspace/packages/shared/node_modules \
   /workspace/packages/database/node_modules \
   /home/node/.claude \
-  /home/node/.local \
+  /home/node/.local/share \
+  /home/node/.local/state \
+  /home/node/.config \
+  /home/node/.cache \
   /commandhistory \
-  && chown -R node:node /workspace /home/node/.claude /home/node/.local /commandhistory
+  && chown -R node:node /workspace /home/node/.claude /home/node/.local \
+       /home/node/.config /home/node/.cache /commandhistory
 
 WORKDIR /workspace
 
-# gh (GitHub CLI) — installed from the upstream .deb, not apt: Debian trixie
-# freezes gh at 2.46.0 (Apr 2024). Version kept current by Renovate.
-# Must stay AFTER the apt block: the .deb depends on git, and dpkg -i does not
-# resolve dependencies — it fails loudly ("dependency problems") if git is absent.
+# gh from the upstream .deb: trixie freezes it at 2.46.0 (Apr 2024). Must follow
+# the apt block — the .deb depends on git and dpkg -i won't resolve it.
 RUN ARCH=$(dpkg --print-architecture) \
   && curl -fsSL -o "gh_${GH_VERSION}_linux_${ARCH}.deb" \
     "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" \
@@ -136,20 +130,15 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/usr/bin/zsh
-# Only LANG, and only C.UTF-8 — what the official images do (ruby sets exactly
-# this; node/debian/python set nothing). LC_ALL would override every LC_* category
-# and silently defeat a consuming project's containerEnv. TERM is deliberately
-# unset: no official image sets it, an image ENV beats the tty value `docker exec -t`
-# supplies, and tput/clear failing without a terminal is correct behaviour.
+# LANG only, as the official images do. LC_ALL would outrank a consumer's
+# containerEnv; TERM stays unset so the terminal's own value wins.
 ENV LANG=C.UTF-8
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
 
 # ── Mise (install as root) ────────────────────────────────────────────────────
-# Mise is installed as a tool manager — projects run `mise install` at container
-# creation to install their specific tool versions from .mise.toml.
-# Node is NOT installed via mise — it's provided by the base image; mise shims
-# would shadow the base image's npx, breaking global npm-installed CLIs.
+# Tool manager only — projects run `mise install` from their own .mise.toml. Node
+# is deliberately not via mise: its shims would shadow the base image's npx.
 USER root
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl https://mise.run | sh \
@@ -160,16 +149,11 @@ SHELL ["/bin/sh", "-c"]
 # ── zsh + oh-my-zsh + powerlevel10k ──────────────────────────────────────────
 # Written as node: $HOME during RUN follows USER, so this must not run as root.
 USER node
-# oh-my-zsh tree is COPYed from the parallel download stage above, so the final
-# image needs no git or curl for it and nothing is fetched at build time here.
 COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
 
-# .zshrc is written here rather than by an installer, so nothing upstream can
-# inject env overrides (locale/TERM) that then have to be patched back out.
-# The wizard flag matters: without a POWERLEVEL9K_* config powerlevel10k starts
-# its interactive configurator on first shell, which blocks a container.
-# $HOME and $ZSH are single-quoted on purpose: they must reach .zshrc
-# unexpanded so zsh resolves them at runtime, not at build time.
+# .zshrc written here, not by an installer, so nothing upstream injects env
+# overrides. The wizard flag stops powerlevel10k prompting on first shell.
+# Single-quoted so $HOME/$ZSH reach .zshrc unexpanded.
 # hadolint ignore=SC2016
 RUN printf '%s\n' \
       'export ZSH="$HOME/.oh-my-zsh"' \
@@ -189,48 +173,35 @@ ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
-# rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
-# Like Claude Code itself, these are dev infrastructure — not project dependencies.
-# Downloaded from GitHub Releases at Renovate-pinned versions (see .github/renovate.json5).
+# rtk (CLI proxy) and ralphex (plan execution) — dev infrastructure, not project
+# dependencies. Renovate-pinned; see .github/renovate.json5.
 COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
 # ── Playwright MCP patch script ──────────────────────────────────────────────
-# Universal logic with no project-specific config — bake into the image so
-# consumer projects don't carry a copy. Invoked from postCreateCommand
-# (init-plugins.sh), postStartCommand (devcontainer.json), and the Claude Code
-# SessionStart hook (managed-settings.json below) — the hook closes the gap
-# where the plugin auto-updates mid-container-run. See issues #87, #98.
+# Baked in so consumer projects don't carry a copy. Invoked from init-plugins.sh,
+# postStartCommand and a SessionStart hook — the hook covers plugin auto-updates
+# mid-run. See #87, #98.
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
 # ── Claude Code managed settings ─────────────────────────────────────────────
-# Image-policy settings at the Linux managed location (highest precedence,
-# outside any volume mount). Wires patch-playwright-mcp as a SessionStart hook
-# so cache dirs created by mid-session plugin auto-updates get patched before
-# the next session reads them. See issues #98, #101.
+# Image-policy settings at the Linux managed location (highest precedence, outside
+# any volume mount). Wires patch-playwright-mcp as a SessionStart hook. See #98, #101.
 #
-# Pre-create /etc/claude-code as root: BuildKit applies COPY --chmod to any
-# parent directories it auto-creates, which would leave the dir at mode 0644
-# (no execute bit, not traversable). Creating it explicitly avoids that and
-# makes the file readable for the node user at runtime.
+# /etc/claude-code is created explicitly: BuildKit applies COPY --chmod to parent
+# dirs it auto-creates, leaving 0644 — not traversable.
 USER root
 RUN mkdir -p /etc/claude-code
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 USER node
 
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
-# Using npm instead of the native installer (curl claude.ai/install.sh | bash).
-# The native installer is recommended for interactive use, but rate-limits (429)
-# when multiple parallel Docker builds hit it simultaneously.
-# npm is deprecated for interactive users but still supported "for compatibility
-# reasons" — Docker/CI parallel builds are exactly that reason.
-# See: https://code.claude.com/docs/en/getting-started#install-with-npm
-# Version pinned and kept up to date by Renovate (see .github/renovate.json5);
-# a bump PR triggers a rebuild.
+# npm, not the native installer: the installer rate-limits (429) under parallel
+# Docker builds. npm stays supported "for compatibility reasons" — this is that
+# reason. https://code.claude.com/docs/en/getting-started#install-with-npm
 #
-# Install as the node user so all files land with node ownership from the start.
-# A later `chown -R` in another layer would duplicate every file (overlayfs
-# treats an ownership change as a rewrite), adding hundreds of MB.
+# Installed as node so files land node-owned; a later chown -R would duplicate
+# every file on overlayfs, adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
 ARG CLAUDE_CODE_VERSION=2.1.274
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}

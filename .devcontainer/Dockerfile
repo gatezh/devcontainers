@@ -19,11 +19,8 @@
 
 # ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
-# Pinned to commit SHAs and fetched as tarballs. Neither project tags usefully --
-# oh-my-zsh has no tags at all, and powerlevel10k's last release predates its
-# current master by years -- so a SHA is the only real pin. Bump deliberately:
-# auto-adopting upstream shell-framework changes is what repeatedly broke this
-# image, and a prompt theme does not need a 3-day release cadence.
+# Pinned by commit SHA: neither project tags usefully, and auto-adopting
+# shell-framework changes has broken this image before. Bump deliberately.
 FROM alpine:3.21 AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
@@ -116,16 +113,18 @@ RUN mkdir -p /usr/local/share/npm-global/lib \
 
 ENV DEVCONTAINER=true
 
-# Create workspace and config directories with proper ownership
-RUN mkdir -p /workspace /home/node/.claude /home/node/.local /commandhistory \
-  && chown -R node:node /workspace /home/node/.claude /home/node/.local /commandhistory
+# Workspace and XDG dirs, node-owned: a volume mounted at a nested path under one
+# of these makes Docker invent the missing parent as root, locking node out.
+RUN mkdir -p /workspace /home/node/.claude \
+  /home/node/.local/share /home/node/.local/state /home/node/.config /home/node/.cache \
+  /commandhistory \
+  && chown -R node:node /workspace /home/node/.claude /home/node/.local \
+       /home/node/.config /home/node/.cache /commandhistory
 
 WORKDIR /workspace
 
-# gh (GitHub CLI) — installed from the upstream .deb, not apt: Debian trixie
-# freezes gh at 2.46.0 (Apr 2024). Version kept current by Renovate.
-# Must stay AFTER the apt block: the .deb depends on git, and dpkg -i does not
-# resolve dependencies — it fails loudly ("dependency problems") if git is absent.
+# gh from the upstream .deb: trixie freezes it at 2.46.0 (Apr 2024). Must follow
+# the apt block — the .deb depends on git and dpkg -i won't resolve it.
 RUN ARCH=$(dpkg --print-architecture) \
   && curl -fsSL -o "gh_${GH_VERSION}_linux_${ARCH}.deb" \
     "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" \
@@ -138,11 +137,8 @@ USER node
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
 ENV PATH=$PATH:/usr/local/share/npm-global/bin
 ENV SHELL=/usr/bin/zsh
-# Only LANG, and only C.UTF-8 — what the official images do (ruby sets exactly
-# this; node/debian/python set nothing). LC_ALL would override every LC_* category
-# and silently defeat a consuming project's containerEnv. TERM is deliberately
-# unset: no official image sets it, an image ENV beats the tty value `docker exec -t`
-# supplies, and tput/clear failing without a terminal is correct behaviour.
+# LANG only, as the official images do. LC_ALL would outrank a consumer's
+# containerEnv; TERM stays unset so the terminal's own value wins.
 ENV LANG=C.UTF-8
 ENV EDITOR="code --wait"
 ENV VISUAL="code --wait"
@@ -150,16 +146,11 @@ ENV VISUAL="code --wait"
 # ── zsh + oh-my-zsh + powerlevel10k ──────────────────────────────────────────
 # Written as node: $HOME during RUN follows USER, so this must not run as root.
 USER node
-# oh-my-zsh tree is COPYed from the parallel download stage above, so the final
-# image needs no git or curl for it and nothing is fetched at build time here.
 COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
 
-# .zshrc is written here rather than by an installer, so nothing upstream can
-# inject env overrides (locale/TERM) that then have to be patched back out.
-# The wizard flag matters: without a POWERLEVEL9K_* config powerlevel10k starts
-# its interactive configurator on first shell, which blocks a container.
-# $HOME and $ZSH are single-quoted on purpose: they must reach .zshrc
-# unexpanded so zsh resolves them at runtime, not at build time.
+# .zshrc written here, not by an installer, so nothing upstream injects env
+# overrides. The wizard flag stops powerlevel10k prompting on first shell.
+# Single-quoted so $HOME/$ZSH reach .zshrc unexpanded.
 # hadolint ignore=SC2016
 RUN printf '%s\n' \
       'export ZSH="$HOME/.oh-my-zsh"' \
