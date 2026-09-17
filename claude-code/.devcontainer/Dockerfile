@@ -203,7 +203,7 @@ USER node
 # Installed as node so files land node-owned; a later chown -R would duplicate
 # every file on overlayfs, adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.274
+ARG CLAUDE_CODE_VERSION=2.1.275
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
