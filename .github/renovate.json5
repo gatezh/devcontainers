@@ -6,10 +6,8 @@
   // github-actions managers open PRs for base images or action pins (out of scope).
   enabledManagers: ['custom.regex'],
 
-  // Pin + auto-update the four dev tools these images used to pull from
-  // "latest" at build time. Replaces the old daily rebuild cron: a Renovate
-  // bump PR (auto-merged on green CI) triggers the existing push-based image
-  // build. No upstream release -> no PR -> no rebuild.
+  // Pins tools these images used to pull at build time. Replaces the daily cron:
+  // a bump PR triggers the push-based build. No release -> no PR -> no rebuild.
   customManagers: [
     {
       customType: 'regex',
@@ -22,25 +20,17 @@
 
   packageRules: [
     {
-      // Most GitHub tags carry a leading "v" ("v0.48.0", "v29.8.1"); strip it so the
-      // datasource version matches the bare ARG value ("0.48.0"). A tag with no "v"
-      // passes through unchanged, so this is safe to apply datasource-wide.
+      // Strip the leading "v" so tags match the bare ARG value. Tags without one
+      // pass through unchanged, so this is safe datasource-wide.
       matchDatasources: ['github-releases', 'github-tags'],
       extractVersion: '^v?(?<version>.+)$',
     },
     {
-      // Group the tracked tools into one PR and auto-merge once CI passes.
-      //
-      // Relies on Renovate's default platformAutomerge:true — GitHub's native
-      // auto-merge merges on green with no second Renovate run. The previous
-      // explicit platformAutomerge:false is what broke this: only a Renovate
-      // run could merge, and every run found a newer claude-code, force-pushed
-      // the branch and ended before CI finished (#121 sat green for 3.5 weeks).
-      //
-      // Requires: repo setting "Allow auto-merge", and a ruleset on master
-      // requiring the "CI complete" check (.github/workflows/ci.yml). Without
-      // that required check nothing blocks the PR, GitHub never offers native
-      // auto-merge, and Renovate silently falls back to the broken path.
+      // One grouped PR, auto-merged on green via Renovate's default
+      // platformAutomerge. Setting it false broke this before: only a Renovate run
+      // could merge, and each run force-pushed a newer claude-code before CI
+      // finished (#121 sat green 3.5 weeks). Requires "Allow auto-merge" plus a
+      // master ruleset requiring the "CI complete" check, or it silently regresses.
       matchPackageNames: [
         'rtk-ai/rtk',
         'umputun/ralphex',
@@ -57,10 +47,8 @@
       groupName: 'devcontainer tools',
       automerge: true,
 
-      // These bumps merge unreviewed and publish straight to ghcr.io, so let a
-      // release soak before adopting it. internalChecksFilter defaults to
-      // 'strict', so a too-young version is simply not offered yet — the group
-      // PR carries whichever tools are currently eligible.
+      // These merge unreviewed and publish straight to ghcr.io, so let releases
+      // soak. Too-young versions are simply not offered; the PR carries the rest.
       minimumReleaseAge: '3 days',
     },
     {
@@ -70,21 +58,17 @@
       minimumReleaseAge: null,
     },
     {
-      // ralphex-fe bakes its toolchain into the image — it has no mise, and
-      // its published tag is literally bun<BUN>-hugo<HUGO>. So these are
-      // image-level versions, not per-project ones, and there is no other
-      // place to set them. Bun uses the npm datasource because oven-sh/bun
-      // tags releases as "bun-v1.4.2", which the github-releases extractVersion
-      // above does not strip.
+      // ralphex-fe has no mise and its tag is literally bun<BUN>-hugo<HUGO>, so
+      // these are image-level versions. Bun uses npm: its tags are "bun-v1.4.2",
+      // which the extractVersion above does not strip.
       matchPackageNames: ['bun', 'gohugoio/hugo'],
       groupName: 'ralphex-fe toolchain',
       automerge: true,
       minimumReleaseAge: '3 days',
     },
     {
-      // hugo-bun-node installs Node from the unofficial musl builds — its base
-      // image (oven/bun:*-alpine) ships no node at all. The image is Node 24 LTS
-      // by design, so major bumps stay a deliberate call, not a Renovate PR.
+      // hugo-bun-node's alpine base ships no node, so it installs the musl build.
+      // Node 24 LTS by design — majors stay a deliberate call.
       matchDatasources: ['node-version'],
       allowedVersions: '^24',
     },
