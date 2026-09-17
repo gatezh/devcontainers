@@ -402,15 +402,19 @@ cat ~/.claude/plugins/cache/claude-plugins-official/playwright/*/.mcp.json
 
 ## Build Args
 
-| Arg | Default | Description |
-|-----|---------|-------------|
-| `RTK_VERSION` | `0.49.0` | rtk version (Renovate-managed) |
-| `RALPHEX_VERSION` | `1.7.0` | ralphex version (Renovate-managed) |
-| `CLAUDE_CODE_VERSION` | `2.1.273` | Claude Code CLI version (Renovate-managed) |
-| `AGENT_BROWSER_VERSION` | `0.37.1` | agent-browser version, default target only (Renovate-managed) |
-| `GH_VERSION` | `2.100.0` | GitHub CLI version — installed from the upstream `.deb`, not apt (Renovate-managed) |
-| `OH_MY_ZSH_REF` | commit SHA | oh-my-zsh, pinned by commit — **not** Renovate-managed, bump deliberately |
-| `POWERLEVEL10K_REF` | commit SHA | powerlevel10k, pinned by commit — **not** Renovate-managed, bump deliberately |
+Current values live in [the Dockerfile](.devcontainer/Dockerfile) and are not repeated
+here — Renovate bumps several of them weekly, so any number written below would be wrong
+more often than right.
+
+| Arg | Updated by | Description |
+|-----|------------|-------------|
+| `RTK_VERSION` | Renovate | rtk |
+| `RALPHEX_VERSION` | Renovate | ralphex |
+| `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
+| `AGENT_BROWSER_VERSION` | Renovate | agent-browser, default target only |
+| `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
+| `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
+| `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
 The five Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
