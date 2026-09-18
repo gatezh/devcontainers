@@ -61,7 +61,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.100.0
+ARG GH_VERSION=2.101.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -203,7 +203,7 @@ USER node
 # Installed as node so files land node-owned; a later chown -R would duplicate
 # every file on overlayfs, adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.276
+ARG CLAUDE_CODE_VERSION=2.1.277
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
