@@ -19,7 +19,7 @@ This is a standalone image, not a devcontainer.
 | Claude Code CLI | 2.1.276 (pinned) |
 | RTK | 0.49.0 (pinned) |
 | Ralphex | 1.7.0 (pinned) |
-| Git, ripgrep, jq, curl, wget | system |
+| Git, ripgrep, jq, curl | system |
 
 All pinned versions live as `ARG`s in the Dockerfile and are kept current by Renovate — see
 [Automatic Rebuilds](#automatic-rebuilds). This image has no `mise`, so its Bun and Hugo are
