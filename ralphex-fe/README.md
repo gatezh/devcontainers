@@ -11,19 +11,25 @@ This is a standalone image, not a devcontainer.
 | Tool | Version |
 |------|---------|
 | Node.js | 24 (from base image) |
-| Bun | 1.3.9 |
-| Hugo Extended | 0.156.0 |
+| Bun | 1.4.2 |
+| Hugo Extended | 0.166.0 |
 | Go | for Hugo Modules |
 | Python 3 | system |
 | Playwright + Chromium | native Debian |
-| Claude Code CLI | 2.1.216 (pinned) |
-| RTK | 0.43.0 (pinned) |
-| Ralphex | 1.6.0 (pinned) |
-| Git, ripgrep, jq, curl, wget | system |
+| Claude Code CLI | 2.1.276 (pinned) |
+| RTK | 0.49.0 (pinned) |
+| Ralphex | 1.7.0 (pinned) |
+| Git, ripgrep, jq, curl | system |
 
 All pinned versions live as `ARG`s in the Dockerfile and are kept current by Renovate — see
 [Automatic Rebuilds](#automatic-rebuilds). This image has no `mise`, so its Bun and Hugo are
 image-level versions rather than per-project ones; Renovate tracks them like everything else.
+
+### MDN MCP server
+
+The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-US/mcp) (web platform docs and browser compatibility data) through `managedMcpServers` in `/etc/claude-code/managed-settings.json`. Ralphex drives Claude non-interactively; a local managed settings file is read at session start, so `claude -p` runs get it too — the unattended runs where a hallucinated DOM or CSS API would otherwise land in a commit unreviewed.
+
+It sends `X-Moz-1st-Party-Data-Opt-Out: 1`, Mozilla's documented opt-out from the query logging they do while the server is experimental. Requires Claude Code >= 2.1.259; earlier clients ignore the key.
 
 ## Usage
 

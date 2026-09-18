@@ -186,7 +186,8 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
 # ── Claude Code managed settings ─────────────────────────────────────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook. See #98, #101.
+# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101)
+# and provides the MDN MCP server. managedMcpServers needs Claude Code >= 2.1.259.
 #
 # /etc/claude-code is created explicitly: BuildKit applies COPY --chmod to parent
 # dirs it auto-creates, leaving 0644 — not traversable.

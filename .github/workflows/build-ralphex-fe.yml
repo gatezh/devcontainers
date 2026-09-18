@@ -7,6 +7,7 @@ on:
     paths:
       - 'ralphex-fe/Dockerfile'
       - 'ralphex-fe/*.sh'
+      - 'ralphex-fe/managed-settings.json'
   workflow_dispatch:
 
 permissions:
@@ -107,5 +108,7 @@ jobs:
             test -f /srv/init.sh &&
             chromium --no-sandbox --version &&
             test -x /usr/bin/chromium &&
+            test -r /etc/claude-code/managed-settings.json &&
+            jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ &&
             echo 'All checks passed'
           "
