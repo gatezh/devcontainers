@@ -248,7 +248,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # Installed as the node user (see claude-code install above for rationale).
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.38.0
+ARG AGENT_BROWSER_VERSION=0.38.1
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
