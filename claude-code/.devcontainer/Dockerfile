@@ -211,7 +211,7 @@ RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 # Installed as node so files land node-owned; a later chown -R would duplicate
 # every file on overlayfs, adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.280
+ARG CLAUDE_CODE_VERSION=2.1.281
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
