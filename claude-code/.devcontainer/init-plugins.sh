@@ -1,6 +1,6 @@
 #!/bin/bash
 # Claude Code plugin initialization — runs once at container creation.
-# Idempotent — safe to run multiple times.
+# Idempotent — safe to run multiple times; each run also updates plugins to latest.
 #
 # Wire into postCreateCommand in your devcontainer.json:
 #   "postCreateCommand": "bash .devcontainer/init-plugins.sh"
@@ -63,6 +63,22 @@ for plugin in "${PLUGINS[@]}"; do
         echo "✔ Installed: $plugin"
     else
         echo "⚠ Failed to install: $plugin" >&2
+    fi
+done
+
+# ~/.claude is a persistent volume, so `install` no-ops after the first run.
+# Refresh marketplace indexes first — `plugin update` resolves against the cache.
+if claude plugin marketplace update 2>&1; then
+    echo "✔ Marketplaces refreshed"
+else
+    echo "⚠ Failed to refresh marketplaces" >&2
+fi
+
+for plugin in "${PLUGINS[@]}"; do
+    if claude plugin update "$plugin" 2>&1; then
+        echo "✔ Up to date: $plugin"
+    else
+        echo "⚠ Failed to update: $plugin" >&2
     fi
 done
 
