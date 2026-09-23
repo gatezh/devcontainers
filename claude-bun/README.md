@@ -12,7 +12,18 @@ Claude Code development container based on the [official Anthropic devcontainer 
 - **Session persistence** for command history and Claude configuration between restarts
 - **Multi-platform support** (linux/amd64, linux/arm64)
 
-## Quick Start
+## Multi-platform Support
+
+This image is built for multiple architectures:
+- `linux/amd64` (x86_64)
+- `linux/arm64` (ARM64/Apple Silicon)
+
+## Image Tags
+
+- `latest` — most recent build
+- `bun<BUN_VERSION>-slim` — version-specific tag (e.g., `bun1.3.5-slim`)
+
+## Usage
 
 ### Using the pre-built image
 
@@ -71,11 +82,6 @@ When executed with `--dangerously-skip-permissions`, devcontainers do **not prev
 | `Dockerfile` | Container image definition |
 | `devcontainer.json` | VS Code devcontainer settings |
 | `init-firewall.sh` | Firewall initialization script |
-
-## Image Tags
-
-- `ghcr.io/gatezh/devcontainers/claude-bun:latest` - Latest build
-- `ghcr.io/gatezh/devcontainers/claude-bun:bun1.3.5-slim` - Bun version specific tag
 
 ## Customization
 
