@@ -2,7 +2,7 @@
 # Claude Code plugin initialization — runs once at container creation.
 # Idempotent — safe to run multiple times.
 #
-# Wire into postCreateCommand in your devcontainer.json:
+# Wired into postCreateCommand by the template devcontainer.json files:
 #   "postCreateCommand": "bash .devcontainer/init-plugins.sh"
 
 set -euo pipefail
