@@ -19,6 +19,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
 | Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
+| gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
@@ -42,7 +43,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -148,6 +149,12 @@ Both image variants ship system chromium and the `/usr/local/bin/patch-playwrigh
 
 Copy `.claude/skills/sandbox-playwright/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
 
+### Recommended: Claude Code skill for stacked PRs
+
+Both image variants bake in the official [`github/gh-stack`](https://github.com/github/gh-stack) extension, so `gh stack` can open, link and atomically merge native [stacked PRs](https://gh.io/stacks). The [stacked-prs](.claude/skills/stacked-prs/SKILL.md) skill tells Claude Code to use it instead of hand-chaining PRs with `gh pr create --base`, and which flags keep it non-interactive.
+
+Copy `.claude/skills/stacked-prs/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+
 ### Recommended: Claude Code skill for upstream sync
 
 To keep your project's `.devcontainer/` and bundled `.claude/skills/` in step with this repo, copy the [devcontainer-upstream-sync](.claude/skills/devcontainer-upstream-sync/SKILL.md) skill into your project's `.claude/skills/` directory. The skill audits drift, helps adopt missed changes, drafts upstream issues for shared bugs, and self-updates when this skill's `version:` bumps.
@@ -240,6 +247,8 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
     │   └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
     ├── sandbox-playwright/
     │   └── SKILL.md               ← teaches Claude Code to drive Playwright MCP + @playwright/test
+    ├── stacked-prs/
+    │   └── SKILL.md               ← teaches Claude Code to use native stacked PRs (gh stack)
     └── devcontainer-upstream-sync/
         └── SKILL.md               ← keeps project's .devcontainer/ + skills synced with this repo
 ```
@@ -413,10 +422,11 @@ more often than right.
 | `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
 | `AGENT_BROWSER_VERSION` | Renovate | agent-browser, default target only |
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
+| `GH_STACK_VERSION` | Renovate | gh-stack extension (`gh stack`) |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The five Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The six Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback

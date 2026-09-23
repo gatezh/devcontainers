@@ -195,6 +195,13 @@ RUN mkdir -p /etc/claude-code
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 USER node
 
+# ── gh-stack (native stacked PRs) ────────────────────────────────────────────
+# Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
+# ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=0.1.1
+RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
+
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
 # npm, not the native installer: the installer rate-limits (429) under parallel
 # Docker builds. npm stays supported "for compatibility reasons" — this is that

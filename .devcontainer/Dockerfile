@@ -179,6 +179,12 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 COPY --from=hadolint-download /usr/local/bin/hadolint /usr/local/bin/hadolint
 COPY --from=actionlint-download /usr/local/bin/actionlint /usr/local/bin/actionlint
 
+# ── gh-stack (native stacked PRs) ────────────────────────────────────────────
+# Installed as node so it lands in ~/.local/share/gh/extensions. See #160.
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=0.1.1
+RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
+
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 # npm install (not native installer) to avoid rate-limiting in parallel builds.
 # See: claude-code/.devcontainer/Dockerfile for rationale.

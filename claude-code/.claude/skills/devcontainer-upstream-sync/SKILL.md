@@ -4,7 +4,7 @@ description: Use to audit a project's .devcontainer/ and bundled .claude/skills/
 metadata:
   author: Serge Gatezh
   url: https://github.com/gatezh
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Devcontainer Upstream Sync
@@ -68,6 +68,7 @@ but don't, and includes files that shouldn't be tracked.
 | `.devcontainer/claude-sandbox/init-firewall.sh` | `.devcontainer/claude-sandbox/init-firewall.sh` *(repo root, not `claude-code/`)* | exemplar |
 | `.claude/skills/sandbox-fetch-docs/SKILL.md` | `claude-code/.claude/skills/sandbox-fetch-docs/SKILL.md` | framework-track |
 | `.claude/skills/sandbox-playwright/SKILL.md` | `claude-code/.claude/skills/sandbox-playwright/SKILL.md` | framework-track |
+| `.claude/skills/stacked-prs/SKILL.md` | `claude-code/.claude/skills/stacked-prs/SKILL.md` | framework-track |
 | `.claude/skills/devcontainer-upstream-sync/SKILL.md` | `claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md` | framework-track |
 | `.claude/settings.json` | `claude-code/.claude/settings.json` | starter-customize |
 | `.mise.toml` | `claude-code/mise.toml` | starter-customize |
