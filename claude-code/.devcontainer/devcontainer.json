@@ -124,8 +124,7 @@
   // depth alongside the SessionStart hook in /etc/claude-code/managed-settings.json,
   // which handles the case where the plugin auto-updates mid-container-run.
   // See issues #85, #87, #98.
-  // Register Claude Code marketplaces/plugins once per container (see init-plugins.sh).
-  "postCreateCommand": "bash .devcontainer/init-plugins.sh",
-  "postStartCommand": "/usr/local/bin/patch-playwright-mcp",
-  "waitFor": "postCreateCommand"
+  // No postCreateCommand: claude CLI calls there race the extension's OAuth sign-in
+  // (#58). Run `bash .devcontainer/init-plugins.sh` once after signing in.
+  "postStartCommand": "/usr/local/bin/patch-playwright-mcp"
 }

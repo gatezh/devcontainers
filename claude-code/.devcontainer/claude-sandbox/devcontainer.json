@@ -130,9 +130,9 @@
   },
   // The find command chowns all node_modules volume mount points in one pass.
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
-  // bun install is skipped until the project has a package.json. init-plugins.sh
-  // runs here, before postStartCommand brings the firewall up, while the network is open.
-  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh && mise install && if [ -f package.json ]; then bun install; fi && bash .devcontainer/init-plugins.sh",
+  // bun install and init-plugins.sh are skipped when their file is absent. Plugins
+  // install here, before postStartCommand brings the firewall up.
+  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh && mise install && if [ -f package.json ]; then bun install; fi && if [ -f .devcontainer/init-plugins.sh ]; then bash .devcontainer/init-plugins.sh; fi",
   // Firewall init (bind-mounted from project) + re-patch the Playwright MCP
   // plugin's .mcp.json. The patch is defense in depth alongside the SessionStart
   // hook in /etc/claude-code/managed-settings.json, which handles the case where
