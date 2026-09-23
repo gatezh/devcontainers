@@ -9,44 +9,16 @@ A multiplatform development container image with Bun runtime, optimized for mode
 - **Zsh** - Modern shell with better VS Code integration
 - **Alpine Linux** - Lightweight base image
 
-## Multiplatform Support
+## Multi-platform Support
 
 This image is built for multiple architectures:
 - `linux/amd64` (x86_64)
 - `linux/arm64` (ARM64/Apple Silicon)
 
-## Building the Image
+## Image Tags
 
-To build this multiplatform image, use Docker Buildx:
-
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/devcontainers/bun:bun<BUN_VERSION>-alpine \
-  -t ghcr.io/<USERNAME>/devcontainers/bun:latest \
-  --push \
-  .devcontainer
-```
-
-### Example with specific versions:
-
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/myusername/devcontainers/bun:bun1.3.5-alpine \
-  -t ghcr.io/myusername/devcontainers/bun:latest \
-  --push \
-  .devcontainer
-```
-
-**Replace:**
-- `<USERNAME>` with your GitHub username or organization
-- `<BUN_VERSION>` with the Bun version (e.g., `1.3.5`)
-
-**Note:** The `--push` flag requires you to be logged in to GitHub Container Registry:
-```bash
-echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
-```
+- `latest` — most recent build
+- `bun<BUN_VERSION>-alpine` — version-specific tag (e.g., `bun1.3.5-alpine`)
 
 ## Usage
 
@@ -96,26 +68,6 @@ The development container comes pre-configured with the following extensions:
 - **Tailwind CSS IntelliSense** (`bradlc.vscode-tailwindcss`) - Autocomplete and syntax highlighting
 - **Tailwind Fold** (`stivo.tailwind-fold`) - Fold long Tailwind class strings
 
-## Version Information
-
-The image uses a specific version of Bun defined as a build argument:
-
-- **Bun Version**: Specified via `BUN_VERSION` build arg (default: `1.3.5`)
-- **Base Image**: `oven/bun:${BUN_VERSION}-alpine`
-
-### Updating Versions
-
-To build with a different version, use build arguments:
-
-```bash
-docker buildx build \
-  --build-arg BUN_VERSION=1.4.0 \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/devcontainers/bun:bun1.4.0-alpine \
-  --push \
-  .devcontainer
-```
-
 ## Development Workflow
 
 ### Starting the Dev Container
@@ -138,6 +90,59 @@ bun run index.ts
 
 # Start development server
 bun run dev
+```
+
+## Build Args
+
+The image uses a specific version of Bun defined as a build argument:
+
+- **Bun Version**: Specified via `BUN_VERSION` build arg (default: `1.3.5`)
+- **Base Image**: `oven/bun:${BUN_VERSION}-alpine`
+
+### Updating Versions
+
+To build with a different version, use build arguments:
+
+```bash
+docker buildx build \
+  --build-arg BUN_VERSION=1.4.0 \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/<USERNAME>/devcontainers/bun:bun1.4.0-alpine \
+  --push \
+  .devcontainer
+```
+
+## Building the Image
+
+To build this multiplatform image, use Docker Buildx:
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/<USERNAME>/devcontainers/bun:bun<BUN_VERSION>-alpine \
+  -t ghcr.io/<USERNAME>/devcontainers/bun:latest \
+  --push \
+  .devcontainer
+```
+
+### Example with Specific Versions
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/myusername/devcontainers/bun:bun1.3.5-alpine \
+  -t ghcr.io/myusername/devcontainers/bun:latest \
+  --push \
+  .devcontainer
+```
+
+**Replace:**
+- `<USERNAME>` with your GitHub username or organization
+- `<BUN_VERSION>` with the Bun version (e.g., `1.3.5`)
+
+**Note:** The `--push` flag requires you to be logged in to GitHub Container Registry:
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
 ```
 
 ## License

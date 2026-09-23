@@ -1,9 +1,10 @@
 #!/bin/bash
-# Claude Code plugin initialization — runs once at container creation.
-# Idempotent — safe to run multiple times; each run also updates plugins to latest.
+# Claude Code plugin initialization. Idempotent — safe to run multiple times;
+# each run also updates plugins to latest.
 #
-# Wire into postCreateCommand in your devcontainer.json:
-#   "postCreateCommand": "bash .devcontainer/init-plugins.sh"
+# Sandbox variant: runs from postCreateCommand, before the firewall comes up.
+# Default variant: run `bash .devcontainer/init-plugins.sh` after signing in, and to
+# update plugins — from postCreateCommand it races the extension's OAuth sign-in (#58).
 
 set -euo pipefail
 
@@ -92,13 +93,11 @@ done
 # ── rtk init (token-optimized CLI proxy) ────────────────────────────────────
 # Global hook-first mode: installs only the PreToolUse rewrite hook to ~/.claude/,
 # no workspace artifacts (CLAUDE.md, .rtk/). Safe to run multiple times.
-# RTK_TELEMETRY_DISABLED=1 is the supported opt-out, not a workaround: since
-# rtk-ai/rtk#2477 (v0.44.0+) it short-circuits the telemetry consent prompt that
-# would otherwise block on stdin here. rtk's own TTY check is not enough — a
-# devcontainer postCreateCommand gets a pseudo-TTY, so the prompt believes it is
-# interactive. timeout stays as a backstop against a future init-time hang.
+# Telemetry consent prompt: RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477),
+# closed stdin defeats the pseudo-TTY postCreateCommand hands us, and timeout
+# backstops any other init-time hang.
 if command -v rtk &>/dev/null; then
-    RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch 2>/dev/null || true
+    RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch < /dev/null 2>/dev/null || true
 fi
 
 # ── agent-browser skill ─────────────────────────────────────────────────────

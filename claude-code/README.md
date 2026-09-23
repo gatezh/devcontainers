@@ -57,7 +57,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history volume mounts, and `updateContentCommand` for mise/bun setup.
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -66,9 +66,9 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 - [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 
-**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)).
+**Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and zsh history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, zsh history, and gh CLI auth (`~/.config/gh`). Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -82,12 +82,14 @@ Only pin tools that affect project stability — dev infrastructure (rtk, ralphe
 
 Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, updates them to the latest marketplace versions (`install` alone no-ops once the persistent `~/.claude` volume holds a plugin), and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
 
-Wire into `devcontainer.json`:
+- **Sandbox variant:** its `postCreateCommand` already runs the script, if present, before `postStartCommand` brings up the firewall.
+- **Default variant:** run it yourself after signing in to Claude Code, and again whenever you want plugin updates:
 
-```jsonc
-"postCreateCommand": "bash .devcontainer/init-plugins.sh",
-"postStartCommand":  "/usr/local/bin/patch-playwright-mcp"
-```
+  ```bash
+  bash .devcontainer/init-plugins.sh
+  ```
+
+  It is not wired into `postCreateCommand` on purpose. `claude` CLI calls made there race the Claude Code extension's OAuth sign-in and can corrupt auth state, even with `waitFor` set (#58).
 
 `postStartCommand` re-runs the patch on every container start so plugin auto-updates between sessions cannot leave MCP pointing at the missing chrome channel. See the [Playwright Strategy](#playwright-strategy) section.
 
@@ -165,9 +167,13 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-The sandbox firewall blocks outbound traffic, so `claude login` (which opens a browser OAuth flow) won't work inside the container. Instead, generate a token on the host and inject it via environment variable.
+**Usual path: sign in once in the default variant.** Both variants mount the same `myproject-claude-config-*` volume at `/home/node/.claude`, so credentials created by signing in to the default variant (VS Code extension, or `claude` in a terminal) are already there when the sandbox starts. No token is needed.
 
-**Setup (one-time):**
+**Standalone sandbox: inject a token.** If you use the sandbox without ever opening the default variant, sign-in has to happen inside the sandbox, where the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it via environment variable instead.
+
+When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. That is expected: with an empty token, Claude Code authenticates from the credentials on the shared volume.
+
+**Setup (one-time, standalone sandbox only):**
 
 1. Generate a setup token on your host machine:
    ```bash
@@ -390,7 +396,7 @@ to use the system chromium:
 }
 ```
 
-`init-plugins.sh` invokes the patch binary at `postCreateCommand`, and the
+`init-plugins.sh` invokes the patch binary when it runs, and the
 template `devcontainer.json` files run it again at `postStartCommand` so
 plugin auto-updates between sessions cannot leave MCP pointing at the
 missing chrome channel.

@@ -59,13 +59,11 @@ done
 
 # Initialize rtk global hook for Claude Code (auto-rewrite mode).
 # --hook-only: installs only the PreToolUse rewrite hook, no workspace artifacts.
-# RTK_TELEMETRY_DISABLED=1 is the supported opt-out, not a workaround: since
-# rtk-ai/rtk#2477 (v0.44.0+) it short-circuits the telemetry consent prompt that
-# would otherwise block on stdin here. rtk's own TTY check is not enough — a
-# devcontainer postCreateCommand gets a pseudo-TTY, so the prompt believes it is
-# interactive. timeout stays as a backstop against a future init-time hang.
+# Telemetry consent prompt: RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477),
+# closed stdin defeats the pseudo-TTY postCreateCommand hands us, and timeout
+# backstops any other init-time hang.
 echo "Initializing rtk (token optimizer)..."
-RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch || {
+RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch < /dev/null || {
     echo "Note: rtk init may have already been configured or rtk not available"
 }
 
