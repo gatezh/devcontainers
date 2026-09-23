@@ -57,7 +57,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history volume mounts, and `updateContentCommand` for mise/bun setup.
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -66,9 +66,9 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 - [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 
-**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)).
+**Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and zsh history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, zsh history, and gh CLI auth (`~/.config/gh`). Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -82,12 +82,14 @@ Only pin tools that affect project stability — dev infrastructure (rtk, ralphe
 
 Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
 
-Wire into `devcontainer.json`:
+- **Sandbox variant:** its `postCreateCommand` already runs the script, if present, before `postStartCommand` brings up the firewall.
+- **Default variant:** run it once yourself after signing in to Claude Code:
 
-```jsonc
-"postCreateCommand": "bash .devcontainer/init-plugins.sh",
-"postStartCommand":  "/usr/local/bin/patch-playwright-mcp"
-```
+  ```bash
+  bash .devcontainer/init-plugins.sh
+  ```
+
+  It is not wired into `postCreateCommand` on purpose. `claude` CLI calls made there race the Claude Code extension's OAuth sign-in and can corrupt auth state, even with `waitFor` set (#58).
 
 `postStartCommand` re-runs the patch on every container start so plugin auto-updates between sessions cannot leave MCP pointing at the missing chrome channel. See the [Playwright Strategy](#playwright-strategy) section.
 
@@ -393,7 +395,7 @@ to use the system chromium:
 }
 ```
 
-`init-plugins.sh` invokes the patch binary at `postCreateCommand`, and the
+`init-plugins.sh` invokes the patch binary when it runs, and the
 template `devcontainer.json` files run it again at `postStartCommand` so
 plugin auto-updates between sessions cannot leave MCP pointing at the
 missing chrome channel.

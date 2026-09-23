@@ -1,9 +1,9 @@
 #!/bin/bash
-# Claude Code plugin initialization — runs once at container creation.
-# Idempotent — safe to run multiple times.
+# Claude Code plugin initialization. Idempotent — safe to run multiple times.
 #
-# Wire into postCreateCommand in your devcontainer.json:
-#   "postCreateCommand": "bash .devcontainer/init-plugins.sh"
+# Sandbox variant: runs from postCreateCommand, before the firewall comes up.
+# Default variant: run `bash .devcontainer/init-plugins.sh` once after signing in —
+# from postCreateCommand it races the extension's OAuth sign-in (#58).
 
 set -euo pipefail
 

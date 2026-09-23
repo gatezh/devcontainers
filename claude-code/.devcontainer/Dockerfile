@@ -108,7 +108,7 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.claude \
   /home/node/.local/share \
   /home/node/.local/state \
-  /home/node/.config \
+  /home/node/.config/gh \
   /home/node/.cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
