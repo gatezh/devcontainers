@@ -117,12 +117,12 @@ jobs:
             add_image "claude-code" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "bun --version || true && claude --version && mise --version && zsh --version && gh --version && gh stack --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node" \
+              "bun --version || true && claude --version && mise --version && zsh --version && gh --version && gh stack --version && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node" \
               "default"
             add_image "claude-code-sandbox" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "claude --version && mise --version && zsh --version && gh --version && gh stack --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node" \
+              "claude --version && mise --version && zsh --version && gh --version && gh stack --version && which iptables && rtk --version && ralphex --version && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node" \
               "sandbox"
           fi
 
@@ -144,7 +144,7 @@ jobs:
             add_image "ralphex-fe" \
               "ralphex-fe" \
               "ralphex-fe/Dockerfile" \
-              "bun --version && hugo version && go version && docker --version && /srv/ralphex --version && rtk --version"
+              "bun --version && hugo version && go version && docker --version && /srv/ralphex --version && rtk --version && test -r /etc/claude-code/managed-settings.json && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/"
           fi
 
           if [ "$INCLUDES" = "[]" ]; then

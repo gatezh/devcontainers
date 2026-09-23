@@ -69,7 +69,8 @@ for domain in \
     "update.code.visualstudio.com" \
     "auth.openai.com" \
     "api.openai.com" \
-    "chatgpt.com"; do
+    "chatgpt.com" \
+    "mcp.mdn.mozilla.net"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then

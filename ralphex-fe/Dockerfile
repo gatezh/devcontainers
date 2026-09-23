@@ -168,6 +168,12 @@ ARG CLAUDE_CODE_VERSION=2.1.280
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
+# ── Claude Code managed settings ─────────────────────────────────────────────
+# Provides the MDN MCP server to every session, including `claude -p` runs.
+# managedMcpServers needs Claude Code >= 2.1.259; earlier clients ignore it.
+RUN mkdir -p /etc/claude-code
+COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+
 # ── Bun ──────────────────────────────────────────────────────────────────────
 ENV BUN_INSTALL=/usr/local/bun
 ENV PATH="$BUN_INSTALL/bin:$PATH"
