@@ -44,7 +44,7 @@ docker run --rm \
   ghcr.io/gatezh/devcontainers/ralphex-fe:latest
 ```
 
-## Building Locally
+## Building the Image
 
 ```bash
 docker build -t ralphex-fe:test ralphex-fe/
@@ -60,9 +60,15 @@ docker build -t ralphex-fe:test ralphex-fe/
 | `SKIP_HOME_CHOWN` | unset | Set to `1` to skip chown of `/home/app` at startup |
 | `INIT_QUIET` | unset | Set to `1` to suppress `init.sh` log output |
 
+## Multi-platform Support
+
+This image is built for multiple architectures:
+- `linux/amd64` (x86_64)
+- `linux/arm64` (ARM64/Apple Silicon)
+
 ## Image Tags
 
-- `latest` — always included
+- `latest` — most recent build
 - `bun{VERSION}-hugo{VERSION}` — version-specific tag (e.g., `bun1.3.9-hugo0.156.0`)
 
 Note: this image deviates from the standalone convention of a single primary version tag because it bundles multiple independently-versioned tools.
