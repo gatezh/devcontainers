@@ -3,11 +3,15 @@
 # The entrypoint (/init.sh) runs /srv/init.sh if it exists before the main command.
 #
 # Source: https://github.com/umputun/ralphex/blob/master/scripts/internal/init-docker.sh
-# Copied as-is from umputun/ralphex. Check upstream for updates.
+# Copied from umputun/ralphex; local additions are marked "Local:" or cite
+# an issue. Check upstream for updates.
+
+# ── Local: ~/.claude must exist without the host mount (#128) ───────────────
+# rtk init -g below writes into it and fails if it is missing.
+mkdir -p /home/app/.claude
 
 # copy only essential claude files (not the entire 2GB directory)
 if [ -d /mnt/claude ]; then
-    mkdir -p /home/app/.claude
     # copy config files only (not cache, history, debug, todos, etc.)
     for f in .credentials.json settings.json settings.local.json CLAUDE.md format.sh; do
         [ -e "/mnt/claude/$f" ] && cp -L "/mnt/claude/$f" "/home/app/.claude/$f" 2>/dev/null || true
@@ -25,21 +29,15 @@ if [ -d /mnt/claude ]; then
             "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
             && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
     fi
+fi
 
-    chown -R app:app /home/app/.claude
+chown -R app:app /home/app/.claude
 
-    # ── RTK: ensure rewrite hook is configured ─────────────────────────────
-    # The host mount usually brings the hook; re-init idempotently in case the
-    # mounted ~/.claude carries none. --hook-only avoids workspace artifacts.
-    # Scope: this sits inside the /mnt/claude guard, so a container started
-    # without the host mount gets no rtk hook and rtk stays inert.
-    # RTK_TELEMETRY_DISABLED=1 is the supported opt-out, not a workaround:
-    # since rtk-ai/rtk#2477 (v0.44.0+) it short-circuits the telemetry consent
-    # prompt that would otherwise block on stdin here. timeout stays as a
-    # backstop against a future init-time hang.
-    if command -v rtk >/dev/null 2>&1; then
-        RTK_TELEMETRY_DISABLED=1 gosu app timeout 10 rtk init -g --hook-only --auto-patch 2>/dev/null || true
-    fi
+# ── Local: RTK rewrite hook, with or without the host mount (#128) ──────────
+# Idempotent; --hook-only avoids workspace artifacts. RTK_TELEMETRY_DISABLED=1
+# skips the consent prompt (rtk-ai/rtk#2477); timeout is a backstop.
+if command -v rtk >/dev/null 2>&1; then
+    RTK_TELEMETRY_DISABLED=1 gosu app timeout 10 rtk init -g --hook-only --auto-patch 2>/dev/null || true
 fi
 
 # copy credentials extracted from macOS keychain (mounted separately)
