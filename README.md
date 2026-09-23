@@ -168,11 +168,12 @@ Images from this repository are built and published to GitHub Container Registry
 ### Automatically, via Renovate
 
 The agent tooling in the `claude-code` and `ralphex-fe` images — `rtk`, `ralphex`, the Claude Code
-CLI, and `agent-browser` — is pinned as `ARG`s carrying `# renovate:` annotations. Renovate watches
-their releases and opens a single grouped bump PR when one ships; CI verifies it, it auto-merges, and
-that merge rebuilds the affected images. No upstream release means no PR and no rebuild. Scope and
-grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
-issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
+CLI, `agent-browser`, and the `gh-stack` extension — is pinned as `ARG`s carrying `# renovate:`
+annotations. Renovate watches their releases and opens a single grouped bump PR when one ships; CI
+verifies it, it auto-merges, and that merge rebuilds the affected images. No upstream release means no
+PR and no rebuild. Scope and grouping live in [`.github/renovate.json5`](./.github/renovate.json5);
+the Dependency Dashboard issue tracks what is pending. Everything else — including base images and
+Bun/Hugo — stays manual.
 
 > **Setup requirement — Mend portal toggles.** Installing the Renovate app with "All repositories"
 > makes Mend default the repo to **Silent mode** (`dryRun=lookup`), where it scans and shows updates
