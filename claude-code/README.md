@@ -80,10 +80,10 @@ Only pin tools that affect project stability — dev infrastructure (rtk, ralphe
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
-Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
+Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, updates them to the latest marketplace versions (`install` alone no-ops once the persistent `~/.claude` volume holds a plugin), and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
 
 - **Sandbox variant:** its `postCreateCommand` already runs the script, if present, before `postStartCommand` brings up the firewall.
-- **Default variant:** run it once yourself after signing in to Claude Code:
+- **Default variant:** run it yourself after signing in to Claude Code, and again whenever you want plugin updates:
 
   ```bash
   bash .devcontainer/init-plugins.sh
@@ -97,7 +97,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 #### Bundled plugins
 
-`init-plugins.sh` registers four marketplaces and installs the following plugins:
+`init-plugins.sh` registers five marketplaces and installs the following plugins:
 
 | Marketplace | Plugin | Purpose |
 |---|---|---|
@@ -111,6 +111,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
 | `anthropics/claude-plugins-official` | `posthog` | PostHog product-analytics & LLM-traces skills |
+| `cloudflare/skills` | `cloudflare` | Cloudflare skills and MCP server |
 | `umputun/ralphex` | `ralphex` | Autonomous plan execution |
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |

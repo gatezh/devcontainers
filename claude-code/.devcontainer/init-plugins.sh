@@ -1,9 +1,10 @@
 #!/bin/bash
-# Claude Code plugin initialization. Idempotent — safe to run multiple times.
+# Claude Code plugin initialization. Idempotent — safe to run multiple times;
+# each run also updates plugins to latest.
 #
 # Sandbox variant: runs from postCreateCommand, before the firewall comes up.
-# Default variant: run `bash .devcontainer/init-plugins.sh` once after signing in —
-# from postCreateCommand it races the extension's OAuth sign-in (#58).
+# Default variant: run `bash .devcontainer/init-plugins.sh` after signing in, and to
+# update plugins — from postCreateCommand it races the extension's OAuth sign-in (#58).
 
 set -euo pipefail
 
@@ -63,6 +64,22 @@ for plugin in "${PLUGINS[@]}"; do
         echo "✔ Installed: $plugin"
     else
         echo "⚠ Failed to install: $plugin" >&2
+    fi
+done
+
+# ~/.claude is a persistent volume, so `install` no-ops after the first run.
+# Refresh marketplace indexes first — `plugin update` resolves against the cache.
+if claude plugin marketplace update 2>&1; then
+    echo "✔ Marketplaces refreshed"
+else
+    echo "⚠ Failed to refresh marketplaces" >&2
+fi
+
+for plugin in "${PLUGINS[@]}"; do
+    if claude plugin update "$plugin" 2>&1; then
+        echo "✔ Up to date: $plugin"
+    else
+        echo "⚠ Failed to update: $plugin" >&2
     fi
 done
 

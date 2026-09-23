@@ -1,6 +1,6 @@
 #!/bin/bash
 # Initialize Claude Code plugins for the devcontainers repo
-# This script is idempotent - safe to run multiple times
+# This script is idempotent - safe to run multiple times; each run also updates plugins
 
 set -euo pipefail
 
@@ -41,6 +41,19 @@ for plugin in "${PLUGINS[@]}"; do
     echo "  Installing: $plugin"
     claude plugin install "$plugin" 2>/dev/null || {
         echo "    Note: $plugin may already be installed or unavailable"
+    }
+done
+
+# ~/.claude is a persistent volume, so `install` no-ops after the first run.
+# Refresh marketplace indexes first — `plugin update` resolves against the cache.
+echo "Updating Claude Code plugins..."
+claude plugin marketplace update || {
+    echo "Note: marketplace refresh failed; updates use cached indexes"
+}
+for plugin in "${PLUGINS[@]}"; do
+    echo "  Updating: $plugin"
+    claude plugin update "$plugin" 2>/dev/null || {
+        echo "    Note: $plugin update failed or unavailable"
     }
 done
 
