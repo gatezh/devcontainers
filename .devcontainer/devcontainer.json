@@ -23,6 +23,8 @@
         "redhat.vscode-yaml",
         // Markdown Preview Github Styles - Markdown preview
         "bierner.markdown-preview-github-styles",
+        // Markdown Preview Mermaid Support - Mermaid diagrams
+        "bierner.markdown-mermaid",
         // Docker - Dockerfile support
         "ms-azuretools.vscode-docker"
       ],

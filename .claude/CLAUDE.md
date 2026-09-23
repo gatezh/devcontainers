@@ -54,6 +54,7 @@ Never duplicate: wiki pages link to READMEs, READMEs link back. Every wiki page 
 - Use comments in devcontainer.json (JSONC format)
 - Dockerfile instruction order: ARG → FROM → packages → user/permissions → tools → LABEL
 - For images with multiple binary downloads, use multi-stage parallel builds (see `ralphex-fe/Dockerfile`)
+- Commit every `.sh` file as `100755` (they all have a shebang); check with `git ls-files -s '*.sh'`
 - README headings are plain text, no emoji. Per-image READMEs use these shared section names, in this order, wherever the section exists: `Features` → `Multi-platform Support` → `Image Tags` → `Usage` → image-specific sections → `Build Args` → `Building the Image` → `Resources` → `License` → `Contributing`. Shared boilerplate (platform list, buildx block) is worded identically; only each image's tag scheme and paths differ.
 
 ## Validation

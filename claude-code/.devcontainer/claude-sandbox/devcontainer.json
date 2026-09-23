@@ -42,6 +42,8 @@
         "redhat.vscode-yaml",
         // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
         "bierner.markdown-preview-github-styles",
+        // Markdown Preview Mermaid Support - renders Mermaid diagrams in Markdown preview
+        "bierner.markdown-mermaid",
         // Docker - Dockerfile and Compose syntax, linting, and image management
         "ms-azuretools.vscode-docker",
 
@@ -122,8 +124,9 @@
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    // Required — the sandbox firewall blocks OAuth login, so the token must be
-    // injected from the host. See "Sandbox Authentication" section in README.
+    // Optional — only needed when the sandbox is used without the default variant, whose
+    // sign-in lands on the shared ~/.claude volume. Resolves to "" when the host var is
+    // unset. See "Sandbox Authentication" section in README.
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   // The find command chowns all node_modules volume mount points in one pass.
