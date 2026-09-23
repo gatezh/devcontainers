@@ -34,10 +34,11 @@ fi
 chown -R app:app /home/app/.claude
 
 # ── Local: RTK rewrite hook, with or without the host mount (#128) ──────────
-# Idempotent; --hook-only avoids workspace artifacts. RTK_TELEMETRY_DISABLED=1
-# skips the consent prompt (rtk-ai/rtk#2477); timeout is a backstop.
+# Idempotent; --hook-only avoids workspace artifacts. Telemetry prompt:
+# RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477), closed stdin stops it
+# blocking, and timeout backstops any other hang.
 if command -v rtk >/dev/null 2>&1; then
-    RTK_TELEMETRY_DISABLED=1 gosu app timeout 10 rtk init -g --hook-only --auto-patch 2>/dev/null || true
+    RTK_TELEMETRY_DISABLED=1 gosu app timeout 10 rtk init -g --hook-only --auto-patch < /dev/null 2>/dev/null || true
 fi
 
 # copy credentials extracted from macOS keychain (mounted separately)
