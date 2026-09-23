@@ -164,9 +164,13 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-The sandbox firewall blocks outbound traffic, so `claude login` (which opens a browser OAuth flow) won't work inside the container. Instead, generate a token on the host and inject it via environment variable.
+**Usual path: sign in once in the default variant.** Both variants mount the same `myproject-claude-config-*` volume at `/home/node/.claude`, so credentials created by signing in to the default variant (VS Code extension, or `claude` in a terminal) are already there when the sandbox starts. No token is needed.
 
-**Setup (one-time):**
+**Standalone sandbox: inject a token.** If you use the sandbox without ever opening the default variant, sign-in has to happen inside the sandbox, where the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it via environment variable instead.
+
+When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. That is expected: with an empty token, Claude Code authenticates from the credentials on the shared volume.
+
+**Setup (one-time, standalone sandbox only):**
 
 1. Generate a setup token on your host machine:
    ```bash
