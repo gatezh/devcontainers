@@ -7,8 +7,10 @@
 # an issue. Check upstream for updates.
 
 # ── Local: ~/.claude must exist without the host mount (#128) ───────────────
-# rtk init -g below writes into it and fails if it is missing.
+# rtk init -g below writes into it (as app) and fails if it is missing. Not
+# recursive: only the copies below are chowned, never anything bind-mounted in.
 mkdir -p /home/app/.claude
+chown app:app /home/app/.claude
 
 # copy only essential claude files (not the entire 2GB directory)
 if [ -d /mnt/claude ]; then
@@ -29,9 +31,9 @@ if [ -d /mnt/claude ]; then
             "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
             && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
     fi
-fi
 
-chown -R app:app /home/app/.claude
+    chown -R app:app /home/app/.claude
+fi
 
 # ── Local: RTK rewrite hook, with or without the host mount (#128) ──────────
 # Idempotent; --hook-only avoids workspace artifacts. Telemetry prompt:
