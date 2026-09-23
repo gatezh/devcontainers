@@ -42,6 +42,8 @@
         "redhat.vscode-yaml",
         // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
         "bierner.markdown-preview-github-styles",
+        // Markdown Preview Mermaid Support - renders Mermaid diagrams in Markdown preview
+        "bierner.markdown-mermaid",
         // Docker - Dockerfile and Compose syntax, linting, and image management
         "ms-azuretools.vscode-docker",
 
