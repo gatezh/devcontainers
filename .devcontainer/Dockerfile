@@ -83,7 +83,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.100.0
+ARG GH_VERSION=2.101.0
 
 # System packages (each justified — see claude-code Dockerfile for rationale)
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -178,6 +178,12 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # Enables running the same checks locally that CI runs on PRs.
 COPY --from=hadolint-download /usr/local/bin/hadolint /usr/local/bin/hadolint
 COPY --from=actionlint-download /usr/local/bin/actionlint /usr/local/bin/actionlint
+
+# ── gh-stack (native stacked PRs) ────────────────────────────────────────────
+# Installed as node so it lands in ~/.local/share/gh/extensions. See #160.
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=0.1.1
+RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 
 # ── Claude Code CLI ──────────────────────────────────────────────────────────
 # npm install (not native installer) to avoid rate-limiting in parallel builds.

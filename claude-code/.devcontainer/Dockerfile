@@ -61,7 +61,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.100.0
+ARG GH_VERSION=2.101.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -108,7 +108,7 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.claude \
   /home/node/.local/share \
   /home/node/.local/state \
-  /home/node/.config \
+  /home/node/.config/gh \
   /home/node/.cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
@@ -196,6 +196,13 @@ RUN mkdir -p /etc/claude-code
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 USER node
 
+# ── gh-stack (native stacked PRs) ────────────────────────────────────────────
+# Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
+# ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
+# renovate: datasource=github-releases depName=github/gh-stack
+ARG GH_STACK_VERSION=0.1.1
+RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
+
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
 # npm, not the native installer: the installer rate-limits (429) under parallel
 # Docker builds. npm stays supported "for compatibility reasons" — this is that
@@ -204,7 +211,7 @@ USER node
 # Installed as node so files land node-owned; a later chown -R would duplicate
 # every file on overlayfs, adding hundreds of MB.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.276
+ARG CLAUDE_CODE_VERSION=2.1.280
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
@@ -249,7 +256,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # Installed as the node user (see claude-code install above for rationale).
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.37.1
+ARG AGENT_BROWSER_VERSION=0.38.1
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \

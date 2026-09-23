@@ -42,6 +42,8 @@
         "redhat.vscode-yaml",
         // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
         "bierner.markdown-preview-github-styles",
+        // Markdown Preview Mermaid Support - renders Mermaid diagrams in Markdown preview
+        "bierner.markdown-mermaid",
         // Docker - Dockerfile and Compose syntax, linting, and image management
         "ms-azuretools.vscode-docker",
 
@@ -112,6 +114,8 @@
     // ── Persistent config ──────────────────────────────────────────────
     "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
     "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
+    // gh CLI auth/state (~/.config/gh/hosts.yml) — keeps `gh auth login` across rebuilds
+    "source=myproject-gh-config-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume",
     // ── Firewall script ────────────────────────────────────────────────
     // The image provides iptables/ipset packages and sudo rule but NOT the script itself.
     // Each project provides its own script via bind mount to customize the domain allowlist.
@@ -122,13 +126,16 @@
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    // Required — the sandbox firewall blocks OAuth login, so the token must be
-    // injected from the host. See "Sandbox Authentication" section in README.
+    // Optional — only needed when the sandbox is used without the default variant, whose
+    // sign-in lands on the shared ~/.claude volume. Resolves to "" when the host var is
+    // unset. See "Sandbox Authentication" section in README.
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   // The find command chowns all node_modules volume mount points in one pass.
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
-  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory && mise install && bun install",
+  // bun install and init-plugins.sh are skipped when their file is absent. Plugins
+  // install here, before postStartCommand brings the firewall up.
+  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh && mise install && if [ -f package.json ]; then bun install; fi && if [ -f .devcontainer/init-plugins.sh ]; then bash .devcontainer/init-plugins.sh; fi",
   // Firewall init (bind-mounted from project) + re-patch the Playwright MCP
   // plugin's .mcp.json. The patch is defense in depth alongside the SessionStart
   // hook in /etc/claude-code/managed-settings.json, which handles the case where

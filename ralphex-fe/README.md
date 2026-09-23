@@ -16,7 +16,7 @@ This is a standalone image, not a devcontainer.
 | Go | for Hugo Modules |
 | Python 3 | system |
 | Playwright + Chromium | native Debian |
-| Claude Code CLI | 2.1.276 (pinned) |
+| Claude Code CLI | 2.1.280 (pinned) |
 | RTK | 0.49.0 (pinned) |
 | Ralphex | 1.7.0 (pinned) |
 | Git, ripgrep, jq, curl | system |
@@ -50,7 +50,7 @@ docker run --rm \
   ghcr.io/gatezh/devcontainers/ralphex-fe:latest
 ```
 
-## Building Locally
+## Building the Image
 
 ```bash
 docker build -t ralphex-fe:test ralphex-fe/
@@ -66,10 +66,16 @@ docker build -t ralphex-fe:test ralphex-fe/
 | `SKIP_HOME_CHOWN` | unset | Set to `1` to skip chown of `/home/app` at startup |
 | `INIT_QUIET` | unset | Set to `1` to suppress `init.sh` log output |
 
+## Multi-platform Support
+
+This image is built for multiple architectures:
+- `linux/amd64` (x86_64)
+- `linux/arm64` (ARM64/Apple Silicon)
+
 ## Image Tags
 
-- `latest` — always included
-- `bun{VERSION}-hugo{VERSION}` — version-specific tag (e.g., `bun1.3.9-hugo0.156.0`)
+- `latest` — most recent build
+- `bun{VERSION}-hugo{VERSION}` — version-specific tag (e.g., `bun1.4.2-hugo0.166.0`)
 
 Note: this image deviates from the standalone convention of a single primary version tag because it bundles multiple independently-versioned tools.
 

@@ -4,7 +4,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 
 **New here?** The [wiki](https://github.com/gatezh/devcontainers/wiki) has a [guide to picking an image](https://github.com/gatezh/devcontainers/wiki/Choosing-an-Image) and explains [what `latest` means and when it moves](https://github.com/gatezh/devcontainers/wiki/Image-Tags-and-Rebuild-Policy).
 
-## 📚 Image Documentation
+## Image Documentation
 
 ### Devcontainer Images
 
@@ -18,7 +18,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 
 - **[ralphex-fe](./ralphex-fe/README.md)** - Bun + Hugo Extended on ralphex base (standalone image)
 
-## 📖 Guides (wiki)
+## Guides (wiki)
 
 Cross-image guides and host-level procedures live in the [wiki](https://github.com/gatezh/devcontainers/wiki), because they go stale when Docker or GitHub changes rather than when this repo does.
 
@@ -168,11 +168,12 @@ Images from this repository are built and published to GitHub Container Registry
 ### Automatically, via Renovate
 
 The agent tooling in the `claude-code` and `ralphex-fe` images — `rtk`, `ralphex`, the Claude Code
-CLI, and `agent-browser` — is pinned as `ARG`s carrying `# renovate:` annotations. Renovate watches
-their releases and opens a single grouped bump PR when one ships; CI verifies it, it auto-merges, and
-that merge rebuilds the affected images. No upstream release means no PR and no rebuild. Scope and
-grouping live in [`.github/renovate.json5`](./.github/renovate.json5); the Dependency Dashboard
-issue tracks what is pending. Everything else — including base images and Bun/Hugo — stays manual.
+CLI, `agent-browser`, and the `gh-stack` extension — is pinned as `ARG`s carrying `# renovate:`
+annotations. Renovate watches their releases and opens a single grouped bump PR when one ships; CI
+verifies it, it auto-merges, and that merge rebuilds the affected images. No upstream release means no
+PR and no rebuild. Scope and grouping live in [`.github/renovate.json5`](./.github/renovate.json5);
+the Dependency Dashboard issue tracks what is pending. Everything else — including base images and
+Bun/Hugo — stays manual.
 
 > **Setup requirement — Mend portal toggles.** Installing the Renovate app with "All repositories"
 > makes Mend default the repo to **Silent mode** (`dryRun=lookup`), where it scans and shows updates

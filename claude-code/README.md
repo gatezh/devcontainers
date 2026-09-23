@@ -19,6 +19,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
 | Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
+| gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
@@ -48,7 +49,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -63,7 +64,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history volume mounts, and `updateContentCommand` for mise/bun setup.
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -72,9 +73,9 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 - [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 
-**Sandbox differences from default:** `capAdd` for iptables, `postStartCommand` runs the firewall script, `claudeCode.allowDangerouslySkipPermissions` enabled, and OAuth token must be injected from the host (see [Sandbox Authentication](#sandbox-authentication)).
+**Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, and zsh history. Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, zsh history, and gh CLI auth (`~/.config/gh`). Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -86,14 +87,16 @@ Only pin tools that affect project stability — dev infrastructure (rtk, ralphe
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
-Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
+Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, updates them to the latest marketplace versions (`install` alone no-ops once the persistent `~/.claude` volume holds a plugin), and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
 
-Wire into `devcontainer.json`:
+- **Sandbox variant:** its `postCreateCommand` already runs the script, if present, before `postStartCommand` brings up the firewall.
+- **Default variant:** run it yourself after signing in to Claude Code, and again whenever you want plugin updates:
 
-```jsonc
-"postCreateCommand": "bash .devcontainer/init-plugins.sh",
-"postStartCommand":  "/usr/local/bin/patch-playwright-mcp"
-```
+  ```bash
+  bash .devcontainer/init-plugins.sh
+  ```
+
+  It is not wired into `postCreateCommand` on purpose. `claude` CLI calls made there race the Claude Code extension's OAuth sign-in and can corrupt auth state, even with `waitFor` set (#58).
 
 `postStartCommand` re-runs the patch on every container start so plugin auto-updates between sessions cannot leave MCP pointing at the missing chrome channel. See the [Playwright Strategy](#playwright-strategy) section.
 
@@ -101,7 +104,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 #### Bundled plugins
 
-`init-plugins.sh` registers four marketplaces and installs the following plugins:
+`init-plugins.sh` registers five marketplaces and installs the following plugins:
 
 | Marketplace | Plugin | Purpose |
 |---|---|---|
@@ -115,6 +118,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
 | `anthropics/claude-plugins-official` | `posthog` | PostHog product-analytics & LLM-traces skills |
+| `cloudflare/skills` | `cloudflare` | Cloudflare skills and MCP server |
 | `umputun/ralphex` | `ralphex` | Autonomous plan execution |
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
@@ -154,6 +158,12 @@ Both image variants ship system chromium and the `/usr/local/bin/patch-playwrigh
 
 Copy `.claude/skills/sandbox-playwright/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
 
+### Recommended: Claude Code skill for stacked PRs
+
+Both image variants bake in the official [`github/gh-stack`](https://github.com/github/gh-stack) extension, so `gh stack` can open, link and atomically merge native [stacked PRs](https://gh.io/stacks). The [stacked-prs](.claude/skills/stacked-prs/SKILL.md) skill tells Claude Code to use it instead of hand-chaining PRs with `gh pr create --base`, and which flags keep it non-interactive.
+
+Copy `.claude/skills/stacked-prs/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+
 ### Recommended: Claude Code skill for upstream sync
 
 To keep your project's `.devcontainer/` and bundled `.claude/skills/` in step with this repo, copy the [devcontainer-upstream-sync](.claude/skills/devcontainer-upstream-sync/SKILL.md) skill into your project's `.claude/skills/` directory. The skill audits drift, helps adopt missed changes, drafts upstream issues for shared bugs, and self-updates when this skill's `version:` bumps.
@@ -170,9 +180,13 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-The sandbox firewall blocks outbound traffic, so `claude login` (which opens a browser OAuth flow) won't work inside the container. Instead, generate a token on the host and inject it via environment variable.
+**Usual path: sign in once in the default variant.** Both variants mount the same `myproject-claude-config-*` volume at `/home/node/.claude`, so credentials created by signing in to the default variant (VS Code extension, or `claude` in a terminal) are already there when the sandbox starts. No token is needed.
 
-**Setup (one-time):**
+**Standalone sandbox: inject a token.** If you use the sandbox without ever opening the default variant, sign-in has to happen inside the sandbox, where the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it via environment variable instead.
+
+When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. That is expected: with an empty token, Claude Code authenticates from the credentials on the shared volume.
+
+**Setup (one-time, standalone sandbox only):**
 
 1. Generate a setup token on your host machine:
    ```bash
@@ -246,6 +260,8 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
     │   └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
     ├── sandbox-playwright/
     │   └── SKILL.md               ← teaches Claude Code to drive Playwright MCP + @playwright/test
+    ├── stacked-prs/
+    │   └── SKILL.md               ← teaches Claude Code to use native stacked PRs (gh stack)
     └── devcontainer-upstream-sync/
         └── SKILL.md               ← keeps project's .devcontainer/ + skills synced with this repo
 ```
@@ -395,7 +411,7 @@ to use the system chromium:
 }
 ```
 
-`init-plugins.sh` invokes the patch binary at `postCreateCommand`, and the
+`init-plugins.sh` invokes the patch binary when it runs, and the
 template `devcontainer.json` files run it again at `postStartCommand` so
 plugin auto-updates between sessions cannot leave MCP pointing at the
 missing chrome channel.
@@ -419,10 +435,11 @@ more often than right.
 | `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
 | `AGENT_BROWSER_VERSION` | Renovate | agent-browser, default target only |
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
+| `GH_STACK_VERSION` | Renovate | gh-stack extension (`gh stack`) |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The five Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The six Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback
