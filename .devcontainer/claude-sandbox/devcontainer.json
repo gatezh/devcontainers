@@ -23,6 +23,7 @@
         // **General**
         "redhat.vscode-yaml",
         "bierner.markdown-preview-github-styles",
+        "bierner.markdown-mermaid",
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
