@@ -40,6 +40,8 @@
         "redhat.vscode-yaml",
         // Markdown Preview Github Styles - renders Markdown preview with GitHub's CSS
         "bierner.markdown-preview-github-styles",
+        // Markdown Preview Mermaid Support - renders Mermaid diagrams in Markdown preview
+        "bierner.markdown-mermaid",
         // Docker - Dockerfile and Compose syntax, linting, and image management
         "ms-azuretools.vscode-docker",
 
@@ -103,7 +105,9 @@
     // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume",
     // ── Persistent config ──────────────────────────────────────────────
     "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
-    "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume"
+    "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
+    // gh CLI auth/state (~/.config/gh/hosts.yml) — keeps `gh auth login` across rebuilds
+    "source=myproject-gh-config-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
@@ -114,13 +118,15 @@
   // sudo chown fixes volume ownership — safety net in case Docker volume population didn't apply.
   // The find command chowns all node_modules volume mount points in one pass.
   // mise install reads .mise.toml and installs project-specific tool versions.
+  // bun install is skipped until the project has a package.json.
   // Chromium is baked into the image via apt — no playwright install step needed.
   // Projects' playwright.config.ts should use process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
-  "updateContentCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory && mise install && bun install",
+  "updateContentCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh && mise install && if [ -f package.json ]; then bun install; fi",
   // Re-patch the Playwright MCP plugin's .mcp.json on every start. Defense in
   // depth alongside the SessionStart hook in /etc/claude-code/managed-settings.json,
   // which handles the case where the plugin auto-updates mid-container-run.
   // See issues #85, #87, #98.
-  "postStartCommand": "/usr/local/bin/patch-playwright-mcp",
-  "waitFor": "postCreateCommand"
+  // No postCreateCommand: claude CLI calls there race the extension's OAuth sign-in
+  // (#58). Run `bash .devcontainer/init-plugins.sh` once after signing in.
+  "postStartCommand": "/usr/local/bin/patch-playwright-mcp"
 }

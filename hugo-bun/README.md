@@ -2,7 +2,7 @@
 
 A multiplatform development container image combining Hugo Extended and Bun runtime, optimized for modern static site development workflows.
 
-## 🌟 Features
+## Features
 
 - **Hugo Extended** - Full-featured static site generator with extended capabilities
 - **Bun Runtime** - Fast JavaScript runtime, bundler, and package manager
@@ -11,47 +11,18 @@ A multiplatform development container image combining Hugo Extended and Bun runt
 - **Zsh** - Modern shell with better VS Code integration
 - **Alpine Linux** - Lightweight base image with glibc compatibility (gcompat)
 
-## 🏗️ Multiplatform Support
+## Multi-platform Support
 
 This image is built for multiple architectures:
 - `linux/amd64` (x86_64)
 - `linux/arm64` (ARM64/Apple Silicon)
 
-## 📦 Building the Image
+## Image Tags
 
-To build this multiplatform image, use Docker Buildx:
+- `latest` — most recent build
+- `hugo<HUGO_VERSION>-bun<BUN_VERSION>-alpine` — version-specific tag (e.g., `hugo0.152.2-bun1.3.2-alpine`)
 
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:hugo<HUGO_VERSION>-bun<BUN_VERSION>-alpine \
-  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:latest \
-  --push \
-  .devcontainer
-```
-
-### Example with specific versions:
-
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/myusername/devcontainers/hugo-bun:hugo0.152.2-bun1.3.2-alpine \
-  -t ghcr.io/myusername/devcontainers/hugo-bun:latest \
-  --push \
-  .devcontainer
-```
-
-**Replace:**
-- `<USERNAME>` with your GitHub username or organization
-- `<HUGO_VERSION>` with the Hugo version (e.g., `0.152.2`)
-- `<BUN_VERSION>` with the Bun version (e.g., `1.3.2`)
-
-**Note:** The `--push` flag requires you to be logged in to GitHub Container Registry:
-```bash
-echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
-```
-
-## 🚀 Usage
+## Usage
 
 ### In Your Project's devcontainer.json
 
@@ -86,7 +57,7 @@ to:
 }
 ```
 
-## 🔧 Included VS Code Extensions
+## Included VS Code Extensions
 
 The development container comes pre-configured with the following extensions:
 
@@ -104,29 +75,7 @@ The development container comes pre-configured with the following extensions:
 - **Language Hugo VSCode** (`budparr.language-hugo-vscode`) - Hugo language support
 - **Hugo Shortcode Syntax** (`kaellarkin.hugo-shortcode-syntax`) - Syntax highlighting for Hugo shortcodes
 
-## 📋 Version Information
-
-The image uses specific versions of Hugo and Bun defined as build arguments:
-
-- **Hugo Version**: Specified via `HUGO_VERSION` build arg (default: `0.152.2`)
-- **Bun Version**: Specified via `BUN_VERSION` build arg (default: `1.3.2`)
-- **Base Image**: `oven/bun:${BUN_VERSION}-alpine`
-
-### Updating Versions
-
-To build with different versions, use build arguments:
-
-```bash
-docker buildx build \
-  --build-arg HUGO_VERSION=0.153.0 \
-  --build-arg BUN_VERSION=1.4.0 \
-  --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:hugo0.153.0-bun1.4.0-alpine \
-  --push \
-  .devcontainer
-```
-
-## ⚠️ Important Notes
+## Important Notes
 
 ### GitHub Actions Integration
 
@@ -150,7 +99,7 @@ Hugo Extended binary requires glibc, but Alpine Linux uses musl. The `gcompat` p
 RUN apk add --no-cache gcompat
 ```
 
-## 🛠️ Development Workflow
+## Development Workflow
 
 ### Starting the Dev Container
 
@@ -184,11 +133,67 @@ bun run build
 bun run index.ts
 ```
 
-## 📄 License
+## Build Args
+
+The image uses specific versions of Hugo and Bun defined as build arguments:
+
+- **Hugo Version**: Specified via `HUGO_VERSION` build arg (default: `0.152.2`)
+- **Bun Version**: Specified via `BUN_VERSION` build arg (default: `1.3.2`)
+- **Base Image**: `oven/bun:${BUN_VERSION}-alpine`
+
+### Updating Versions
+
+To build with different versions, use build arguments:
+
+```bash
+docker buildx build \
+  --build-arg HUGO_VERSION=0.153.0 \
+  --build-arg BUN_VERSION=1.4.0 \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:hugo0.153.0-bun1.4.0-alpine \
+  --push \
+  .devcontainer
+```
+
+## Building the Image
+
+To build this multiplatform image, use Docker Buildx:
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:hugo<HUGO_VERSION>-bun<BUN_VERSION>-alpine \
+  -t ghcr.io/<USERNAME>/devcontainers/hugo-bun:latest \
+  --push \
+  .devcontainer
+```
+
+### Example with Specific Versions
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t ghcr.io/myusername/devcontainers/hugo-bun:hugo0.152.2-bun1.3.2-alpine \
+  -t ghcr.io/myusername/devcontainers/hugo-bun:latest \
+  --push \
+  .devcontainer
+```
+
+**Replace:**
+- `<USERNAME>` with your GitHub username or organization
+- `<HUGO_VERSION>` with the Hugo version (e.g., `0.152.2`)
+- `<BUN_VERSION>` with the Bun version (e.g., `1.3.2`)
+
+**Note:** The `--push` flag requires you to be logged in to GitHub Container Registry:
+```bash
+echo $GITHUB_TOKEN | docker login ghcr.io -u <USERNAME> --password-stdin
+```
+
+## License
 
 This image configuration is part of the devcontainers repository.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please ensure:
 1. Version numbers are clearly documented

@@ -4,7 +4,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 
 **New here?** The [wiki](https://github.com/gatezh/devcontainers/wiki) has a [guide to picking an image](https://github.com/gatezh/devcontainers/wiki/Choosing-an-Image) and explains [what `latest` means and when it moves](https://github.com/gatezh/devcontainers/wiki/Image-Tags-and-Rebuild-Policy).
 
-## 📚 Image Documentation
+## Image Documentation
 
 ### Devcontainer Images
 
@@ -18,7 +18,7 @@ This repository contains Dockerfiles for custom Docker images hosted on GitHub C
 
 - **[ralphex-fe](./ralphex-fe/README.md)** - Bun + Hugo Extended on ralphex base (standalone image)
 
-## 📖 Guides (wiki)
+## Guides (wiki)
 
 Cross-image guides and host-level procedures live in the [wiki](https://github.com/gatezh/devcontainers/wiki), because they go stale when Docker or GitHub changes rather than when this repo does.
 
