@@ -184,16 +184,22 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # mid-run. See #87, #98.
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
-# ── Claude Code managed settings ─────────────────────────────────────────────
+# ── Claude Code managed settings and skills ──────────────────────────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101)
-# and provides the MDN MCP server. managedMcpServers needs Claude Code >= 2.1.259.
+# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
+# provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
+# routes browser work to the devcontainer-browser skill (claudeMd) with agent-browser
+# pre-allowed.
 #
-# /etc/claude-code is created explicitly: BuildKit applies COPY --chmod to parent
+# The skill ships at the managed skills location, so every project gets it without a
+# copy in its own .claude/skills/, and it wins a name clash with a project skill.
+#
+# The directories are created explicitly: BuildKit applies COPY --chmod to parent
 # dirs it auto-creates, leaving 0644 — not traversable.
 USER root
-RUN mkdir -p /etc/claude-code
+RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 USER node
 
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
@@ -213,6 +219,15 @@ RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
 ARG CLAUDE_CODE_VERSION=2.1.282
 RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+# ── agent-browser ─────────────────────────────────────────────────────────────
+# Headless browser automation for AI agents, and the default browser tool (see the
+# devcontainer-browser skill). In base so both targets have it; each target installs
+# chromium and sets AGENT_BROWSER_EXECUTABLE_PATH. Installed as node (see the Claude
+# Code install above). Version pinned and kept up to date by Renovate.
+# renovate: datasource=npm depName=agent-browser
+ARG AGENT_BROWSER_VERSION=0.38.1
+RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM base AS default
@@ -251,13 +266,6 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# agent-browser: headless browser automation for AI agents.
-# Uses the apt-installed chromium above (via AGENT_BROWSER_EXECUTABLE_PATH).
-# Installed as the node user (see claude-code install above for rationale).
-# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-# renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.38.1
-RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
@@ -272,8 +280,8 @@ FROM base AS sandbox
 
 # Firewall packages (not needed in default target).
 # Chromium + fonts are also baked in here — the sandbox firewall blocks
-# deb.debian.org, so they cannot be added at runtime. Required for the
-# Playwright MCP plugin to launch a browser.
+# deb.debian.org, so they cannot be added at runtime. agent-browser and Playwright
+# both launch it.
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -286,10 +294,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   chromium \
   fonts-freefont-ttf
 
-# Use the apt-installed chromium instead of Playwright-managed browsers
-# (matches the default stage; see comment above the default chromium block).
+# Use the apt-installed chromium instead of Playwright-managed browsers, and point
+# agent-browser at it too (matches the default stage; see the comment there).
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Passwordless sudo for node user — needed for:
 #   - "sudo chown" on named volumes (node_modules isolation)
@@ -302,7 +311,7 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
-      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages" \
+      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages and agent-browser" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code-sandbox" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
