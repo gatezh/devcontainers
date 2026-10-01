@@ -30,6 +30,9 @@ jobs:
       push: true
       target: default
       context: claude-code/.devcontainer
+      # Reuse unchanged layers so a Claude Code bump republishes only its own layer.
+      cache: true
+      cache-scope: claude-code
 
       platforms: linux/amd64,linux/arm64
       meta-images: ghcr.io/gatezh/devcontainers/claude-code
@@ -54,6 +57,8 @@ jobs:
       push: true
       target: sandbox
       context: claude-code/.devcontainer
+      cache: true
+      cache-scope: claude-code-sandbox
 
       platforms: linux/amd64,linux/arm64
       meta-images: ghcr.io/gatezh/devcontainers/claude-code-sandbox
