@@ -11,6 +11,12 @@
 #   docker build --target sandbox -t claude-code:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Global so Renovate bumps one line; re-declared as the last step of each target.
+# An ARG joins the cache key of every later RUN, so declaring it earlier would
+# rebuild Chromium on each Claude Code release.
+# renovate: datasource=npm depName=@anthropic-ai/claude-code
+ARG CLAUDE_CODE_VERSION=2.1.286
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
@@ -203,17 +209,6 @@ USER node
 ARG GH_STACK_VERSION=0.1.1
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 
-# ── Claude Code CLI ───────────────────────────────────────────────────────────
-# npm, not the native installer: the installer rate-limits (429) under parallel
-# Docker builds. npm stays supported "for compatibility reasons" — this is that
-# reason. https://code.claude.com/docs/en/getting-started#install-with-npm
-#
-# Installed as node so files land node-owned; a later chown -R would duplicate
-# every file on overlayfs, adding hundreds of MB.
-# renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.286
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
-
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM base AS default
 
@@ -253,11 +248,21 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 
 # agent-browser: headless browser automation for AI agents.
 # Uses the apt-installed chromium above (via AGENT_BROWSER_EXECUTABLE_PATH).
-# Installed as the node user (see claude-code install above for rationale).
+# Installed as the node user (see the Claude Code install below for rationale).
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=agent-browser
 ARG AGENT_BROWSER_VERSION=0.38.1
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
+
+# ── Claude Code CLI — last: it changes most often (see the global ARG) ───────
+# npm, not the native installer: the installer rate-limits (429) under parallel
+# Docker builds. npm stays supported "for compatibility reasons" — this is that
+# reason. https://code.claude.com/docs/en/getting-started#install-with-npm
+#
+# Installed as node so files land node-owned; a later chown -R would duplicate
+# every file on overlayfs, adding hundreds of MB.
+ARG CLAUDE_CODE_VERSION
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
@@ -300,6 +305,10 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 USER node
+
+# ── Claude Code CLI — last (see the global ARG and the default target) ───────
+ARG CLAUDE_CODE_VERSION
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages" \
