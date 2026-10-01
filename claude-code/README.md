@@ -9,7 +9,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Variant | Image | Use Case |
 |---------|-------|----------|
 | **default** | `ghcr.io/gatezh/devcontainers/claude-code:latest` | Full dev environment with agent-browser and passwordless sudo |
-| **sandbox** | `ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest` | Network-restricted environment with iptables firewall packages |
+| **sandbox** | `ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest` | Network-restricted environment with iptables firewall packages and agent-browser |
 
 ## What's Included
 
@@ -23,9 +23,9 @@ Projects consume these pre-built images and control their own tool versions via 
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` (used by Playwright and the Playwright MCP plugin via `/usr/bin/chromium`)
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill))
 
-**Default-only:** passwordless sudo, agent-browser
+**Default-only:** passwordless sudo
 
 **Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate, firewall sudo rule
 
@@ -152,11 +152,13 @@ The sandbox firewall blocks vendor doc sites, so Claude Code can't `WebFetch` or
 
 Copy `.claude/skills/sandbox-fetch-docs/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
 
-### Recommended: Claude Code skill for Playwright
+### Built in: browser skill
 
-Both image variants ship system chromium and the `/usr/local/bin/patch-playwright-mcp` binary, so Playwright MCP and `@playwright/test` (and `@vitest/browser-playwright`, and direct `playwright-core` calls) work out of the box once each project entry point wires `launchOptions.executablePath` — see [Playwright Strategy](#playwright-strategy) for the full per-consumer wiring matrix. The image includes a [sandbox-playwright](.claude/skills/sandbox-playwright/SKILL.md) skill that teaches Claude Code how to drive these paths — discovery-driven, with no hardcoded project ports, service names, or test layouts.
+Both image variants ship the [devcontainer-browser](.devcontainer/managed-skills/devcontainer-browser/SKILL.md) skill at `/etc/claude-code/.claude/skills/`, Claude Code's managed skills location, so every project gets it with nothing to copy. It makes **agent-browser the default** for any browser work (opening the app, UI checks, screenshots, DPR and srcset measurements, React render profiling) and keeps **Playwright as the fallback** for a project's committed `@playwright/test` suite, vitest browser mode and Storybook tests, Firefox/WebKit, or a missing agent-browser. It also carries the per-consumer `executablePath` wiring from [Playwright Strategy](#playwright-strategy) and the rule never to download a browser.
 
-Copy `.claude/skills/sandbox-playwright/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+`/etc/claude-code/managed-settings.json` backs it with a short `claudeMd` routing rule loaded in every session and `permissions.allow` for `Bash(agent-browser:*)`, so agent-browser runs without permission prompts.
+
+**Migrating from `sandbox-playwright`:** delete `.claude/skills/sandbox-playwright/` from your project. It has a different name, so Claude Code would load both.
 
 ### Recommended: Claude Code skill for stacked PRs
 
@@ -258,8 +260,6 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 └── skills/
     ├── sandbox-fetch-docs/
     │   └── SKILL.md               ← teaches Claude Code to fetch docs within sandbox firewall
-    ├── sandbox-playwright/
-    │   └── SKILL.md               ← teaches Claude Code to drive Playwright MCP + @playwright/test
     ├── stacked-prs/
     │   └── SKILL.md               ← teaches Claude Code to use native stacked PRs (gh stack)
     └── devcontainer-upstream-sync/
@@ -300,7 +300,7 @@ The Dockerfile sets:
 ```bash
 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
-AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium   # default target only
+AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 ```
 
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` is a project convention — Playwright
@@ -314,7 +314,7 @@ binary"; consumer projects do the wiring.
 | `@playwright/test` | `playwright.config.ts` | `use.launchOptions.executablePath` |
 | `@vitest/browser-playwright` (incl. `@storybook/addon-vitest`, `@vitest/browser`) | `vitest.config.ts` | `playwright({ launchOptions: { executablePath } })` |
 | Direct `playwright-core` / `playwright` use in scripts | every `chromium.launch(...)` site | `chromium.launch({ executablePath })` |
-| `agent-browser` (default target only) | nothing | Image sets `AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium`. Independent of the `PLAYWRIGHT_*` convention — agent-browser is a Rust CLI with its own env-var family. |
+| `agent-browser` | nothing | Image sets `AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium`. Independent of the `PLAYWRIGHT_*` convention — agent-browser is a Rust CLI with its own env-var family. |
 
 ### `@playwright/test` — `playwright.config.ts`
 
@@ -433,7 +433,7 @@ more often than right.
 | `RTK_VERSION` | Renovate | rtk |
 | `RALPHEX_VERSION` | Renovate | ralphex |
 | `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
-| `AGENT_BROWSER_VERSION` | Renovate | agent-browser, default target only |
+| `AGENT_BROWSER_VERSION` | Renovate | agent-browser |
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
 | `GH_STACK_VERSION` | Renovate | gh-stack extension (`gh stack`) |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |

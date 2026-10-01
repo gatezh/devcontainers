@@ -4,7 +4,7 @@ description: Use to audit a project's .devcontainer/ and bundled .claude/skills/
 metadata:
   author: Serge Gatezh
   url: https://github.com/gatezh
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Devcontainer Upstream Sync
@@ -67,11 +67,19 @@ but don't, and includes files that shouldn't be tracked.
 | `.devcontainer/claude-sandbox/docker-compose.yml` | `claude-code/.devcontainer/claude-sandbox/docker-compose.yml` | starter-customize |
 | `.devcontainer/claude-sandbox/init-firewall.sh` | `.devcontainer/claude-sandbox/init-firewall.sh` *(repo root, not `claude-code/`)* | exemplar |
 | `.claude/skills/sandbox-fetch-docs/SKILL.md` | `claude-code/.claude/skills/sandbox-fetch-docs/SKILL.md` | framework-track |
-| `.claude/skills/sandbox-playwright/SKILL.md` | `claude-code/.claude/skills/sandbox-playwright/SKILL.md` | framework-track |
 | `.claude/skills/stacked-prs/SKILL.md` | `claude-code/.claude/skills/stacked-prs/SKILL.md` | framework-track |
 | `.claude/skills/devcontainer-upstream-sync/SKILL.md` | `claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md` | framework-track |
 | `.claude/settings.json` | `claude-code/.claude/settings.json` | starter-customize |
 | `.mise.toml` | `claude-code/mise.toml` | starter-customize |
+
+### Retired paths
+
+Upstream no longer ships these. If the project still has one, report it as
+`retired: delete` and delete it when adopting — don't diff it.
+
+| local path | why |
+|---|---|
+| `.claude/skills/sandbox-playwright/` | Replaced by `devcontainer-browser`, which the image ships at `/etc/claude-code/.claude/skills/`. The names differ, so a leftover copy loads alongside it and contradicts it (it makes the Playwright MCP the default). |
 
 ### Bucket meanings
 
@@ -155,7 +163,8 @@ Report format (one row per manifest entry):
 ✓ .devcontainer/devcontainer.json                   framework-track    intentional-customization (Hugo extensions, hostname)
 ⚠ .devcontainer/claude-sandbox/init-firewall.sh     exemplar           template-divergence: see Workflow 2
 ⚠ .mise.toml                                        starter-customize  local-missing (project may not use mise)
-✗ .claude/skills/sandbox-playwright/SKILL.md        framework-track    drift-needs-adopt: 3 hunks
+✗ .claude/skills/stacked-prs/SKILL.md               framework-track    drift-needs-adopt: 3 hunks
+✗ .claude/skills/sandbox-playwright/                retired            retired: delete
 ```
 
 Audit is read-only. Don't apply edits in this phase.

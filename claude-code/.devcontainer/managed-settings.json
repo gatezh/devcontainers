@@ -1,4 +1,10 @@
 {
+  "claudeMd": "Browser work in this devcontainer (opening pages, UI checks, screenshots, browser measurements, browser tests): follow the `devcontainer-browser` skill. agent-browser is the default; use Playwright only for the project's committed test suites, Firefox/WebKit, or when agent-browser is missing. Never install or download a browser: Chromium is preinstalled at /usr/bin/chromium.",
+  "permissions": {
+    "allow": [
+      "Bash(agent-browser:*)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
