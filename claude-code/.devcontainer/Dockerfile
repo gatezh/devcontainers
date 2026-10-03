@@ -67,7 +67,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.101.0
+ARG GH_VERSION=2.102.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
