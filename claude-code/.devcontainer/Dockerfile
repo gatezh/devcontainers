@@ -251,7 +251,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # Installed as the node user (see the Claude Code install below for rationale).
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.38.1
+ARG AGENT_BROWSER_VERSION=0.38.2
 RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
 
 # ── Claude Code CLI — last: it changes most often (see the global ARG) ───────
