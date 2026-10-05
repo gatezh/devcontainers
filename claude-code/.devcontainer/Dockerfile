@@ -206,7 +206,7 @@ USER node
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=0.1.1
+ARG GH_STACK_VERSION=0.2.0
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
