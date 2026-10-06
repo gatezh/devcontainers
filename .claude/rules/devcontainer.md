@@ -14,7 +14,7 @@ paths:
 
 ## Comments
 
-Comment only what the JSON can't say: a reason, a constraint, an issue number, or what a template adopter must change. A comment that restates the key below it (`// Show workspace folder name in window title` above `"window.title"`) is noise; leave it out.
+Skip a comment that only repeats the line below it in other words, such as `// Show workspace folder name in window title` above `"window.title"`. Extension descriptions are not that: they say what an extension ID does.
 
 ## node_modules Mount
 
@@ -28,11 +28,12 @@ Always include to keep node_modules off the host:
 
 ## VS Code Extensions
 
-Group by category with a header comment. No per-extension description: the ID names the extension.
+Group by category with header comments:
 
 ```jsonc
 "extensions": [
   // **Category Name**
+  // Extension Description
   "publisher.extension-id"
 ]
 ```

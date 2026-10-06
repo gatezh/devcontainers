@@ -5,6 +5,7 @@ IFS=$'\n\t'
 # 1. Extract Docker DNS info BEFORE any flushing
 DOCKER_DNS_RULES=$(iptables-save -t nat | grep "127\.0\.0\.11" || true)
 
+# Flush existing rules and delete existing ipsets
 iptables -F
 iptables -X
 iptables -t nat -F
@@ -31,8 +32,10 @@ iptables -A INPUT -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
+# Create ipset with CIDR support
 ipset create allowed-domains hash:net
 
+# Fetch GitHub IP ranges
 echo "Fetching GitHub IP ranges..."
 gh_ranges=$(curl -s https://api.github.com/meta)
 if [ -z "$gh_ranges" ]; then

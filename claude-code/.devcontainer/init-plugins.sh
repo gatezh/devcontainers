@@ -101,6 +101,7 @@ if command -v rtk &>/dev/null; then
 fi
 
 # ── agent-browser skill ─────────────────────────────────────────────────────
+# Installs the agent-browser Claude Code skill for headless browser automation.
 # agent-browser CLI is pre-installed in the default devcontainer image (not sandbox).
 if command -v agent-browser &>/dev/null; then
     agent-browser install-skill 2>/dev/null || true
