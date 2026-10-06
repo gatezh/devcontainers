@@ -26,6 +26,7 @@ MARKETPLACES=(
     "GoogleChrome/modern-web-guidance"
     "AgriciDaniel/claude-seo"
     "cloudflare/skills"
+    "rubberduck-studio/typescript-native-lsp"
 )
 
 for marketplace in "${MARKETPLACES[@]}"; do
@@ -41,7 +42,6 @@ done
 PLUGINS=(
     "frontend-design@claude-plugins-official"
     "code-review@claude-plugins-official"
-    "typescript-lsp@claude-plugins-official"
     "code-simplifier@claude-plugins-official"
     "playwright@claude-plugins-official"
     "superpowers@claude-plugins-official"
@@ -57,6 +57,10 @@ PLUGINS=(
     "ralphex@ralphex"
     "modern-web-guidance@googlechrome"
     "claude-seo@agricidaniel-claude-seo"
+    # Replaces typescript-lsp@claude-plugins-official, which wraps tsserver and fails
+    # every request on TypeScript 7 (no tsserver.js). Runs `tsc --lsp` on TS 7+ and
+    # falls back to typescript-language-server on TS 6 and older (#194).
+    "typescript-native-lsp@typescript-native-lsp"
 )
 
 for plugin in "${PLUGINS[@]}"; do
@@ -64,6 +68,25 @@ for plugin in "${PLUGINS[@]}"; do
         echo "✔ Installed: $plugin"
     else
         echo "⚠ Failed to install: $plugin" >&2
+    fi
+done
+
+# ── Conflicting plugins ─────────────────────────────────────────────────────
+# Plugins that claim the same file extensions as one in PLUGINS: Claude Code
+# starts only whichever registers first. Not installed above, but a persistent
+# ~/.claude volume may still hold them from an older run — disable if enabled.
+DISABLED_PLUGINS=(
+    "typescript-lsp@claude-plugins-official"   # superseded by typescript-native-lsp
+)
+
+for plugin in "${DISABLED_PLUGINS[@]}"; do
+    if claude plugin list --json 2>/dev/null \
+        | jq -e --arg id "$plugin" 'any(.[]; .id == $id and .enabled)' >/dev/null; then
+        if claude plugin disable "$plugin" 2>&1; then
+            echo "✔ Disabled: $plugin"
+        else
+            echo "⚠ Failed to disable: $plugin" >&2
+        fi
     fi
 done
 
