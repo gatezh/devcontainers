@@ -104,13 +104,12 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 #### Bundled plugins
 
-`init-plugins.sh` registers five marketplaces and installs the following plugins:
+`init-plugins.sh` registers six marketplaces and installs the following plugins:
 
 | Marketplace | Plugin | Purpose |
 |---|---|---|
 | `anthropics/claude-plugins-official` | `frontend-design` | Production-grade UI/UX scaffolding |
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
-| `anthropics/claude-plugins-official` | `typescript-lsp` | TypeScript language-server tooling |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via `patch-playwright-mcp`) |
 | `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
@@ -122,6 +121,9 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `umputun/ralphex` | `ralphex` | Autonomous plan execution |
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
+| `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
+
+> **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
