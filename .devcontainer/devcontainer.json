@@ -15,17 +15,12 @@
     "vscode": {
       "extensions": [
         // **AI Agents**
-        // Claude Code - AI assistant
         "anthropic.claude-code",
 
         // **General**
-        // YAML - YAML support (for workflows and docker-compose)
         "redhat.vscode-yaml",
-        // Markdown Preview Github Styles - Markdown preview
         "bierner.markdown-preview-github-styles",
-        // Markdown Preview Mermaid Support - Mermaid diagrams
         "bierner.markdown-mermaid",
-        // Docker - Dockerfile support
         "ms-azuretools.vscode-docker"
       ],
       "settings": {
@@ -34,21 +29,14 @@
           "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
-        // Suppress extension recommendation prompts
         "extensions.ignoreRecommendations": true,
-        // ── Formatter settings (customize per project) ──────────────────
-        // Change "editor.defaultFormatter" to match your tooling:
-        //   Biome: "biomejs.biome"  |  Prettier: "esbenp.prettier-vscode"
-        //   OXC:   "oxc.oxc-vscode" |  None: remove these three settings
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "oxc.oxc-vscode",
         "editor.codeActionsOnSave": {
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // Show workspace folder name in window title
         "window.title": "${localWorkspaceFolderBasename}",
-        // Visual identity — Claude Dark theme with coral remote indicator
         "workbench.colorTheme": "Claude Dark",
         "workbench.colorCustomizations": {
           "statusBarItem.remoteBackground": "#C15F3C",
@@ -58,9 +46,7 @@
     }
   },
   "mounts": [
-    // Persist Claude Code configuration between container rebuilds
     "source=devcontainers-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    // Persist zsh history between container rebuilds
     "source=devcontainers-zsh-history-${devcontainerId},target=/commandhistory,type=volume"
   ],
   "containerEnv": {

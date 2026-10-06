@@ -11,17 +11,12 @@
     "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
   ],
 
-  // Configure tool-specific properties.
   "customizations": {
-    // Configure properties specific to VS Code.
     "vscode": {
-      // Use zsh as the default shell for better VS Code integration
       "settings": {
         "terminal.integrated.defaultProfile.linux": "zsh",
-        // Suppress extension recommendation prompts (e.g., Container Tools in Codespaces)
         "extensions.ignoreRecommendations": true
       },
-      // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         // **Claude Code**
         "anthropic.claude-code",
@@ -29,21 +24,15 @@
         // **Bun**
         "oven.bun-vscode",
 
-        // Prettier - Code Formatter
         "esbenp.prettier-vscode",
 
         // **Tailwind**
-        // Tailwind CSS IntelliSense
         "bradlc.vscode-tailwindcss",
-        // Tailwind Fold
         "stivo.tailwind-fold",
 
         // **Hugo**
-        // Hugofy - Hugo-related extension
         "akmittal.hugofy",
-        // Language Hugo VSCode - Hugo language support
         "budparr.language-hugo-vscode",
-        // Hugo Shortcode Syntax - Hugo shortcode syntax
         "kaellarkin.hugo-shortcode-syntax"
       ]
     }

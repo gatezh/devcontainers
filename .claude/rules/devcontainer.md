@@ -12,6 +12,10 @@ paths:
 // README at: {relevant-reference-url}
 ```
 
+## Comments
+
+Comment only what the JSON can't say: a reason, a constraint, an issue number, or what a template adopter must change. A comment that restates the key below it (`// Show workspace folder name in window title` above `"window.title"`) is noise; leave it out.
+
 ## node_modules Mount
 
 Always include to keep node_modules off the host:
@@ -24,12 +28,11 @@ Always include to keep node_modules off the host:
 
 ## VS Code Extensions
 
-Group by category with header comments:
+Group by category with a header comment. No per-extension description: the ID names the extension.
 
 ```jsonc
 "extensions": [
   // **Category Name**
-  // Extension Description
   "publisher.extension-id"
 ]
 ```

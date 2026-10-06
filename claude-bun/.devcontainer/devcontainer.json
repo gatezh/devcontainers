@@ -18,18 +18,13 @@
   "mounts": [
     // Keep node_modules out of a host machine
     "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
-    // Persist shell history between container rebuilds. zsh writes here
-    // (HISTFILE in the Dockerfile); the volume name is legacy.
+    // zsh writes its history here (HISTFILE in the Dockerfile); the volume name is legacy.
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    // Persist Claude Code configuration between container rebuilds
     "source=claude-code-config-${devcontainerId},target=/home/bun/.claude,type=volume"
   ],
 
-  // Configure tool-specific properties.
   "customizations": {
-    // Configure properties specific to VS Code.
     "vscode": {
-      // Use zsh as the default shell for better VS Code integration
       "settings": {
         "terminal.integrated.defaultProfile.linux": "zsh",
         "terminal.integrated.profiles.linux": {
@@ -41,18 +36,14 @@
             "path": "zsh"
           }
         },
-        // Suppress extension recommendation prompts (e.g., Container Tools in Codespaces)
         "extensions.ignoreRecommendations": true,
-        // Format on save with Biome
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "biomejs.biome",
-        // Biome auto-fix on save
         "editor.codeActionsOnSave": {
           "source.fixAll.biome": "explicit",
           "source.organizeImports.biome": "explicit"
         }
       },
-      // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         // **Claude Code**
         "anthropic.claude-code",
@@ -61,13 +52,10 @@
         "oven.bun-vscode",
 
         // **Code Quality**
-        // Biome - Fast formatter and linter for JavaScript/TypeScript
         "biomejs.biome",
 
         // **Tailwind**
-        // Tailwind CSS IntelliSense
         "bradlc.vscode-tailwindcss",
-        // Tailwind Fold
         "stivo.tailwind-fold"
       ]
     }
@@ -81,7 +69,6 @@
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
-  // Initialize firewall after container starts
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }
