@@ -49,6 +49,10 @@ PLUGINS=(
     "claude-md-management@claude-plugins-official"
     "claude-code-setup@claude-plugins-official"
     "posthog@claude-plugins-official"
+    # Both need python3 (baked into the image). security-guidance reviews every
+    # edit, turn and commit; claude-security runs on-demand /claude-security scans.
+    "security-guidance@claude-plugins-official"
+    "claude-security@claude-plugins-official"
     # cloudflare/skills is Cloudflare's own marketplace: current skills + MCP server.
     # (The claude-plugins-official copy is a stale snapshot.) wrangler <4.126 also
     # auto-installed a 3rd copy into ~/.claude/skills after any command; run
