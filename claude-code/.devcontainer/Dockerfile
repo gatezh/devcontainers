@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.292
+ARG CLAUDE_CODE_VERSION=2.1.293
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
