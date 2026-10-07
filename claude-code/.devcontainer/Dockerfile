@@ -79,6 +79,13 @@ ARG GH_VERSION=2.102.0
 # - openssh-client: ssh-keygen for SSH-format commit signing (and FIDO2 keys via
 #   libfido2). git only Recommends it, so --no-install-recommends drops it. Must be
 #   in base — the sandbox firewall blocks deb.debian.org at runtime. See #110.
+# - python3, python3-venv: runtime for the security-guidance and claude-security
+#   plugin hooks/scripts (stdlib only; ~+41 MB together). python3-minimal is too
+#   small (no http/urllib); python3-venv (ensurepip, +5 MB) rather than
+#   python3-pip (+15 MB) lets security-guidance build its claude-agent-sdk venv
+#   in ~/.claude/security. Keep the byte-compiled stdlib: without it every hook
+#   call recompiles (~50 ms -> ~240 ms). In base for the same reason as
+#   openssh-client: the sandbox can't apt-install.
 # - sudo: privilege escalation for firewall setup
 # - zsh: interactive shell; oh-my-zsh + powerlevel10k configured below
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -91,6 +98,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   jq \
   less \
   openssh-client \
+  python3 \
+  python3-venv \
   sudo \
   zsh
 

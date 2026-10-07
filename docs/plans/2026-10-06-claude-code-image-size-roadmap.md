@@ -123,7 +123,7 @@ drive a browser. A core image without them is roughly:
 | Core content | Size |
 |---|---|
 | node:24-trixie-slim | 244 MB |
-| apt base (git, zsh, ssh, …) | 147 MB |
+| apt base (git, zsh, ssh, python3, …) | 188 MB (python3 + venv: +41 MB, #199) |
 | mise | 153 MB |
 | Claude Code | 239 MB |
 | gh + gh-stack, oh-my-zsh, rtk, ralphex | ~115 MB |
@@ -192,3 +192,4 @@ on the sandbox network model before adopting.
 |---|---|---|---|---|---|
 | 2026-10-06 | baseline (`latest`) | 2.82 GB | 812 MB (852 local) | 715 MB | 214 MB |
 | 2026-10-06 | Tier 1 (local build, before publish) | 2.32 GB | 633 MB local | 631 MB local, 18 MB on top of default | 108 MB |
+| 2026-10-06 | + python3/python3-venv in base for the security plugins (#199, local build) | 2.37 GB | ~+13 MB (gzip of the added files) | shared layer — no extra on top of default | unchanged (still 108 MB; 2 of 23 layers per bump, as before) |
