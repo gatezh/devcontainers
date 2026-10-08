@@ -160,7 +160,13 @@ Copy `.claude/skills/sandbox-fetch-docs/` into your project's `.claude/skills/` 
 
 Both image variants ship the [devcontainer-browser](.devcontainer/managed-skills/devcontainer-browser/SKILL.md) skill at `/etc/claude-code/.claude/skills/`, Claude Code's managed skills location, so every project gets it with nothing to copy. It makes **agent-browser the default** for any browser work (opening the app, UI checks, screenshots, DPR and srcset measurements, React render profiling) and keeps **Playwright as the fallback** for a project's committed `@playwright/test` suite, vitest browser mode and Storybook tests, Firefox/WebKit, or a missing agent-browser. It also carries the per-consumer `executablePath` wiring from [Playwright Strategy](#playwright-strategy) and the rule never to download a browser.
 
-`/etc/claude-code/managed-settings.json` backs it with a short `claudeMd` routing rule loaded in every session and `permissions.allow` for `Bash(agent-browser *)`, so agent-browser runs without permission prompts. `permissions.deny` blocks `agent-browser install` and `agent-browser upgrade`: Chromium is preinstalled and the version is pinned.
+`/etc/claude-code/managed-settings.json` backs it with a short `claudeMd` routing rule loaded in every session. `permissions.deny` blocks `agent-browser install` and `agent-browser upgrade`: Chromium is preinstalled and the version is pinned.
+
+The image doesn't pre-allow agent-browser. Some of its flags start any binary (`--executable-path`, `--args`) or load plugins (`--config`), so a blanket allow would let a page that tricks the agent run code without a prompt. The first agent-browser command in a project asks; pick "don't ask again" to keep the answer. To skip the prompts in a project you trust, add this to its `.claude/settings.local.json` (personal and uncommitted; it survives rebuilds):
+
+```json
+{ "permissions": { "allow": ["Bash(agent-browser *)"] } }
+```
 
 agent-browser reads only `/etc/agent-browser/config.json` (`AGENT_BROWSER_CONFIG`). A repo's `./agent-browser.json` can declare plugin executables and Chromium args, so it is ignored, and so is `~/.agent-browser/config.json`; pass options as CLI flags or `AGENT_BROWSER_*` env vars. The image config turns on [content boundaries](https://github.com/vercel-labs/agent-browser#security), which mark where page output starts and ends, and caps output at 50,000 characters.
 

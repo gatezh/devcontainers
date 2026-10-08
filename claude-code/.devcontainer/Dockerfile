@@ -278,8 +278,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # Image-policy settings at the Linux managed location (highest precedence, outside
 # any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
-# routes browser work to the devcontainer-browser skill (claudeMd) with agent-browser
-# pre-allowed, except its install/upgrade subcommands.
+# routes browser work to the devcontainer-browser skill (claudeMd), and denies
+# agent-browser install/upgrade.
 #
 # The skill ships at the managed skills location, so every project gets it without a
 # copy in its own .claude/skills/, and it wins a name clash with a project skill.
