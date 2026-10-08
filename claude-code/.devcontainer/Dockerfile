@@ -168,13 +168,14 @@ USER node
 COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
 
 # .zshrc written here, not by an installer, so nothing upstream injects env
-# overrides. The wizard flag stops powerlevel10k prompting on first shell.
+# overrides. The wizard flag stops powerlevel10k prompting on first shell. The gh
+# plugin regenerates gh's completion on each shell start, so it never goes stale.
 # Single-quoted so $HOME/$ZSH reach .zshrc unexpanded.
 # hadolint ignore=SC2016
 RUN printf '%s\n' \
       'export ZSH="$HOME/.oh-my-zsh"' \
       'ZSH_THEME="powerlevel10k/powerlevel10k"' \
-      'plugins=(git fzf)' \
+      'plugins=(git fzf gh)' \
       "zstyle ':omz:update' mode disabled" \
       'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' \
       'export HISTFILE=/commandhistory/.zsh_history' \
@@ -252,11 +253,13 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
 # Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). No install scripts, and the
 # bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
+# Completion is installed the documented way; it queries cf, so upgrades don't stale it.
 # renovate: datasource=npm depName=cf
 ARG CF_VERSION=1.0.0-beta.13
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
-  && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-*
+  && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
+  && cf complete zsh >> "$HOME/.zshrc"
 # No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
 ENV CF_SEND_TELEMETRY=false \
     WRANGLER_SEND_METRICS=false

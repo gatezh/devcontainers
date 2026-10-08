@@ -16,7 +16,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Layer | What | Why |
 |-------|------|-----|
 | OS | `node:24-trixie-slim` + system packages | Node is needed during the build (Playwright, npm globals) |
-| Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
+| Shell | zsh, oh-my-zsh (`git`, `fzf`, `gh` plugins), powerlevel10k, `cf` completion | Completions, git aliases and prompt integration |
 | Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client, python3 (+ venv) | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing; `python3` runs the `security-guidance` and `claude-security` plugins) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
