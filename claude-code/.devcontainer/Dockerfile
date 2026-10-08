@@ -124,6 +124,7 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.local/share \
   /home/node/.local/state \
   /home/node/.config/gh \
+  /home/node/.config/cloudflare \
   /home/node/.cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
@@ -203,12 +204,14 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 # Image-policy settings at the Linux managed location (highest precedence, outside
 # any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101)
 # and provides the MDN MCP server. managedMcpServers needs Claude Code >= 2.1.259.
+# The managed CLAUDE.md tells every session to prefer `cf` over Wrangler.
 #
 # /etc/claude-code is created explicitly: BuildKit applies COPY --chmod to parent
 # dirs it auto-creates, leaving 0644 — not traversable.
 USER root
 RUN mkdir -p /etc/claude-code
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=root:root --chmod=0644 managed-CLAUDE.md /etc/claude-code/CLAUDE.md
 USER node
 
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
@@ -254,6 +257,19 @@ USER node
 # playwright.config.ts at process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+
+# ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
+# Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). Bundled workerd (133 MB,
+# hard-linked twice) is deleted: `cf dev`/--local run the project's own cf copy.
+# renovate: datasource=npm depName=cf
+ARG CF_VERSION=1.0.0-beta.13
+RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
+    npm install -g --cache /tmp/npm-cache cf@${CF_VERSION} \
+  && CF_MODULES=/usr/local/share/npm-global/lib/node_modules/cf/node_modules \
+  && rm -rf "$CF_MODULES"/@cloudflare/workerd-linux-* "$CF_MODULES"/workerd/bin/workerd
+# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
+ENV CF_SEND_TELEMETRY=false \
+    WRANGLER_SEND_METRICS=false
 
 # ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
 # npm, not the native installer: the installer rate-limits (429) under parallel
