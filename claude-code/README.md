@@ -64,7 +64,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, env-based git config (see [Git and GitHub Authentication](#git-and-github-authentication)), and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -291,6 +291,21 @@ The image pre-creates a common monorepo directory structure with `node:node` own
 The template only mounts root `node_modules` by default. For monorepo projects, uncomment and customize the additional volume mounts in `devcontainer.json` to match your structure. The pre-created directories ensure correct ownership when you add mounts.
 
 The `sudo find` in `updateContentCommand` chowns all `node_modules` directories in one pass, so additional mounts are handled automatically.
+
+## Git and GitHub Authentication
+
+Both `devcontainer.json` variants set git config through `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` in `containerEnv`. Git reads these as [command scope](https://git-scm.com/docs/git-config#SCOPES): they apply to every git process in the container (terminal, VS Code's Git extension, Claude Code) and outrank `/etc/gitconfig` and `~/.gitconfig`, which the Dev Containers extension writes to on attach.
+
+| Key | Value | Why |
+|-----|-------|-----|
+| `safe.directory` | `/workspace` | Docker Desktop bind mounts can report `/workspace` as owned by another user, so git refuses it with `detected dubious ownership`. The Dev Containers extension adds this entry to `~/.gitconfig` only when its one-time check at attach detects the mismatch, so the error comes and goes. |
+| `url.https://github.com/.insteadOf` | `git@github.com:` | Sends SSH-style GitHub remotes over HTTPS inside the container. The remotes themselves and the host's SSH setup don't change. |
+| `credential.https://github.com.helper` | *(empty)* | Clears the helper list for github.com, including the helper VS Code injects, which answers with the host's possibly stale GitHub credential. Other hosts keep VS Code's helper. |
+| `credential.https://github.com.helper` | `!gh auth git-credential` | Authenticates github.com through the container's `gh` login. The empty entry and this one are what `gh auth setup-git` writes. |
+
+**One-time setup:** run `gh auth login` in either variant. The login lives on the shared `myproject-gh-config-*` volume, so it survives rebuilds and covers both variants. After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
+
+To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The entries above are listed with scope `command`. To add your own entries, append `GIT_CONFIG_KEY_4` / `GIT_CONFIG_VALUE_4` and so on, and raise `GIT_CONFIG_COUNT` to match.
 
 ## Playwright Strategy
 

@@ -128,7 +128,19 @@
     // Optional — only needed when the sandbox is used without the default variant, whose
     // sign-in lands on the shared ~/.claude volume. Resolves to "" when the host var is
     // unset. See "Sandbox Authentication" section in README.
-    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
+    "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}",
+    // Git config for every process, outranking the ~/.gitconfig the extension copies in:
+    // trust /workspace, send git@github.com: remotes over HTTPS, and authenticate github.com
+    // only through gh (the empty helper drops VS Code's, as `gh auth setup-git` does).
+    "GIT_CONFIG_COUNT": "4",
+    "GIT_CONFIG_KEY_0": "safe.directory",
+    "GIT_CONFIG_VALUE_0": "/workspace",
+    "GIT_CONFIG_KEY_1": "url.https://github.com/.insteadOf",
+    "GIT_CONFIG_VALUE_1": "git@github.com:",
+    "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_2": "",
+    "GIT_CONFIG_KEY_3": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_3": "!gh auth git-credential"
   },
   // The find command chowns all node_modules volume mount points in one pass.
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
