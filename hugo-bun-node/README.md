@@ -85,9 +85,11 @@ This image uses Node.js unofficial builds for Alpine Linux (musl libc). The bina
 ### Cloudflare Workers
 
 This image includes Node.js specifically for Cloudflare Workers development, which requires a Node.js environment for:
-- Running `wrangler` CLI
+- Running the `cf` CLI (Node 22.18 or later; it can't load `cloudflare.config.ts` under Bun) or `wrangler`
 - Building and deploying Workers
-- Local development with `wrangler dev`
+- Local development with `cf dev` or `wrangler dev`
+
+`cf` is Cloudflare's successor to Wrangler (open beta). A project moves to it by running `cf migrate`, which writes a typed `cloudflare.config.ts` next to `wrangler.jsonc`. See [Recommended: migrate Workers projects to `cloudflare.config.ts`](../claude-code/README.md#recommended-migrate-workers-projects-to-cloudflareconfigts) for the steps and caveats.
 
 ### GitHub Actions Integration
 
@@ -147,12 +149,17 @@ node --version
 # Check npm version
 npm --version
 
-# Install Cloudflare Wrangler
-npm install -g wrangler
+# Install the Cloudflare CLI (it runs on Node, never Bun)
+npm install -g cf
+cf auth login --no-browser
 
-# Run Wrangler commands
-wrangler dev
-wrangler deploy
+# Projects with cloudflare.config.ts
+cf dev
+cf deploy
+
+# Projects still on wrangler.jsonc / wrangler.toml
+npx wrangler dev
+npx wrangler deploy
 ```
 
 ## Build Args

@@ -124,6 +124,7 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.local/share \
   /home/node/.local/state \
   /home/node/.config/gh \
+  /home/node/.config/cloudflare \
   /home/node/.cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
@@ -167,13 +168,14 @@ USER node
 COPY --from=ohmyzsh-download --chown=node:node /omz /home/node/.oh-my-zsh
 
 # .zshrc written here, not by an installer, so nothing upstream injects env
-# overrides. The wizard flag stops powerlevel10k prompting on first shell.
+# overrides. The wizard flag stops powerlevel10k prompting on first shell. The gh
+# plugin regenerates gh's completion on each shell start, so it never goes stale.
 # Single-quoted so $HOME/$ZSH reach .zshrc unexpanded.
 # hadolint ignore=SC2016
 RUN printf '%s\n' \
       'export ZSH="$HOME/.oh-my-zsh"' \
       'ZSH_THEME="powerlevel10k/powerlevel10k"' \
-      'plugins=(git fzf)' \
+      'plugins=(git fzf gh)' \
       "zstyle ':omz:update' mode disabled" \
       'POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true' \
       'export HISTFILE=/commandhistory/.zsh_history' \
@@ -248,6 +250,20 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
 
+# ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
+# Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). No install scripts, and the
+# bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
+# Completion is installed the documented way; it queries cf, so upgrades don't stale it.
+# renovate: datasource=npm depName=cf
+ARG CF_VERSION=1.0.0-beta.13
+RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
+    npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
+  && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
+  && cf complete zsh >> "$HOME/.zshrc"
+# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
+ENV CF_SEND_TELEMETRY=false \
+    WRANGLER_SEND_METRICS=false
+
 # ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
 # npm, not the native installer: the installer rate-limits (429) under parallel
 # Docker builds. npm stays supported "for compatibility reasons" — this is that
@@ -278,8 +294,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # Image-policy settings at the Linux managed location (highest precedence, outside
 # any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
-# routes browser work to the devcontainer-browser skill (claudeMd), and denies
-# agent-browser install/upgrade.
+# routes browser work to the devcontainer-browser skill and Cloudflare work to cf
+# (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
 #
 # The skill ships at the managed skills location, so every project gets it without a
 # copy in its own .claude/skills/, and it wins a name clash with a project skill.

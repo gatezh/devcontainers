@@ -1,6 +1,10 @@
 {
-  "claudeMd": "Browser work in this devcontainer (opening pages, UI checks, screenshots, browser measurements, browser tests): follow the `devcontainer-browser` skill. agent-browser is the default; use Playwright only for the project's committed test suites, Firefox/WebKit, or when agent-browser is missing. Never install or download a browser: Chromium is preinstalled at /usr/bin/chromium.",
+  "claudeMd": "Browser work in this devcontainer (opening pages, UI checks, screenshots, browser measurements, browser tests): follow the `devcontainer-browser` skill. agent-browser is the default; use Playwright only for the project's committed test suites, Firefox/WebKit, or when agent-browser is missing. Never install or download a browser: Chromium is preinstalled at /usr/bin/chromium.\n\nCloudflare: use the `cf` CLI unless the project has a Wrangler config (`wrangler.jsonc`, `wrangler.json` or `wrangler.toml`) and no `cloudflare.config.ts`. There, use Wrangler and never run `cf dev`, `cf build` or `cf deploy`: without a terminal they rewrite `package.json`, the lockfile and `vite.config.ts` without asking. Migrate first with `cf migrate --dry-run`. Find commands with `cf cli search \"<task>\"`.",
   "permissions": {
+    "ask": [
+      "Bash(cf * --force*)",
+      "Bash(cf * -f*)"
+    ],
     "deny": [
       "Bash(agent-browser install *)",
       "Bash(agent-browser upgrade *)"

@@ -16,10 +16,11 @@ Projects consume these pre-built images and control their own tool versions via 
 | Layer | What | Why |
 |-------|------|-----|
 | OS | `node:24-trixie-slim` + system packages | Node is needed during the build (Playwright, npm globals) |
-| Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
+| Shell | zsh, oh-my-zsh (`git`, `fzf`, `gh` plugins), powerlevel10k, `cf` completion | Completions, git aliases and prompt integration |
 | Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client, python3 (+ venv) | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing; `python3` runs the `security-guidance` and `claude-security` plugins) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
+| cf | npm global install, pinned `ARG` bumped by Renovate | Cloudflare CLI for the whole Cloudflare API. See [Cloudflare CLI](#cloudflare-cli-cf) |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
@@ -32,6 +33,23 @@ Projects consume these pre-built images and control their own tool versions via 
 The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-US/mcp) (web platform docs and browser compatibility data) to every session through `managedMcpServers` in `/etc/claude-code/managed-settings.json` — no per-project setup. It sends `X-Moz-1st-Party-Data-Opt-Out: 1`, Mozilla's documented opt-out from the query logging they do while the server is experimental.
 
 Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. Sandbox users must allowlist `mcp.mdn.mozilla.net` in their firewall script.
+
+### Cloudflare CLI (`cf`)
+
+Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. The `claudeMd` key in `/etc/claude-code/managed-settings.json` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. A managed `ask` rule makes Claude Code ask before any `cf` command with `--force` or `-f`, the flag `cf` requires for deletes when there's no terminal. Bypass mode skips the prompt, as it skips every prompt. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`).
+
+Sign in once per project. The template's `myproject-cloudflare-config-*` volume keeps the login (`~/.config/cloudflare`) across rebuilds, and both variants share it:
+
+```bash
+cf auth login --no-browser   # approve the printed link and code in your host browser
+cf auth whoami
+```
+
+The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must allowlist `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in).
+
+The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Commands that call the Cloudflare API don't need it.
+
+The `cloudflare` plugin (skills plus the Cloudflare MCP server) stays installed alongside `cf`: its MCP server also searches current Cloudflare docs, which `cf` doesn't.
 
 ## Multi-platform Support
 
@@ -47,7 +65,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -62,7 +80,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, env-based git config (see [Git and GitHub Authentication](#git-and-github-authentication)), and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config/cf login volume mounts, env-based git config (see [Git and GitHub Authentication](#git-and-github-authentication)), and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -73,7 +91,7 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 
 **Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, zsh history, and gh CLI auth (`~/.config/gh`). Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
+**Shared volumes:** Both variants use `${localWorkspaceFolderBasename}` in volume names, so they share node_modules, Claude config, zsh history, gh CLI auth (`~/.config/gh`), and the `cf` login (`~/.config/cloudflare`). Install packages in one variant and both benefit. Docker named volumes support multi-container access, so both can run simultaneously — just avoid running `bun install` in both at the same time.
 
 ## Project Setup Guide
 
@@ -135,7 +153,7 @@ To remove a plugin in your project, delete its entry from the local `init-plugin
 
 Default-deny iptables firewall. The image provides the packages and sudo rule; the project provides this script via bind mount. Customize the domain allowlist for your project.
 
-See the [repo's own sandbox firewall script](../.devcontainer/claude-sandbox/init-firewall.sh) for a complete example. The script should: preserve Docker internal DNS rules, allow DNS/SSH/localhost, fetch GitHub IP ranges via `curl -s https://api.github.com/meta`, resolve additional allowed domains (npm, Anthropic API, VS Code marketplace, `mcp.mdn.mozilla.net` for the MDN MCP server, etc.) via `dig`, set default DROP policies, allow established connections and the ipset allowlist, then verify by confirming `example.com` is blocked and `api.github.com` is reachable.
+See the [repo's own sandbox firewall script](../.devcontainer/claude-sandbox/init-firewall.sh) for a complete example. The script should: preserve Docker internal DNS rules, allow DNS/SSH/localhost, fetch GitHub IP ranges via `curl -s https://api.github.com/meta`, resolve additional allowed domains (npm, Anthropic API, VS Code marketplace, `mcp.mdn.mozilla.net` for the MDN MCP server, `api.cloudflare.com` and `dash.cloudflare.com` for `cf`, etc.) via `dig`, set default DROP policies, allow established connections and the ipset allowlist, then verify by confirming `example.com` is blocked and `api.github.com` is reachable.
 
 Mark as executable and ensure git tracks the executable bit:
 
@@ -177,6 +195,17 @@ agent-browser reads only `/etc/agent-browser/config.json` (`AGENT_BROWSER_CONFIG
 Both image variants bake in the official [`github/gh-stack`](https://github.com/github/gh-stack) extension, so `gh stack` can open, link and atomically merge native [stacked PRs](https://gh.io/stacks). The [stacked-prs](.claude/skills/stacked-prs/SKILL.md) skill tells Claude Code to use it instead of hand-chaining PRs with `gh pr create --base`, and which flags keep it non-interactive.
 
 Copy `.claude/skills/stacked-prs/` into your project's `.claude/skills/` directory so Claude Code picks it up automatically.
+
+### Recommended: migrate Workers projects to `cloudflare.config.ts`
+
+`cloudflare.config.ts` is `cf`'s typed replacement for `wrangler.jsonc`, so agents and the TypeScript language server can check bindings and routes. Migration is per project, so the image can't do it for you. Wrangler gets 18 months of maintenance once the `cf` beta ends, so start now:
+
+```bash
+cf migrate --dry-run   # preview
+cf migrate             # writes cloudflare.config.ts, adds cf as a devDependency
+```
+
+Then resolve the `TODO(@cloudflare)` comments it leaves: Durable Object migrations, Workflows, Containers and package scripts need a manual pass, and the build fails until they're done. Keep `wrangler.jsonc` while you still need Wrangler-only commands (`wrangler tail`, setting a single secret). The two tools don't read each other's config. `cf` needs Node, so don't run it with `bun --bun`.
 
 ### Recommended: Claude Code skill for upstream sync
 
@@ -464,10 +493,11 @@ more often than right.
 | `AGENT_BROWSER_VERSION` | Renovate | agent-browser |
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
 | `GH_STACK_VERSION` | Renovate | gh-stack extension (`gh stack`) |
+| `CF_VERSION` | Renovate | Cloudflare CLI (`cf`), open beta; releases wait 3 days before auto-merge |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The six Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The seven Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback
