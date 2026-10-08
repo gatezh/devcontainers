@@ -17,17 +17,15 @@ Projects consume these pre-built images and control their own tool versions via 
 |-------|------|-----|
 | OS | `node:24-trixie-slim` + system packages | Node is needed during the build (Playwright, npm globals) |
 | Shell | zsh, oh-my-zsh (`git`, `fzf` plugins), powerlevel10k | Completions, git aliases and prompt integration |
-| Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing) |
+| Tools | gh CLI, git, curl, jq, less, fzf, procps, openssh-client, python3 (+ venv) | Standard dev utilities (`openssh-client` provides `ssh`/`ssh-keygen` — enables SSH-format commit signing; `python3` runs the `security-guidance` and `claude-security` plugins) |
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill))
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), passwordless sudo
 
-**Default-only:** passwordless sudo
-
-**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate, firewall sudo rule
+**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate
 
 ### MDN MCP server
 
@@ -64,7 +62,7 @@ Copy these to your project's `.devcontainer/`:
 - [`.devcontainer/docker-compose.yml`](.devcontainer/docker-compose.yml) — image reference (kept fresh by the `initializeCommand` pull in `devcontainer.json`)
 - [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) — full config with VS Code extensions, zsh shell, OXC formatter, node_modules volume isolation, and lifecycle commands
 
-**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
+**Key settings included:** zsh + bash terminal profiles, OXC formatter (with comments for switching to Biome/Prettier), node_modules/Claude config/zsh history/gh CLI config volume mounts, env-based git config (see [Git and GitHub Authentication](#git-and-github-authentication)), and `updateContentCommand` for mise/bun setup (`bun install` is skipped until the project has a `package.json`). There is deliberately no `postCreateCommand`: see [`init-plugins.sh`](#optional-devcontainerinit-pluginssh).
 
 ### Sandbox variant
 
@@ -104,13 +102,12 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 #### Bundled plugins
 
-`init-plugins.sh` registers five marketplaces and installs the following plugins:
+`init-plugins.sh` registers six marketplaces and installs the following plugins:
 
 | Marketplace | Plugin | Purpose |
 |---|---|---|
 | `anthropics/claude-plugins-official` | `frontend-design` | Production-grade UI/UX scaffolding |
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
-| `anthropics/claude-plugins-official` | `typescript-lsp` | TypeScript language-server tooling |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via `patch-playwright-mcp`) |
 | `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
@@ -118,10 +115,17 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
 | `anthropics/claude-plugins-official` | `posthog` | PostHog product-analytics & LLM-traces skills |
+| `anthropics/claude-plugins-official` | `security-guidance` | Security warnings on edits, LLM diff review on Stop, agentic review on commit/push (config via env vars — see [README](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance)) |
+| `anthropics/claude-plugins-official` | `claude-security` | On-demand `/claude-security` vulnerability scans and verified patch suggestions |
 | `cloudflare/skills` | `cloudflare` | Cloudflare skills and MCP server |
 | `umputun/ralphex` | `ralphex` | Autonomous plan execution |
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
+| `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
+
+> **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
+
+**`security-guidance` runtime download:** on first session start the plugin builds a `claude-agent-sdk` venv in `~/.claude/security/` for its agentic commit reviewer — a ~100 MB wheel from PyPI (it bundles its own Claude Code binary), stored once in the `~/.claude` volume, not the image. In the sandbox, add `pypi.org` and `files.pythonhosted.org` to your `init-firewall.sh` allowlist, or the commit reviewer falls back to the single-call diff review (edit warnings and Stop reviews still work). `SECURITY_GUIDANCE_DISABLE=1` in `containerEnv` turns the reviews off, but the venv bootstrap still runs; to skip the download, drop the plugin from your `init-plugins.sh`.
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
@@ -285,6 +289,21 @@ The image pre-creates a common monorepo directory structure with `node:node` own
 The template only mounts root `node_modules` by default. For monorepo projects, uncomment and customize the additional volume mounts in `devcontainer.json` to match your structure. The pre-created directories ensure correct ownership when you add mounts.
 
 The `sudo find` in `updateContentCommand` chowns all `node_modules` directories in one pass, so additional mounts are handled automatically.
+
+## Git and GitHub Authentication
+
+Both `devcontainer.json` variants set git config through `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` in `containerEnv`. Git reads these as [command scope](https://git-scm.com/docs/git-config#SCOPES): they apply to every git process in the container (terminal, VS Code's Git extension, Claude Code) and outrank `/etc/gitconfig` and `~/.gitconfig`, which the Dev Containers extension writes to on attach.
+
+| Key | Value | Why |
+|-----|-------|-----|
+| `safe.directory` | `/workspace` | Docker Desktop bind mounts can report `/workspace` as owned by another user, so git refuses it with `detected dubious ownership`. The Dev Containers extension adds this entry to `~/.gitconfig` only when its one-time check at attach detects the mismatch, so the error comes and goes. |
+| `url.https://github.com/.insteadOf` | `git@github.com:` | Sends SSH-style GitHub remotes over HTTPS inside the container. The remotes themselves and the host's SSH setup don't change. |
+| `credential.https://github.com.helper` | *(empty)* | Clears the helper list for github.com, including the helper VS Code injects, which answers with the host's possibly stale GitHub credential. Other hosts keep VS Code's helper. |
+| `credential.https://github.com.helper` | `!gh auth git-credential` | Authenticates github.com through the container's `gh` login. The empty entry and this one are what `gh auth setup-git` writes. |
+
+**One-time setup:** run `gh auth login` in either variant. The login lives on the shared `myproject-gh-config-*` volume, so it survives rebuilds and covers both variants. After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
+
+To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The entries above are listed with scope `command`. To add your own entries, append `GIT_CONFIG_KEY_4` / `GIT_CONFIG_VALUE_4` and so on, and raise `GIT_CONFIG_COUNT` to match.
 
 ## Playwright Strategy
 

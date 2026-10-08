@@ -1,11 +1,11 @@
 # renovate: datasource=npm depName=bun
 ARG BUN_VERSION=1.4.2
 # renovate: datasource=github-tags depName=docker/cli
-ARG DOCKER_VERSION=29.8.1
+ARG DOCKER_VERSION=29.8.2
 # renovate: datasource=golang-version depName=go
 ARG GO_VERSION=1.27.1
 # renovate: datasource=github-releases depName=gohugoio/hugo
-ARG HUGO_VERSION=0.166.0
+ARG HUGO_VERSION=0.167.0
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -52,7 +52,7 @@ RUN set -eux; \
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=0.49.0
+ARG RTK_VERSION=0.51.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
@@ -164,7 +164,7 @@ WORKDIR /workspace
 # See: claude-code/.devcontainer/Dockerfile for rationale.
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.282
+ARG CLAUDE_CODE_VERSION=2.1.294
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 

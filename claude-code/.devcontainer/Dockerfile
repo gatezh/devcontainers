@@ -11,6 +11,12 @@
 #   docker build --target sandbox -t claude-code:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Global so Renovate bumps one line; re-declared in the shared stage after Chromium.
+# An ARG joins the cache key of every later RUN, so declaring it earlier would
+# rebuild Chromium on each Claude Code release.
+# renovate: datasource=npm depName=@anthropic-ai/claude-code
+ARG CLAUDE_CODE_VERSION=2.1.294
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
@@ -34,7 +40,7 @@ RUN set -eux; \
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=0.49.0
+ARG RTK_VERSION=0.51.0
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
@@ -61,7 +67,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.101.0
+ARG GH_VERSION=2.102.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -73,6 +79,13 @@ ARG GH_VERSION=2.101.0
 # - openssh-client: ssh-keygen for SSH-format commit signing (and FIDO2 keys via
 #   libfido2). git only Recommends it, so --no-install-recommends drops it. Must be
 #   in base — the sandbox firewall blocks deb.debian.org at runtime. See #110.
+# - python3, python3-venv: runtime for the security-guidance and claude-security
+#   plugin hooks/scripts (stdlib only; ~+41 MB together). python3-minimal is too
+#   small (no http/urllib); python3-venv (ensurepip, +5 MB) rather than
+#   python3-pip (+15 MB) lets security-guidance build its claude-agent-sdk venv
+#   in ~/.claude/security. Keep the byte-compiled stdlib: without it every hook
+#   call recompiles (~50 ms -> ~240 ms). In base for the same reason as
+#   openssh-client: the sandbox can't apt-install.
 # - sudo: privilege escalation for firewall setup
 # - zsh: interactive shell; oh-my-zsh + powerlevel10k configured below
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -85,6 +98,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   jq \
   less \
   openssh-client \
+  python3 \
+  python3-venv \
   sudo \
   zsh
 
@@ -205,48 +220,32 @@ USER node
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
+# ~/.cache/gh is gh's HTTP cache — the install leaves a 25 MB copy of the download.
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=0.1.1
-RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
+ARG GH_STACK_VERSION=0.2.0
+RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
+  && rm -rf /home/node/.cache/gh
 
-# ── Claude Code CLI ───────────────────────────────────────────────────────────
-# npm, not the native installer: the installer rate-limits (429) under parallel
-# Docker builds. npm stays supported "for compatibility reasons" — this is that
-# reason. https://code.claude.com/docs/en/getting-started#install-with-npm
-#
-# Installed as node so files land node-owned; a later chown -R would duplicate
-# every file on overlayfs, adding hundreds of MB.
-# renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.282
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
-
-# ── agent-browser ─────────────────────────────────────────────────────────────
-# Headless browser automation for AI agents, and the default browser tool (see the
-# devcontainer-browser skill). In base so both targets have it; each target installs
-# chromium and sets AGENT_BROWSER_EXECUTABLE_PATH. Installed as node (see the Claude
-# Code install above). Version pinned and kept up to date by Renovate.
-# renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.38.1
-RUN npm install -g agent-browser@${AGENT_BROWSER_VERSION}
-
-# ─── DEFAULT — full dev environment ───────────────────────────────────────────
-FROM base AS default
+# ─── SHARED — Chromium, Claude Code and agent-browser, common to both targets ─
+# Everything heavy lives here so default and sandbox share these layers: pulling
+# both images downloads Chromium and Claude Code once. Each target adds only a
+# small layer on top (firewall packages in the sandbox).
+FROM base AS shared
 
 # Passwordless sudo for node user — standard practice for devcontainer images.
-# Required by the canonical "sudo chown" pattern for named volume ownership.
+# Needed for the canonical "sudo chown" pattern for named volume ownership, and
+# in the sandbox for "sudo /usr/local/bin/init-firewall.sh". Sandbox security
+# comes from the network firewall, not sudo restrictions.
 # See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
 USER root
 RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
-USER node
 
 # System Chromium + fonts for headless browser testing.
-# - chromium: used by Playwright and agent-browser via
-#   PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH (see .claude/rules/dockerfile.md).
+# - chromium: launched by agent-browser and Playwright (env vars below).
 # - fonts-freefont-ttf: baseline fonts for headless rendering.
-# Mirrored into the sandbox stage too — the firewall blocks deb.debian.org,
-# so chromium cannot be added at runtime.
-USER root
+# Baked in for both targets — the sandbox firewall blocks deb.debian.org, so
+# chromium cannot be added at runtime.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -258,14 +257,40 @@ USER node
 # Avoids version coupling between @playwright/mcp (alpha playwright-core builds)
 # and cached browser binaries. Projects using @playwright/test must point their
 # playwright.config.ts at process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
-# AGENT_BROWSER_EXECUTABLE_PATH points agent-browser at the same binary —
-# agent-browser is a Rust CLI with its own env-var convention, NOT Playwright,
-# so PLAYWRIGHT_* vars are silently ignored. Without this, agent-browser would
-# auto-detect or attempt a Chrome-for-Testing download on first use.
+# agent-browser is a Rust CLI that ignores PLAYWRIGHT_* vars; without its own var
+# it would attempt a Chrome-for-Testing download on first use.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
+# npm, not the native installer: the installer rate-limits (429) under parallel
+# Docker builds. npm stays supported "for compatibility reasons" — this is that
+# reason. https://code.claude.com/docs/en/getting-started#install-with-npm
+#
+# Installed as node so files land node-owned; a later chown -R would duplicate
+# every file on overlayfs, adding hundreds of MB.
+#
+# The npm cache goes to a BuildKit cache mount, not ~/.npm: left in the image it
+# keeps a second, compressed copy of every package (~160 MB across both installs).
+ARG CLAUDE_CODE_VERSION
+RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
+    npm install -g --cache /tmp/npm-cache @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+
+# ── agent-browser — the default browser tool (devcontainer-browser skill) ────
+# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
+# The package ships prebuilt binaries for 7 platforms (~113 MB); the global
+# `agent-browser` link targets agent-browser-linux-<arch> directly, so the other
+# six are deleted. Rebuilt on each Claude Code bump (ARG above) — a small layer.
+# renovate: datasource=npm depName=agent-browser
+ARG AGENT_BROWSER_VERSION=0.38.2
+RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
+    npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
+  && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \
+       -name 'agent-browser-*' ! -name "agent-browser-linux-$(node -p process.arch)" -delete
+
+# ─── DEFAULT — full dev environment ───────────────────────────────────────────
+FROM shared AS default
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
@@ -276,12 +301,11 @@ LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" 
 CMD ["sleep", "infinity"]
 
 # ─── SANDBOX — network-restricted environment ─────────────────────────────────
-FROM base AS sandbox
+FROM shared AS sandbox
 
 # Firewall packages (not needed in default target).
-# Chromium + fonts are also baked in here — the sandbox firewall blocks
-# deb.debian.org, so they cannot be added at runtime. agent-browser and Playwright
-# both launch it.
+# The firewall script is NOT baked into the image — each project mounts its
+# own script via bind mount in devcontainer.json to customize the domain allowlist.
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -290,24 +314,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   ipset \
   iproute2 \
   dnsutils \
-  aggregate \
-  chromium \
-  fonts-freefont-ttf
-
-# Use the apt-installed chromium instead of Playwright-managed browsers, and point
-# agent-browser at it too (matches the default stage; see the comment there).
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
-    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
-
-# Passwordless sudo for node user — needed for:
-#   - "sudo chown" on named volumes (node_modules isolation)
-#   - "sudo /usr/local/bin/init-firewall.sh" (firewall setup)
-# Sandbox security comes from the network firewall, not sudo restrictions.
-# The firewall script is NOT baked into the image — each project mounts its
-# own script via bind mount in devcontainer.json to customize the domain allowlist.
-RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
-  && chmod 0440 /etc/sudoers.d/node-nopasswd
+  aggregate
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \

@@ -83,7 +83,7 @@ RUN set -eux; \
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.101.0
+ARG GH_VERSION=2.102.0
 
 # System packages (each justified — see claude-code Dockerfile for rationale)
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -182,7 +182,7 @@ COPY --from=actionlint-download /usr/local/bin/actionlint /usr/local/bin/actionl
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Installed as node so it lands in ~/.local/share/gh/extensions. See #160.
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=0.1.1
+ARG GH_STACK_VERSION=0.2.0
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}"
 
 # ── Claude Code CLI ──────────────────────────────────────────────────────────

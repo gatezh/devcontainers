@@ -12,6 +12,10 @@ paths:
 // README at: {relevant-reference-url}
 ```
 
+## Comments
+
+Skip a comment that only repeats the line below it in other words, such as `// Show workspace folder name in window title` above `"window.title"`. Extension descriptions are not that: they say what an extension ID does.
+
 ## node_modules Mount
 
 Always include to keep node_modules off the host:
