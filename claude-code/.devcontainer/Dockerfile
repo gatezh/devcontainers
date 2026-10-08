@@ -250,14 +250,13 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
 
 # ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
-# Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). Bundled workerd (133 MB,
-# hard-linked twice) is deleted: `cf dev`/--local run the project's own cf copy.
+# Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). No install scripts, and the
+# bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
 # renovate: datasource=npm depName=cf
 ARG CF_VERSION=1.0.0-beta.13
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
-    npm install -g --cache /tmp/npm-cache cf@${CF_VERSION} \
-  && CF_MODULES=/usr/local/share/npm-global/lib/node_modules/cf/node_modules \
-  && rm -rf "$CF_MODULES"/@cloudflare/workerd-linux-* "$CF_MODULES"/workerd/bin/workerd
+    npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
+  && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-*
 # No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
 ENV CF_SEND_TELEMETRY=false \
     WRANGLER_SEND_METRICS=false
@@ -292,8 +291,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # Image-policy settings at the Linux managed location (highest precedence, outside
 # any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
-# routes browser work to the devcontainer-browser skill (claudeMd), and denies
-# agent-browser install/upgrade.
+# routes browser work to the devcontainer-browser skill and Cloudflare work to cf
+# (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
 #
 # The skill ships at the managed skills location, so every project gets it without a
 # copy in its own .claude/skills/, and it wins a name clash with a project skill.
@@ -305,7 +304,6 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 USER root
 RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-browser
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
-COPY --chown=root:root --chmod=0644 managed-CLAUDE.md /etc/claude-code/CLAUDE.md
 COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
 USER node

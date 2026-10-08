@@ -36,7 +36,7 @@ Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp rem
 
 ### Cloudflare CLI (`cf`)
 
-Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. `/etc/claude-code/CLAUDE.md` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`).
+Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. The `claudeMd` key in `/etc/claude-code/managed-settings.json` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. A managed `ask` rule makes Claude Code ask before any `cf` command with `--force` or `-f`, the flag `cf` requires for deletes when there's no terminal. Bypass mode skips the prompt, as it skips every prompt. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`).
 
 Sign in once per project. The template's `myproject-cloudflare-config-*` volume keeps the login (`~/.config/cloudflare`) across rebuilds, and both variants share it:
 
@@ -45,7 +45,7 @@ cf auth login --no-browser   # approve the printed link and code in your host br
 cf auth whoami
 ```
 
-For CI or unattended agents, set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` instead. Sandbox users must allowlist `api.cloudflare.com` and `dash.cloudflare.com`.
+The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must allowlist `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in).
 
 The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Commands that call the Cloudflare API don't need it.
 

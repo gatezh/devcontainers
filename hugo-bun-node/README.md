@@ -149,7 +149,7 @@ node --version
 # Check npm version
 npm --version
 
-# Install the Cloudflare CLI (with npm, so it runs on Node rather than Bun)
+# Install the Cloudflare CLI (it runs on Node, never Bun)
 npm install -g cf
 cf auth login --no-browser
 
