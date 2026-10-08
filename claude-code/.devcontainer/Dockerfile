@@ -199,24 +199,6 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # mid-run. See #87, #98.
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
-# ── Claude Code managed settings and skills ──────────────────────────────────
-# Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
-# provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
-# routes browser work to the devcontainer-browser skill (claudeMd) with agent-browser
-# pre-allowed.
-#
-# The skill ships at the managed skills location, so every project gets it without a
-# copy in its own .claude/skills/, and it wins a name clash with a project skill.
-#
-# The directories are created explicitly: BuildKit applies COPY --chmod to parent
-# dirs it auto-creates, leaving 0644 — not traversable.
-USER root
-RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser
-COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
-COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
-USER node
-
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
@@ -258,10 +240,13 @@ USER node
 # and cached browser binaries. Projects using @playwright/test must point their
 # playwright.config.ts at process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
 # agent-browser is a Rust CLI that ignores PLAYWRIGHT_* vars; without its own var
-# it would attempt a Chrome-for-Testing download on first use.
+# it would attempt a Chrome-for-Testing download on first use. AGENT_BROWSER_CONFIG
+# pins its config to the image's file, so a repo's ./agent-browser.json (which can
+# declare plugin executables and Chromium args) is never loaded.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
-    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
+    AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
 
 # ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
 # npm, not the native installer: the installer rate-limits (429) under parallel
@@ -288,6 +273,27 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
   && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \
        -name 'agent-browser-*' ! -name "agent-browser-linux-$(node -p process.arch)" -delete
+
+# ── Claude Code managed settings and skills, agent-browser config ────────────
+# Image-policy settings at the Linux managed location (highest precedence, outside
+# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
+# provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
+# routes browser work to the devcontainer-browser skill (claudeMd) with agent-browser
+# pre-allowed, except its install/upgrade subcommands.
+#
+# The skill ships at the managed skills location, so every project gets it without a
+# copy in its own .claude/skills/, and it wins a name clash with a project skill.
+#
+# Last in shared so editing these files doesn't rebuild Chromium or Claude Code.
+#
+# The directories are created explicitly: BuildKit applies COPY --chmod to parent
+# dirs it auto-creates, leaving 0644 — not traversable.
+USER root
+RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-browser
+COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
+COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
+USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM shared AS default

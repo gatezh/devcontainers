@@ -75,7 +75,7 @@ but don't, and includes files that shouldn't be tracked.
 ### Retired paths
 
 Upstream no longer ships these. If the project still has one, report it as
-`retired: delete` and delete it when adopting — don't diff it.
+`retired: delete` and delete it in Workflow 2 — don't diff it.
 
 | local path | why |
 |---|---|
@@ -187,6 +187,11 @@ Driven by Workflow 1's report. For each row that needs action:
 2. Walk hunks one at a time (or in a small batch) with the user.
 3. Apply only the hunks they accept.
 4. Stage; don't commit.
+
+### `retired: delete`
+
+1. Show the path and its "why" from §"Retired paths".
+2. Confirm with the user, then `git rm -r <local-path>`. Don't commit.
 
 ### Special cases
 
