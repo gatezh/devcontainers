@@ -34,7 +34,6 @@
           "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
-        // Suppress extension recommendation prompts
         "extensions.ignoreRecommendations": true,
         // ── Formatter settings (customize per project) ──────────────────
         // Change "editor.defaultFormatter" to match your tooling:
@@ -46,7 +45,6 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // Show workspace folder name in window title
         "window.title": "${localWorkspaceFolderBasename}",
         // Visual identity — Claude Dark theme with coral remote indicator
         "workbench.colorTheme": "Claude Dark",
@@ -58,9 +56,7 @@
     }
   },
   "mounts": [
-    // Persist Claude Code configuration between container rebuilds
     "source=devcontainers-claude-config-${devcontainerId},target=/home/node/.claude,type=volume",
-    // Persist zsh history between container rebuilds
     "source=devcontainers-zsh-history-${devcontainerId},target=/commandhistory,type=volume"
   ],
   "containerEnv": {

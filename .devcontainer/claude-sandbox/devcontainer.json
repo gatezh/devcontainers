@@ -43,7 +43,6 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // Show workspace folder name in window title
         "window.title": "${localWorkspaceFolderBasename}",
         // Sandbox visual identity — Claude Dark theme with coral remote indicator
         "workbench.colorTheme": "Claude Dark",
@@ -51,7 +50,6 @@
           "statusBarItem.remoteBackground": "#C15F3C",
           "statusBarItem.remoteForeground": "#ffffff"
         },
-        // Allow Claude Code to skip permission prompts in sandbox
         "claudeCode.allowDangerouslySkipPermissions": true
       }
     }
@@ -59,7 +57,6 @@
   "mounts": [
     "source=devcontainers-sandbox-config-${devcontainerId},target=/home/node/.claude,type=volume",
     "source=devcontainers-sandbox-zsh-history-${devcontainerId},target=/commandhistory,type=volume",
-    // Mount firewall script into the expected path
     "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
   ],
   "containerEnv": {
@@ -71,7 +68,6 @@
   },
   // Plugins before firewall (network still open during postCreateCommand)
   "postCreateCommand": "sudo chown -R node /home/node/.claude /commandhistory && bash /workspace/.devcontainer/init-plugins.sh",
-  // Firewall locks down the network
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
   "waitFor": "postStartCommand"
 }

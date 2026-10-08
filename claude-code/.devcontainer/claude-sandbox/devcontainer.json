@@ -95,7 +95,6 @@
           "statusBarItem.remoteBackground": "#C15F3C",
           "statusBarItem.remoteForeground": "#ffffff"
         },
-        // Allow Claude Code to skip permission prompts in sandbox
         "claudeCode.allowDangerouslySkipPermissions": true
       }
     }

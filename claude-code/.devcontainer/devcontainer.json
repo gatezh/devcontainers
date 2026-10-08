@@ -75,7 +75,6 @@
           "zsh": { "path": "zsh" },
           "bash": { "path": "bash", "icon": "terminal-bash" }
         },
-        // Suppress extension recommendation prompts
         "extensions.ignoreRecommendations": true,
         // ── Formatter settings (customize per project) ──────────────────
         // Change "editor.defaultFormatter" to match your tooling:
@@ -87,7 +86,6 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
-        // Show workspace folder name in window title
         "window.title": "${localWorkspaceFolderBasename}"
       }
     }
