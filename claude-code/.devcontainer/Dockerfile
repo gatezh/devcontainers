@@ -200,20 +200,6 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # mid-run. See #87, #98.
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
-# ── Claude Code managed settings ─────────────────────────────────────────────
-# Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101)
-# and provides the MDN MCP server. managedMcpServers needs Claude Code >= 2.1.259.
-# The managed CLAUDE.md tells every session to prefer `cf` over Wrangler.
-#
-# /etc/claude-code is created explicitly: BuildKit applies COPY --chmod to parent
-# dirs it auto-creates, leaving 0644 — not traversable.
-USER root
-RUN mkdir -p /etc/claude-code
-COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
-COPY --chown=root:root --chmod=0644 managed-CLAUDE.md /etc/claude-code/CLAUDE.md
-USER node
-
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
@@ -223,10 +209,10 @@ ARG GH_STACK_VERSION=0.2.0
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
   && rm -rf /home/node/.cache/gh
 
-# ─── SHARED — Chromium + Claude Code, common to both targets ─────────────────
+# ─── SHARED — Chromium, Claude Code and agent-browser, common to both targets ─
 # Everything heavy lives here so default and sandbox share these layers: pulling
 # both images downloads Chromium and Claude Code once. Each target adds only a
-# small layer on top (agent-browser / firewall packages).
+# small layer on top (firewall packages in the sandbox).
 FROM base AS shared
 
 # Passwordless sudo for node user — standard practice for devcontainer images.
@@ -239,11 +225,10 @@ RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
   && chmod 0440 /etc/sudoers.d/node-nopasswd
 
 # System Chromium + fonts for headless browser testing.
-# - chromium: used by Playwright and agent-browser via
-#   PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH (see .claude/rules/dockerfile.md).
+# - chromium: launched by agent-browser and Playwright (env vars below).
 # - fonts-freefont-ttf: baseline fonts for headless rendering.
 # Baked in for both targets — the sandbox firewall blocks deb.debian.org, so
-# chromium cannot be added at runtime. Required for the Playwright MCP plugin.
+# chromium cannot be added at runtime.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -255,8 +240,14 @@ USER node
 # Avoids version coupling between @playwright/mcp (alpha playwright-core builds)
 # and cached browser binaries. Projects using @playwright/test must point their
 # playwright.config.ts at process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
+# agent-browser is a Rust CLI that ignores PLAYWRIGHT_* vars; without its own var
+# it would attempt a Chrome-for-Testing download on first use. AGENT_BROWSER_CONFIG
+# pins its config to the image's file, so a repo's ./agent-browser.json (which can
+# declare plugin executables and Chromium args) is never loaded.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
+    AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
 
 # ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
 # Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). Bundled workerd (133 MB,
@@ -285,15 +276,7 @@ ARG CLAUDE_CODE_VERSION
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
-# ─── DEFAULT — full dev environment ───────────────────────────────────────────
-FROM shared AS default
-
-# agent-browser is a Rust CLI with its own env-var convention, NOT Playwright,
-# so PLAYWRIGHT_* vars are silently ignored. Without this, agent-browser would
-# auto-detect or attempt a Chrome-for-Testing download on first use.
-ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
-
-# agent-browser: headless browser automation for AI agents.
+# ── agent-browser — the default browser tool (devcontainer-browser skill) ────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # The package ships prebuilt binaries for 7 platforms (~113 MB); the global
 # `agent-browser` link targets agent-browser-linux-<arch> directly, so the other
@@ -304,6 +287,31 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
   && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \
        -name 'agent-browser-*' ! -name "agent-browser-linux-$(node -p process.arch)" -delete
+
+# ── Claude Code managed settings and skills, agent-browser config ────────────
+# Image-policy settings at the Linux managed location (highest precedence, outside
+# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
+# provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
+# routes browser work to the devcontainer-browser skill (claudeMd), and denies
+# agent-browser install/upgrade.
+#
+# The skill ships at the managed skills location, so every project gets it without a
+# copy in its own .claude/skills/, and it wins a name clash with a project skill.
+#
+# Last in shared so editing these files doesn't rebuild Chromium or Claude Code.
+#
+# The directories are created explicitly: BuildKit applies COPY --chmod to parent
+# dirs it auto-creates, leaving 0644 — not traversable.
+USER root
+RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-browser
+COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
+COPY --chown=root:root --chmod=0644 managed-CLAUDE.md /etc/claude-code/CLAUDE.md
+COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
+COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
+USER node
+
+# ─── DEFAULT — full dev environment ───────────────────────────────────────────
+FROM shared AS default
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
@@ -331,7 +339,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
-      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages" \
+      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages and agent-browser" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code-sandbox" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
