@@ -7,6 +7,8 @@ on:
       - "claude-code/.devcontainer/Dockerfile"
       - "claude-code/.devcontainer/*.sh"
       - "claude-code/.devcontainer/managed-settings.json"
+      - "claude-code/.devcontainer/managed-skills/**"
+      - "claude-code/.devcontainer/agent-browser.json"
   workflow_dispatch:
 
 permissions:
