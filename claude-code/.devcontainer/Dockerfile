@@ -206,7 +206,7 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
 # ~/.cache/gh is gh's HTTP cache — the install leaves a 25 MB copy of the download.
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=0.2.0
+ARG GH_STACK_VERSION=0.2.1
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
   && rm -rf /home/node/.cache/gh
 
@@ -255,7 +255,7 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
 # bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
 # Completion is installed the documented way; it queries cf, so upgrades don't stale it.
 # renovate: datasource=npm depName=cf
-ARG CF_VERSION=1.0.0-beta.13
+ARG CF_VERSION=1.0.0-beta.14
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
@@ -284,7 +284,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # `agent-browser` link targets agent-browser-linux-<arch> directly, so the other
 # six are deleted. Rebuilt on each Claude Code bump (ARG above) — a small layer.
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.38.2
+ARG AGENT_BROWSER_VERSION=0.39.0
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
   && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \
