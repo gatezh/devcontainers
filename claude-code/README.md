@@ -22,6 +22,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
 | cf | npm global install, pinned `ARG` bumped by Renovate | Cloudflare CLI for the whole Cloudflare API. See [Cloudflare CLI](#cloudflare-cli-cf) |
 | rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
+| actionlint, shellcheck | Pinned `ARG`s, bumped by Renovate on each GitHub release | GitHub Actions workflow linting; actionlint checks `run:` scripts only when shellcheck is on `PATH` |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
 **Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), passwordless sudo
@@ -65,7 +66,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, ralphex, actionlint, or shellcheck — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -99,7 +100,7 @@ Projects consuming these images need the following files in their repository.
 
 ### Required: `.mise.toml` (project root)
 
-Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image, which tracks their releases for you. See [`mise.toml`](mise.toml) for a template.
+Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code, actionlint, shellcheck) is pre-installed in the image, which tracks their releases for you. A project whose CI must match exact linter versions pins them in a CI-only `.mise.ci.toml` (`MISE_ENV=ci`), so container creation doesn't download them. See [`mise.toml`](mise.toml) for a template.
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
@@ -489,6 +490,8 @@ more often than right.
 |-----|------------|-------------|
 | `RTK_VERSION` | Renovate | rtk |
 | `RALPHEX_VERSION` | Renovate | ralphex |
+| `ACTIONLINT_VERSION` | Renovate | actionlint |
+| `SHELLCHECK_VERSION` | Renovate | shellcheck |
 | `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
 | `AGENT_BROWSER_VERSION` | Renovate | agent-browser |
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
@@ -497,7 +500,7 @@ more often than right.
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The seven Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The nine Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback
