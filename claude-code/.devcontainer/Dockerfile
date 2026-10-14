@@ -63,6 +63,27 @@ RUN set -eux; \
       "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
 
+# ── actionlint + shellcheck (GitHub Actions workflow linting) ─────────────
+# actionlint hands `run:` scripts to shellcheck when it is on PATH, else skips them.
+FROM alpine:3.21 AS actionlint-download
+RUN apk add --no-cache curl
+# renovate: datasource=github-releases depName=rhysd/actionlint
+ARG ACTIONLINT_VERSION=1.7.12
+RUN set -eux; \
+    ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
+    curl -fsSL -o /tmp/actionlint.tar.gz \
+      "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_${ARCH}.tar.gz"; \
+    tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
+
+FROM alpine:3.21 AS shellcheck-download
+RUN apk add --no-cache curl tar
+# renovate: datasource=github-releases depName=koalaman/shellcheck
+ARG SHELLCHECK_VERSION=0.11.0
+RUN set -eux; \
+    curl -fsSL -o /tmp/shellcheck.tar.gz \
+      "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.$(uname -m).tar.gz"; \
+    tar -xzf /tmp/shellcheck.tar.gz -C /usr/local/bin --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
 
@@ -249,6 +270,10 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
+
+# ── actionlint + shellcheck — after Chromium, so their bumps don't rebuild it ─
+COPY --from=actionlint-download /usr/local/bin/actionlint /usr/local/bin/actionlint
+COPY --from=shellcheck-download /usr/local/bin/shellcheck /usr/local/bin/shellcheck
 
 # ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
 # Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). No install scripts, and the

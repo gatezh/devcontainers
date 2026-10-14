@@ -19,6 +19,7 @@ This is a standalone image, not a devcontainer.
 | Claude Code CLI | 2.1.280 (pinned) |
 | RTK | 0.49.0 (pinned) |
 | Ralphex | 1.7.0 (pinned) |
+| actionlint, shellcheck | 1.7.12, 0.11.0 (pinned) |
 | Git, ripgrep, jq, curl | system |
 
 All pinned versions live as `ARG`s in the Dockerfile and are kept current by Renovate — see
@@ -81,7 +82,7 @@ Note: this image deviates from the standalone convention of a single primary ver
 
 ## Automatic Rebuilds
 
-The image rebuilds when one of its pinned tools — Claude Code, rtk, or ralphex — publishes a
+The image rebuilds when one of its pinned tools — Claude Code, rtk, ralphex, actionlint, or shellcheck — publishes a
 new release: Renovate opens a version-bump PR against the `ARG`s in the Dockerfile, CI verifies
 it, it auto-merges, and that merge triggers the build. No upstream release means no rebuild —
 there is no longer a daily cron. Manual rebuilds run from the "Run workflow" button on
