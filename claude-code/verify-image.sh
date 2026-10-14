@@ -32,6 +32,8 @@ zsh --version
 gh --version
 gh stack --version
 ralphex --version
+actionlint --version
+shellcheck --version
 cf --version
 cf cli search 'list zones' | jq -e '.[0].command' >/dev/null
 python3 -c 'import ensurepip'

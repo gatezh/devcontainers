@@ -102,6 +102,8 @@ jobs:
             docker --version &&
             node --version &&
             /srv/ralphex --version &&
+            actionlint --version &&
+            shellcheck --version &&
             claude --version &&
             id app &&
             test -f /init.sh &&

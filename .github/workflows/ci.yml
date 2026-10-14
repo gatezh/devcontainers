@@ -144,7 +144,7 @@ jobs:
             add_image "ralphex-fe" \
               "ralphex-fe" \
               "ralphex-fe/Dockerfile" \
-              "bun --version && hugo version && go version && docker --version && /srv/ralphex --version && printenv PLAYWRIGHT_MCP_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/managed-settings.json && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/"
+              "bun --version && hugo version && go version && docker --version && /srv/ralphex --version && actionlint --version && shellcheck --version && printenv PLAYWRIGHT_MCP_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/managed-settings.json && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/"
           fi
 
           if [ "$INCLUDES" = "[]" ]; then
