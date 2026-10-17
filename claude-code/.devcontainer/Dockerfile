@@ -40,7 +40,7 @@ RUN set -eux; \
 FROM alpine:3.21 AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=1.0.0
+ARG RTK_VERSION=1.0.1
 RUN set -eux; \
     ARCH="$(uname -m)"; \
     case "$ARCH" in \
