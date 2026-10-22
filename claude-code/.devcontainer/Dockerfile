@@ -127,6 +127,10 @@ RUN ARCH=$(dpkg --print-architecture) \
   && dpkg -i "gh_${GH_VERSION}_linux_${ARCH}.deb" \
   && rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
 
+# Trust the bind-mounted /workspace in /etc/gitconfig, which every git process reads.
+# A GIT_CONFIG_* env var is stripped by tools that filter env, e.g. Hugo >= 0.166 (#211).
+RUN git config --system --add safe.directory /workspace
+
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
 

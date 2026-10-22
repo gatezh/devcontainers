@@ -29,6 +29,7 @@ agent-browser --version
 test -r "$SETTINGS"
 test -x /usr/local/bin/patch-playwright-mcp
 jq -r '.hooks.SessionStart[0].hooks[0].command' "$SETTINGS" | grep -qx /usr/local/bin/patch-playwright-mcp
+/usr/local/bin/patch-playwright-mcp
 test -x /usr/local/bin/drop-rtk-hook
 jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook
 jq -r '.managedMcpServers.mdn.url' "$SETTINGS" | grep -qx https://mcp.mdn.mozilla.net/
@@ -46,6 +47,9 @@ test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 # ── Environment ─────────────────────────────────────────────────────────────
 printenv CF_SEND_TELEMETRY | grep -qx false
 printenv WRANGLER_SEND_METRICS | grep -qx false
+
+# ── Git ─────────────────────────────────────────────────────────────────────
+git config --system --get-all safe.directory | grep -qx /workspace
 
 # ── Shell ───────────────────────────────────────────────────────────────────
 zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k

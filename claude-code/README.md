@@ -47,7 +47,7 @@ cf auth whoami
 
 The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must allowlist `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in).
 
-The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Commands that call the Cloudflare API don't need it.
+The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Most commands that call the Cloudflare API don't need it, but `cf workers …` does, even for API reads like `cf workers scripts list` ([#212](https://github.com/gatezh/devcontainers/issues/212)). For Workers reads outside such a project, use `bunx wrangler` or the Cloudflare MCP server.
 
 The `cloudflare` plugin (skills plus the Cloudflare MCP server) stays installed alongside `cf`: its MCP server also searches current Cloudflare docs, which `cf` doesn't.
 
@@ -333,16 +333,17 @@ The `sudo find` in `updateContentCommand` chowns all `node_modules` directories 
 
 Both `devcontainer.json` variants set git config through `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` in `containerEnv`. Git reads these as [command scope](https://git-scm.com/docs/git-config#SCOPES): they apply to every git process in the container (terminal, VS Code's Git extension, Claude Code) and outrank `/etc/gitconfig` and `~/.gitconfig`, which the Dev Containers extension writes to on attach.
 
+The image itself trusts `/workspace` in `/etc/gitconfig` (`safe.directory`). Docker Desktop bind mounts can report `/workspace` as owned by another user, so git refuses it with `detected dubious ownership`. The Dev Containers extension adds this entry to `~/.gitconfig` only when its one-time check at attach detects the mismatch, so the error comes and goes. It's system config rather than a `GIT_CONFIG_*` entry because tools that filter their child's env, such as Hugo 0.166 and later, strip those ([#211](https://github.com/gatezh/devcontainers/issues/211)).
+
 | Key | Value | Why |
 |-----|-------|-----|
-| `safe.directory` | `/workspace` | Docker Desktop bind mounts can report `/workspace` as owned by another user, so git refuses it with `detected dubious ownership`. The Dev Containers extension adds this entry to `~/.gitconfig` only when its one-time check at attach detects the mismatch, so the error comes and goes. |
 | `url.https://github.com/.insteadOf` | `git@github.com:` | Sends SSH-style GitHub remotes over HTTPS inside the container. The remotes themselves and the host's SSH setup don't change. |
 | `credential.https://github.com.helper` | *(empty)* | Clears the helper list for github.com, including the helper VS Code injects, which answers with the host's possibly stale GitHub credential. Other hosts keep VS Code's helper. |
 | `credential.https://github.com.helper` | `!gh auth git-credential` | Authenticates github.com through the container's `gh` login. The empty entry and this one are what `gh auth setup-git` writes. |
 
 **One-time setup:** run `gh auth login` in either variant. The login lives on the shared `myproject-gh-config-*` volume, so it survives rebuilds and covers both variants. After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
 
-To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The entries above are listed with scope `command`. To add your own entries, append `GIT_CONFIG_KEY_4` / `GIT_CONFIG_VALUE_4` and so on, and raise `GIT_CONFIG_COUNT` to match.
+To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The table's entries are listed with scope `command` and `safe.directory` with scope `system`. To add your own entries, append `GIT_CONFIG_KEY_3` / `GIT_CONFIG_VALUE_3` and so on, and raise `GIT_CONFIG_COUNT` to match.
 
 ## Playwright Strategy
 

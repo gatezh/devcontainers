@@ -86,6 +86,8 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
+        // Oxc starts oxfmt/oxlint with the PATH from `$SHELL -ilc env`, which can lack node (#228)
+        "oxc.path.node": "/usr/local/bin/node",
         "window.title": "${localWorkspaceFolderBasename}"
       }
     }
@@ -115,17 +117,16 @@
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     // Git config for every process, outranking the ~/.gitconfig the extension copies in:
-    // trust /workspace, send git@github.com: remotes over HTTPS, and authenticate github.com
-    // only through gh (the empty helper drops VS Code's, as `gh auth setup-git` does).
-    "GIT_CONFIG_COUNT": "4",
-    "GIT_CONFIG_KEY_0": "safe.directory",
-    "GIT_CONFIG_VALUE_0": "/workspace",
-    "GIT_CONFIG_KEY_1": "url.https://github.com/.insteadOf",
-    "GIT_CONFIG_VALUE_1": "git@github.com:",
+    // send git@github.com: remotes over HTTPS, and authenticate github.com only through gh
+    // (the empty helper drops VS Code's, as `gh auth setup-git` does). The image trusts
+    // /workspace in /etc/gitconfig, which tools that filter env (Hugo) can't strip (#211).
+    "GIT_CONFIG_COUNT": "3",
+    "GIT_CONFIG_KEY_0": "url.https://github.com/.insteadOf",
+    "GIT_CONFIG_VALUE_0": "git@github.com:",
+    "GIT_CONFIG_KEY_1": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_1": "",
     "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
-    "GIT_CONFIG_VALUE_2": "",
-    "GIT_CONFIG_KEY_3": "credential.https://github.com.helper",
-    "GIT_CONFIG_VALUE_3": "!gh auth git-credential"
+    "GIT_CONFIG_VALUE_2": "!gh auth git-credential"
   },
   // sudo chown fixes volume ownership — safety net in case Docker volume population didn't apply.
   // The find command chowns all node_modules volume mount points in one pass.

@@ -22,6 +22,9 @@ if [ ! -x /usr/bin/chromium ]; then
     exit 0
 fi
 
+# A fresh ~/.claude volume has no plugin cache until init-plugins.sh runs; find would exit 1 (#207).
+[ -d "$HOME/.claude/plugins/cache" ] || exit 0
+
 find "$HOME/.claude/plugins/cache" -path "*/playwright*/.mcp.json" 2>/dev/null \
 | while read -r MCP_CONFIG; do
     jq '.playwright.args = [
