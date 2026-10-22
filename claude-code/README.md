@@ -21,7 +21,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Mise | The tool manager itself (not the tools) | Projects run `mise install` at container creation for their tool versions |
 | gh-stack | `gh` extension, pinned `ARG` bumped by Renovate | Native stacked PRs (`gh stack`). Baked in because `~/.local/share/gh` is not a volume, so a runtime `gh extension install` is lost on rebuild |
 | cf | npm global install, pinned `ARG` bumped by Renovate | Cloudflare CLI for the whole Cloudflare API. See [Cloudflare CLI](#cloudflare-cli-cf) |
-| rtk, ralphex | Pinned `ARG`s, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the versions so projects don't have to |
+| ralphex | Pinned `ARG`, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the version so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
 **Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), passwordless sudo
@@ -65,7 +65,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges (a new major version waits for review instead), and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges (a new major version waits for review instead), and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -99,7 +99,7 @@ Projects consuming these images need the following files in their repository.
 
 ### Required: `.mise.toml` (project root)
 
-Only pin tools that affect project stability — dev infrastructure (rtk, ralphex, Claude Code) is pre-installed in the image, which tracks their releases for you. See [`mise.toml`](mise.toml) for a template.
+Only pin tools that affect project stability — dev infrastructure (ralphex, Claude Code) is pre-installed in the image, which tracks their releases for you. See [`mise.toml`](mise.toml) for a template.
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
@@ -117,6 +117,8 @@ Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, ins
 `postStartCommand` re-runs the patch on every container start so plugin auto-updates between sessions cannot leave MCP pointing at the missing chrome channel. See the [Playwright Strategy](#playwright-strategy) section.
 
 Mark as executable: `chmod +x init-plugins.sh`
+
+**Upgrading from an image with rtk:** the images no longer ship rtk, but earlier versions of this script registered its `rtk hook claude` hook in `~/.claude/settings.json`, which persists on the volume. Without the binary, that hook errors on every Bash call. Update your copy of `init-plugins.sh` from the template and run it once: it removes the hook and leaves your other hooks alone.
 
 #### Bundled plugins
 
@@ -487,7 +489,6 @@ more often than right.
 
 | Arg | Updated by | Description |
 |-----|------------|-------------|
-| `RTK_VERSION` | Renovate | rtk |
 | `RALPHEX_VERSION` | Renovate | ralphex |
 | `CLAUDE_CODE_VERSION` | Renovate | Claude Code CLI |
 | `AGENT_BROWSER_VERSION` | Renovate | agent-browser |

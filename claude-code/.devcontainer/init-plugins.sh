@@ -117,14 +117,12 @@ done
 # hook is what closes the gap when the plugin auto-updates mid-container-run.
 /usr/local/bin/patch-playwright-mcp
 
-# ── rtk init (token-optimized CLI proxy) ────────────────────────────────────
-# Global hook-first mode: installs only the PreToolUse rewrite hook to ~/.claude/,
-# no workspace artifacts (CLAUDE.md, .rtk/). Safe to run multiple times.
-# Telemetry consent prompt: RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477),
-# closed stdin defeats the pseudo-TTY postCreateCommand hands us, and timeout
-# backstops any other init-time hang.
-if command -v rtk &>/dev/null; then
-    RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch < /dev/null 2>/dev/null || true
+# ── rtk removed: drop the hook earlier versions of this script registered ───
+# Without the binary, a leftover `rtk hook claude` PreToolUse entry errors on
+# every Bash call. Transitional: delete this block after 2027-01-31.
+SETTINGS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+if [ -f "$SETTINGS" ] && grep -q 'rtk' "$SETTINGS"; then
+    jq 'if .hooks.PreToolUse then .hooks.PreToolUse |= (map(.hooks |= map(select((.command // "") | test("(^|/)rtk hook claude$|rtk-rewrite\\.sh") | not))) | map(select(.hooks | length > 0))) else . end' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
 fi
 
 # ── agent-browser skill ─────────────────────────────────────────────────────

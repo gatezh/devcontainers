@@ -33,7 +33,6 @@
       // finished (#121 sat green 3.5 weeks). Requires "Allow auto-merge" plus a
       // master ruleset requiring the "CI complete" check, or it silently regresses.
       matchPackageNames: [
-        'rtk-ai/rtk',
         'umputun/ralphex',
         '@anthropic-ai/claude-code',
         'agent-browser',

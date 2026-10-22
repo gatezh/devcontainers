@@ -19,7 +19,6 @@ mise --version
 zsh --version
 gh --version
 gh stack --version
-rtk --version
 ralphex --version
 cf --version
 cf cli search 'list zones' | jq -e '.[0].command' >/dev/null

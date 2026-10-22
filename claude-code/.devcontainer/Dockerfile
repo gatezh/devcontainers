@@ -24,8 +24,6 @@ ARG ALPINE_VERSION=3.24
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
 
-# ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
-# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
 # Pinned by commit SHA: neither project tags usefully, and auto-adopting
 # shell-framework changes has broken this image before. Bump deliberately.
@@ -39,20 +37,6 @@ RUN set -eux; \
       | tar -xz -C /omz --strip-components=1; \
     curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
-
-FROM alpine:${ALPINE_VERSION} AS rtk-download
-RUN apk add --no-cache curl
-# renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=1.0.1
-RUN set -eux; \
-    ARCH="$(uname -m)"; \
-    case "$ARCH" in \
-      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
-      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
-    esac; \
-    curl -fsSL -o /tmp/rtk.tar.gz \
-      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
-    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
@@ -193,9 +177,8 @@ ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
-# rtk (CLI proxy) and ralphex (plan execution) — dev infrastructure, not project
-# dependencies. Renovate-pinned; see .github/renovate.json5.
-COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+# ralphex (plan execution) — dev infrastructure, not a project dependency.
+# Renovate-pinned; see .github/renovate.json5.
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
 # ── Playwright MCP patch script ──────────────────────────────────────────────
