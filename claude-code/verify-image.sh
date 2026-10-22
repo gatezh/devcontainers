@@ -8,6 +8,7 @@ set -eux
 case "${1:?usage: verify-image.sh default|sandbox}" in
     default)
         sudo -n true
+        test -x /usr/local/sbin/chown-volumes
         ;;
     sandbox)
         command -v iptables

@@ -298,6 +298,9 @@ COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config
 # no-op where the Playwright MCP patcher was, for projects that still call it.
 COPY --chmod=0755 drop-rtk-hook.sh /usr/local/bin/drop-rtk-hook
 COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
+# Volume-ownership safety net both templates run through sudo; in the sandbox it's
+# one of the only two commands sudo allows (#208).
+COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
@@ -337,7 +340,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # root-owned scripts, with no arguments: a firewall the agent can't edit or flush,
 # and the volume chown. Projects list extra domains in a file, read as data (#208).
 COPY --chown=root:root --chmod=0755 init-firewall.sh /usr/local/sbin/init-firewall
-COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
 RUN printf '%s\n' 'node ALL=(root) NOPASSWD: /usr/local/sbin/init-firewall "", /usr/local/sbin/chown-volumes ""' \
     > /etc/sudoers.d/node-sandbox \
   && chmod 0440 /etc/sudoers.d/node-sandbox \

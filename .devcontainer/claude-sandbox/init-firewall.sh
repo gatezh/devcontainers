@@ -2,6 +2,16 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Fail closed: whatever stops the script before the DROP policies below, the network
+# ends up shut, not wide open.
+fail_closed() {
+    iptables -P INPUT DROP
+    iptables -P FORWARD DROP
+    iptables -P OUTPUT DROP
+    echo "ERROR: firewall setup failed; the network is closed. Restart the container to retry." >&2
+}
+trap fail_closed EXIT
+
 # 1. Extract Docker DNS info BEFORE any flushing
 DOCKER_DNS_RULES=$(iptables-save -t nat | grep "127\.0\.0\.11" || true)
 
@@ -24,11 +34,11 @@ else
     echo "No Docker DNS rules to restore"
 fi
 
-# Allow DNS, SSH, and localhost before restrictions
+# Allow DNS and localhost before restrictions. No blanket SSH: an open port 22 to
+# any host is an exit around the allowlist. Allowlisted hosts are reachable on
+# every port by the ipset rule below.
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 iptables -A INPUT -p udp --sport 53 -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 22 -j ACCEPT
-iptables -A INPUT -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
@@ -129,3 +139,5 @@ if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
 else
     echo "Firewall verification passed - able to reach https://api.github.com as expected"
 fi
+
+trap - EXIT

@@ -128,13 +128,13 @@
     "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
     "GIT_CONFIG_VALUE_2": "!gh auth git-credential"
   },
-  // sudo chown fixes volume ownership — safety net in case Docker volume population didn't apply.
-  // The find command chowns all node_modules volume mount points in one pass.
+  // chown-volumes (image-baked, shared with the sandbox) gives node the node_modules and
+  // config volume mount points, a safety net in case Docker volume population didn't apply.
   // mise install reads .mise.toml and installs project-specific tool versions.
   // bun install is skipped until the project has a package.json.
   // Chromium is baked into the image via apt — no playwright install step needed.
   // Projects' playwright.config.ts should use process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
-  "updateContentCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh /home/node/.config/cloudflare && mise install && if [ -f package.json ]; then bun install; fi"
+  "updateContentCommand": "sudo /usr/local/sbin/chown-volumes && mise install && if [ -f package.json ]; then bun install; fi"
   // No postCreateCommand: claude CLI calls there race the extension's OAuth sign-in
   // (#58). Run `bash .devcontainer/init-plugins.sh` once after signing in.
 }

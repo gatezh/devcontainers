@@ -24,11 +24,11 @@ Projects consume these pre-built images and control their own tool versions via 
 | ralphex | Pinned `ARG`, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the version so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill))
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), and `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run
 
 **Default-only:** passwordless sudo
 
-**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate; the firewall (`/usr/local/sbin/init-firewall`) and volume chown (`/usr/local/sbin/chown-volumes`), the only commands `node` can run with sudo
+**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate; the firewall (`/usr/local/sbin/init-firewall`). It and `chown-volumes` are the only commands `node` can run with sudo
 
 ### MDN MCP server
 
@@ -158,7 +158,7 @@ To remove a plugin in your project, delete its entry from the local `init-plugin
 
 The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
 
-To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down.
+To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down, and if setup itself fails partway (say, GitHub's IP list can't be fetched), the firewall closes the network rather than leaving it open: restart the container to retry. Allowlisted hosts are reachable on every port, SSH included; nothing else is, and IPv6 gets loopback only.
 
 ```
 # cf

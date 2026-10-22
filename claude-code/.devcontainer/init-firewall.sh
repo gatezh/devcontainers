@@ -30,27 +30,34 @@ if iptables -S OUTPUT | grep -qx -- "-P OUTPUT DROP"; then
     exit 0
 fi
 
+# Fail closed: whatever stops the script before the DROP policies below (a failed
+# GitHub meta fetch, no default route), the network ends up shut, not wide open.
+fail_closed() {
+    iptables -P INPUT DROP
+    iptables -P FORWARD DROP
+    iptables -P OUTPUT DROP
+    echo "ERROR: firewall setup failed; the network is closed. Restart the container to retry." >&2
+}
+trap fail_closed EXIT
+
 # Project domains: read as data and validated. Bad input is skipped, not fatal, so
-# a corrupted allowlist can't keep the firewall down; invalid lines aren't echoed,
-# so a symlinked allowlist can't print a root-only file.
+# a corrupted allowlist can't keep the firewall down; invalid lines aren't echoed.
+# Read as node, so the kernel refuses a symlink to a file node can't read (a root-only
+# file); timeout stops a FIFO from blocking start-up.
 PROJECT_DOMAINS=()
-resolved=$(realpath -e "$ALLOWLIST" 2>/dev/null || true)
-if [ -n "$resolved" ] && { [ ! -f "$resolved" ] || [[ "$resolved" != /workspace/* ]]; }; then
-    echo "WARN: $ALLOWLIST is not a regular file inside /workspace — ignoring it"
-elif [ -n "$resolved" ]; then
-    line_no=0
-    while IFS= read -r line || [ -n "$line" ]; do
-        line_no=$((line_no + 1))
-        line="${line%%#*}"
-        line="${line//[[:space:]]/}"
-        [ -z "$line" ] && continue
-        if [[ ! "$line" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]]; then
-            echo "WARN: $ALLOWLIST line $line_no is not a domain name — skipping"
-            continue
-        fi
-        PROJECT_DOMAINS+=("$line")
-    done < "$resolved"
-fi
+allowlist=$(timeout 5 runuser -u node -- cat -- "$ALLOWLIST" 2>/dev/null || true)
+line_no=0
+while IFS= read -r line; do
+    line_no=$((line_no + 1))
+    line="${line%%#*}"
+    line="${line//[[:space:]]/}"
+    [ -z "$line" ] && continue
+    if [[ ! "$line" =~ ^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$ ]]; then
+        echo "WARN: $ALLOWLIST line $line_no is not a domain name — skipping"
+        continue
+    fi
+    PROJECT_DOMAINS+=("$line")
+done <<< "$allowlist"
 
 # 1. Extract Docker DNS info BEFORE any flushing
 DOCKER_DNS_RULES=$(iptables-save -t nat | grep "127\.0\.0\.11" || true)
@@ -74,11 +81,11 @@ else
     echo "No Docker DNS rules to restore"
 fi
 
-# Allow DNS, SSH, and localhost before restrictions
+# Allow DNS and localhost before restrictions. No blanket SSH: an open port 22 to
+# any host is an exit around the allowlist (ssh -D). Allowlisted hosts, GitHub
+# included, are reachable on every port by the ipset rule below.
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 iptables -A INPUT -p udp --sport 53 -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 22 -j ACCEPT
-iptables -A INPUT -p tcp --sport 22 -m state --state ESTABLISHED -j ACCEPT
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
@@ -149,6 +156,20 @@ iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A OUTPUT -m set --match-set allowed-domains dst -j ACCEPT
 iptables -A OUTPUT -j REJECT --reject-with icmp-admin-prohibited
 
+# IPv6 gets loopback only, so a Compose network with enable_ipv6 isn't an open side
+# door. Skipped where the kernel has no ip6tables support.
+if ip6tables -S >/dev/null 2>&1; then
+    ip6tables -F
+    ip6tables -X
+    ip6tables -A INPUT -i lo -j ACCEPT
+    ip6tables -A OUTPUT -o lo -j ACCEPT
+    ip6tables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+    ip6tables -A OUTPUT -j REJECT
+    ip6tables -P INPUT DROP
+    ip6tables -P FORWARD DROP
+    ip6tables -P OUTPUT DROP
+fi
+
 echo "Firewall configuration complete"
 echo "Verifying firewall rules..."
 if curl --connect-timeout 5 https://example.com >/dev/null 2>&1; then
@@ -158,9 +179,18 @@ else
     echo "Firewall verification passed - unable to reach https://example.com as expected"
 fi
 
+if timeout 5 bash -c '</dev/tcp/example.com/22' 2>/dev/null; then
+    echo "ERROR: Firewall verification failed - was able to reach example.com:22"
+    exit 1
+else
+    echo "Firewall verification passed - unable to reach example.com:22 as expected"
+fi
+
 if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
     echo "ERROR: Firewall verification failed - unable to reach https://api.github.com"
     exit 1
 else
     echo "Firewall verification passed - able to reach https://api.github.com as expected"
 fi
+
+trap - EXIT
