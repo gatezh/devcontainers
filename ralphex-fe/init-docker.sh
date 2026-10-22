@@ -22,16 +22,6 @@ if [ -d /mnt/claude ]; then
     for d in commands skills hooks agents plugins; do
         [ -d "/mnt/claude/$d" ] && cp -rL "/mnt/claude/$d" "/home/app/.claude/" 2>/dev/null || true
     done
-    # ── Playwright MCP: use system Chromium (#64, #67) ──────────────────────
-    # @playwright/mcp defaults to --browser chrome, which isn't installed in Docker.
-    # Point it at the system Chromium with --executable-path and --no-sandbox.
-    PLAYWRIGHT_MCP_CONFIG="/home/app/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/playwright/.mcp.json"
-    if [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
-        jq '.playwright.args = ["@playwright/mcp@latest", "--browser", "chromium", "--executable-path", "/usr/bin/chromium", "--no-sandbox"]' \
-            "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
-            && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
-    fi
-
     # ── Local: the image has no rtk; drop a host rtk hook from this copy ────
     # Otherwise `rtk hook claude` errors on every Bash call. The host file is untouched.
     S=/home/app/.claude/settings.json

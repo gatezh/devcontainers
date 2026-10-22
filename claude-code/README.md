@@ -103,7 +103,7 @@ Only pin tools that affect project stability — dev infrastructure (ralphex, Cl
 
 ### Optional: `.devcontainer/init-plugins.sh`
 
-Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, updates them to the latest marketplace versions (`install` alone no-ops once the persistent `~/.claude` volume holds a plugin), and invokes the image-baked `/usr/local/bin/patch-playwright-mcp` to rewrite every cached Playwright MCP `.mcp.json` to launch the system chromium. Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
+Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, installs plugins, updates them to the latest marketplace versions (`install` alone no-ops once the persistent `~/.claude` volume holds a plugin). Idempotent. See [`.devcontainer/init-plugins.sh`](.devcontainer/init-plugins.sh) for the template.
 
 - **Sandbox variant:** its `postCreateCommand` already runs the script, if present, before `postStartCommand` brings up the firewall.
 - **Default variant:** run it yourself after signing in to Claude Code, and again whenever you want plugin updates:
@@ -129,7 +129,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `frontend-design` | Production-grade UI/UX scaffolding |
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
-| `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via `patch-playwright-mcp`) |
+| `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via the image's `PLAYWRIGHT_MCP_*` env vars) |
 | `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
 | `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
@@ -149,7 +149,7 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
-> **Why `init-plugins.sh` stays per-project but `patch-playwright-mcp` doesn't:** `init-plugins.sh` carries project-specific configuration (marketplace list, plugin list) — it's *meant* to be edited per project. The patch script has zero project-specific config and is identical across every consumer, so it's baked into the image and flows through the same Renovate-triggered rebuild + `initializeCommand` image-pull channel as the rest of the image. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
+> **Why `init-plugins.sh` stays per-project:** it carries project-specific configuration (marketplace list, plugin list) and is *meant* to be edited per project. Anything identical across every consumer, such as the Playwright MCP browser settings or the managed settings file, lives in the image instead and flows through the same Renovate-triggered rebuild + `initializeCommand` image-pull channel. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/init-firewall.sh`
 
@@ -370,7 +370,7 @@ binary"; consumer projects do the wiring.
 
 | Consumer | Where to wire | What to add |
 |---|---|---|
-| `@playwright/mcp` | nothing (image-baked) | `/usr/local/bin/patch-playwright-mcp` rewrites every cached `.mcp.json` to use the system chromium. See [Playwright MCP plugin](#playwright-mcp-plugin) below. |
+| `@playwright/mcp` | nothing (image env) | Image sets `PLAYWRIGHT_MCP_BROWSER`, `PLAYWRIGHT_MCP_EXECUTABLE_PATH` and `PLAYWRIGHT_MCP_HEADLESS`. See [Playwright MCP plugin](#playwright-mcp-plugin) below. |
 | `@playwright/test` | `playwright.config.ts` | `use.launchOptions.executablePath` |
 | `@vitest/browser-playwright` (incl. `@storybook/addon-vitest`, `@vitest/browser`) | `vitest.config.ts` | `playwright({ launchOptions: { executablePath } })` |
 | Direct `playwright-core` / `playwright` use in scripts | every `chromium.launch(...)` site | `chromium.launch({ executablePath })` |
@@ -449,38 +449,29 @@ const browser = await chromium.launch({
 
 ### Playwright MCP plugin
 
-The `playwright@claude-plugins-official` plugin's `@playwright/mcp` defaults
-to the `chrome` channel (`/opt/google/chrome/chrome`), which the image does
-not ship. The image bakes in `/usr/local/bin/patch-playwright-mcp` (built
-from [`patch-playwright-mcp.sh`](.devcontainer/patch-playwright-mcp.sh)),
-which rewrites every cached `.mcp.json` under `~/.claude/plugins/cache/`
-to use the system chromium:
+The `playwright@claude-plugins-official` plugin starts `npx @playwright/mcp@latest`
+with no arguments, and `@playwright/mcp` defaults to the `chrome` channel
+(`/opt/google/chrome/chrome`), which the image does not ship. Every
+`@playwright/mcp` command-line option also has an environment variable, and
+Claude Code starts stdio MCP servers with its own environment, so the image sets:
 
-```json
-{
-  "playwright": {
-    "command": "npx",
-    "args": [
-      "@playwright/mcp@latest",
-      "--browser", "chromium",
-      "--executable-path", "/usr/bin/chromium",
-      "--no-sandbox",
-      "--headless"
-    ]
-  }
-}
-```
+| Variable | Value | Replaces |
+|---|---|---|
+| `PLAYWRIGHT_MCP_BROWSER` | `chromium` | `--browser chromium` |
+| `PLAYWRIGHT_MCP_EXECUTABLE_PATH` | `/usr/bin/chromium` | `--executable-path /usr/bin/chromium` |
+| `PLAYWRIGHT_MCP_HEADLESS` | `true` | `--headless` |
 
-`init-plugins.sh` invokes the patch binary when it runs, and the
-template `devcontainer.json` files run it again at `postStartCommand` so
-plugin auto-updates between sessions cannot leave MCP pointing at the
-missing chrome channel.
+The `chromium` channel already runs without Chromium's sandbox on Linux, so there's
+no `--no-sandbox` equivalent to set. The plugin's `.mcp.json` stays exactly as
+upstream ships it, so plugin auto-updates can't undo the configuration.
 
-To debug, inspect the patched configs after a container start:
-
-```bash
-cat ~/.claude/plugins/cache/claude-plugins-official/playwright/*/.mcp.json
-```
+**Upgrading from an image with `patch-playwright-mcp`:** earlier images rewrote
+each cached `.mcp.json` with a `patch-playwright-mcp` script, run from
+`postStartCommand`, `init-plugins.sh` and a SessionStart hook. Remove the calls
+from your `devcontainer.json` and `init-plugins.sh`. Until 2027-01-31 the image
+keeps a no-op at `/usr/local/bin/patch-playwright-mcp`, so old calls still succeed.
+A `.mcp.json` the script already rewrote passes the same settings as flags, which
+take precedence over the env vars, and the next plugin update restores the original.
 
 ## Build Args
 

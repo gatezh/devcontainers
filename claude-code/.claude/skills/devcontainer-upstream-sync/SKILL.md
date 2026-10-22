@@ -14,7 +14,7 @@ metadata:
 This project's `.devcontainer/` and bundled `.claude/skills/` track
 [`gatezh/devcontainers`](https://github.com/gatezh/devcontainers) (the
 `claude-code` template) as the single source of truth. Upstream evolves —
-new postStartCommand wiring (e.g. `patch-playwright-mcp`), new bundled
+new postStartCommand wiring, new bundled
 skills, retired allowlist hosts, image refactors. Without an audit loop
 those changes silently rot the local config.
 
@@ -110,7 +110,8 @@ When adopting an upstream change, preserve these per-project patterns:
 4. **`postCreateCommand` / `postStartCommand`.** These chain commands.
    Keep local additions (e.g. `bash .devcontainer/init-plugins.sh`,
    `ln -sfn /workspace/.codex ~/.codex`); sync upstream's *required*
-   additions like `/usr/local/bin/patch-playwright-mcp`.
+   additions and removals. Upstream dropped `/usr/local/bin/patch-playwright-mcp`
+   (the image sets `PLAYWRIGHT_MCP_*` instead): remove local calls to it.
 5. **`init-firewall.sh` allowlist** and **`init-plugins.sh` plugin
    list** — never auto-overwrite. Surface upstream's recipe; ask
    before adopting.
@@ -200,8 +201,7 @@ Driven by Workflow 1's report. For each row that needs action:
   `…/master/.devcontainer/claude-sandbox/init-firewall.sh`. The
   `claude-code/` template intentionally omits this file because
   per-project allowlist customization is the whole point.
-- **`postStartCommand` chains:** when upstream adds a step (e.g.
-  `/usr/local/bin/patch-playwright-mcp`), splice it into the local
+- **`postStartCommand` chains:** when upstream adds a step, splice it into the local
   chain rather than overwriting the chain. Verify the binary is in the
   image first:
   ```sh

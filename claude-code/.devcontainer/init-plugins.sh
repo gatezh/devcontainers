@@ -110,13 +110,6 @@ for plugin in "${PLUGINS[@]}"; do
     fi
 done
 
-# ── Playwright MCP: route every cached .mcp.json to system chromium ─────────
-# Universal across arches (no Chrome stable binary in either default or sandbox).
-# The patch binary is baked into the image (see Dockerfile #87) and also runs
-# from postStartCommand (#85) and a Claude Code SessionStart hook (#98) — the
-# hook is what closes the gap when the plugin auto-updates mid-container-run.
-/usr/local/bin/patch-playwright-mcp
-
 # ── agent-browser skill ─────────────────────────────────────────────────────
 # Installs the agent-browser Claude Code skill for headless browser automation.
 # agent-browser CLI is pre-installed in the default devcontainer image (not sandbox).

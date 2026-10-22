@@ -185,12 +185,6 @@ ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 # Renovate-pinned; see .github/renovate.json5.
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
-# ── Playwright MCP patch script ──────────────────────────────────────────────
-# Baked in so consumer projects don't carry a copy. Invoked from init-plugins.sh,
-# postStartCommand and a SessionStart hook — the hook covers plugin auto-updates
-# mid-run. See #87, #98.
-COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
-
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
@@ -235,8 +229,14 @@ USER node
 # it would attempt a Chrome-for-Testing download on first use. AGENT_BROWSER_CONFIG
 # pins its config to the image's file, so a repo's ./agent-browser.json (which can
 # declare plugin executables and Chromium args) is never loaded.
+# PLAYWRIGHT_MCP_* configure the Playwright MCP plugin, which Claude Code starts with
+# this environment: its default chrome channel isn't installed. The chromium channel
+# already runs without Chromium's sandbox on Linux.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_BROWSER=chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_HEADLESS=true \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
 
@@ -282,7 +282,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 
 # ── Claude Code managed settings and skills, agent-browser config ────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp (#98, #101) and drop-rtk-hook as SessionStart hooks,
+# any volume mount). Wires drop-rtk-hook as a SessionStart hook,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
 # (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
@@ -299,8 +299,10 @@ RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-bro
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
-# Transitional SessionStart hook: removes the rtk hook older images registered.
+# Transitional: a hook that removes the rtk hook older images registered, and a
+# no-op where the Playwright MCP patcher was, for projects that still call it.
 COPY --chmod=0755 drop-rtk-hook.sh /usr/local/bin/drop-rtk-hook
+COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────

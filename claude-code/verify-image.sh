@@ -27,19 +27,22 @@ agent-browser --version
 
 # ── Managed settings ────────────────────────────────────────────────────────
 test -r "$SETTINGS"
-test -x /usr/local/bin/patch-playwright-mcp
-jq -r '.hooks.SessionStart[0].hooks[0].command' "$SETTINGS" | grep -qx /usr/local/bin/patch-playwright-mcp
-/usr/local/bin/patch-playwright-mcp
-test -x /usr/local/bin/drop-rtk-hook
-jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook
 jq -r '.managedMcpServers.mdn.url' "$SETTINGS" | grep -qx https://mcp.mdn.mozilla.net/
 jq -e '.permissions.deny | index("Bash(agent-browser install *)")' "$SETTINGS" >/dev/null
 jq -r '.permissions.ask[]' "$SETTINGS" | grep -qxF 'Bash(cf * --force*)'
 jq -r '.claudeMd' "$SETTINGS" | grep -q devcontainer-browser
 jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
 
+# ── Transitional (until 2027-01-31) ─────────────────────────────────────────
+test -x /usr/local/bin/drop-rtk-hook
+jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook
+/usr/local/bin/patch-playwright-mcp
+
 # ── Browser ─────────────────────────────────────────────────────────────────
 printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium
+printenv PLAYWRIGHT_MCP_BROWSER | grep -qx chromium
+printenv PLAYWRIGHT_MCP_EXECUTABLE_PATH | grep -qx /usr/bin/chromium
+printenv PLAYWRIGHT_MCP_HEADLESS | grep -qx true
 printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json
 jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null
 test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md

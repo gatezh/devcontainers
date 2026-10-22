@@ -170,10 +170,14 @@ RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" && \
 SHELL ["/bin/sh", "-c"]
 
 # ── Environment ──────────────────────────────────────────────────────────────
+# PLAYWRIGHT_MCP_* point the Playwright MCP plugin at the system Chromium (#64, #67).
 ENV RALPHEX_DOCKER=1 \
     USE_BUILTIN_RIPGREP=0 \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_BROWSER=chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_HEADLESS=true
 
 # Ralphex web dashboard port
 EXPOSE 8080
