@@ -48,6 +48,8 @@ Dockerfiles for custom devcontainer images on GitHub Container Registry (ghcr.io
 
 Never duplicate: wiki pages link to READMEs, READMEs link back. Every wiki page ends with a `## Sources` section citing the PRs/issues it came from and a `*Last verified:*` date.
 
+**The wiki has no PR gate, so check it by hand.** It's a separate git repo (`gatezh/devcontainers.wiki`), so `git grep` here never sees it and no CI looks at it. Before opening a PR that changes a tool list, an update policy, a template's behavior, or anything else a wiki page describes, grep a fresh clone (`git clone --depth 1 git@github.com:gatezh/devcontainers.wiki.git`) for what the change makes stale, name those pages in the PR's Notes, and update them right after the merge.
+
 ## Code Style
 
 - 2-space indentation in JSON/YAML
