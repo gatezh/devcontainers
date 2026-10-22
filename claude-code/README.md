@@ -65,7 +65,7 @@ Both variants are built for:
 
 ## Automatic Rebuilds
 
-The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges, and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
+The image rebuilds automatically whenever one of its pinned tools — Claude Code, agent-browser, cf, gh, gh-stack, rtk, or ralphex — publishes a new release: Renovate opens a version-bump PR, CI verifies it, it auto-merges (a new major version waits for review instead), and the merge builds the image on native runners for both amd64 and arm64 (no QEMU emulation). Manual rebuilds can be triggered via the "Run workflow" button in the Actions UI.
 
 ## Quick Start
 
@@ -494,11 +494,13 @@ more often than right.
 | `GH_VERSION` | Renovate | GitHub CLI — from the upstream `.deb`, not apt (trixie freezes gh at 2.46.0) |
 | `GH_STACK_VERSION` | Renovate | gh-stack extension (`gh stack`) |
 | `CF_VERSION` | Renovate | Cloudflare CLI (`cf`), open beta; releases wait 3 days before auto-merge |
+| `ALPINE_VERSION` | Renovate | Alpine base of the download stages; no final image is built on it |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The seven Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
-hand only for a local build. Bumps land as auto-merged PRs — see [Automatic Rebuilds](#automatic-rebuilds).
+The eight Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+hand only for a local build. Minor and patch bumps land as auto-merged PRs, majors wait for review —
+see [Automatic Rebuilds](#automatic-rebuilds).
 
 ## Building Locally / Local Fallback
 

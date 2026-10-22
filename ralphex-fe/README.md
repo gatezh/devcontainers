@@ -83,7 +83,7 @@ Note: this image deviates from the standalone convention of a single primary ver
 
 The image rebuilds when one of its pinned tools — Claude Code, rtk, or ralphex — publishes a
 new release: Renovate opens a version-bump PR against the `ARG`s in the Dockerfile, CI verifies
-it, it auto-merges, and that merge triggers the build. No upstream release means no rebuild —
+it, it auto-merges (a new major version waits for review instead), and that merge triggers the build. No upstream release means no rebuild —
 there is no longer a daily cron. Manual rebuilds run from the "Run workflow" button on
 **Build ralphex-fe** in the Actions tab.
 

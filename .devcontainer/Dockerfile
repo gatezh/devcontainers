@@ -13,6 +13,10 @@
 #   docker build --target sandbox -t devcontainers:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
@@ -21,7 +25,7 @@
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
 # Pinned by commit SHA: neither project tags usefully, and auto-adopting
 # shell-framework changes has broken this image before. Bump deliberately.
-FROM alpine:3.21 AS ohmyzsh-download
+FROM alpine:${ALPINE_VERSION} AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
 ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
@@ -32,7 +36,7 @@ RUN set -eux; \
     curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
 
-FROM alpine:3.21 AS rtk-download
+FROM alpine:${ALPINE_VERSION} AS rtk-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m)"; \
@@ -47,7 +51,7 @@ RUN set -eux; \
     tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
 
 # ── hadolint (Dockerfile linter) ────────────────────────────────────────
-FROM alpine:3.21 AS hadolint-download
+FROM alpine:${ALPINE_VERSION} AS hadolint-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/')"; \
@@ -58,7 +62,7 @@ RUN set -eux; \
     chmod +x /usr/local/bin/hadolint
 
 # ── actionlint (GitHub Actions workflow linter) ────────────────────────
-FROM alpine:3.21 AS actionlint-download
+FROM alpine:${ALPINE_VERSION} AS actionlint-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
@@ -69,7 +73,7 @@ RUN set -eux; \
     tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \

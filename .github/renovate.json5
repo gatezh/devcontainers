@@ -4,6 +4,7 @@
 
   // Only the custom regex manager below — do NOT let the built-in dockerfile /
   // github-actions managers open PRs for base images or action pins (out of scope).
+  // A base image Renovate should track gets an annotated ARG, like ALPINE_VERSION.
   enabledManagers: ['custom.regex'],
 
   // Pins tools these images used to pull at build time. Replaces the daily cron:
@@ -45,6 +46,7 @@
                               // parse, so every candidate is silently discarded.
         'go',                 // ralphex-fe Go toolchain (go.dev)
         'node',               // hugo-bun-node musl build; base-image node is NOT managed here
+        'alpine',             // ALPINE_VERSION: base of the download stages, never a final image
       ],
       groupName: 'devcontainer tools',
       automerge: true,
@@ -73,6 +75,12 @@
       // Node 24 LTS by design — majors stay a deliberate call.
       matchDatasources: ['node-version'],
       allowedVersions: '^24',
+    },
+    {
+      // Majors open a PR and wait for review: rtk 1.0 changed its CLI and licence
+      // and auto-merged unread (#224). Must stay last so it overrides automerge above.
+      matchUpdateTypes: ['major'],
+      automerge: false,
     },
   ],
 }

@@ -6,6 +6,9 @@ ARG DOCKER_VERSION=29.9.1
 ARG GO_VERSION=1.27.3
 # renovate: datasource=github-releases depName=gohugoio/hugo
 ARG HUGO_VERSION=0.168.0
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -13,7 +16,7 @@ ARG HUGO_VERSION=0.168.0
 
 # ── Go binary ────────────────────────────────────────────────────────────────
 # Pattern from: https://github.com/umputun/ralphex/blob/master/Dockerfile-go
-FROM alpine:3.21 AS go-download
+FROM alpine:${ALPINE_VERSION} AS go-download
 ARG GO_VERSION
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
@@ -22,7 +25,7 @@ RUN set -eux; \
 
 # ── Docker CLI static binary ────────────────────────────────────────────────
 # Matches ralphex base's docker-cli — only the CLI, no daemon/containerd/runc.
-FROM alpine:3.21 AS docker-download
+FROM alpine:${ALPINE_VERSION} AS docker-download
 ARG DOCKER_VERSION
 RUN set -eux; \
     ARCH="$(uname -m)"; \
@@ -31,7 +34,7 @@ RUN set -eux; \
     mv /tmp/docker/docker /usr/local/bin/docker
 
 # ── Hugo Extended with checksum verification ─────────────────────────────────
-FROM alpine:3.21 AS hugo-download
+FROM alpine:${ALPINE_VERSION} AS hugo-download
 ARG HUGO_VERSION
 ARG TARGETARCH
 RUN set -eux; \
@@ -49,7 +52,7 @@ RUN set -eux; \
 # ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────
 # Pattern from: .devcontainer/Dockerfile
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS rtk-download
+FROM alpine:${ALPINE_VERSION} AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
 ARG RTK_VERSION=1.0.1
@@ -66,7 +69,7 @@ RUN set -eux; \
 # ── Ralphex binary (pinned; Renovate-managed) ───────────────────────────────
 # Pattern from: claude-code/.devcontainer/Dockerfile
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=umputun/ralphex
 ARG RALPHEX_VERSION=1.7.0

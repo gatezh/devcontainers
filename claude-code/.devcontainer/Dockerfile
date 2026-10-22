@@ -16,6 +16,9 @@
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
 ARG CLAUDE_CODE_VERSION=2.1.308
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -26,7 +29,7 @@ ARG CLAUDE_CODE_VERSION=2.1.308
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
 # Pinned by commit SHA: neither project tags usefully, and auto-adopting
 # shell-framework changes has broken this image before. Bump deliberately.
-FROM alpine:3.21 AS ohmyzsh-download
+FROM alpine:${ALPINE_VERSION} AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
 ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
@@ -37,7 +40,7 @@ RUN set -eux; \
     curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
 
-FROM alpine:3.21 AS rtk-download
+FROM alpine:${ALPINE_VERSION} AS rtk-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=rtk-ai/rtk
 ARG RTK_VERSION=1.0.1
@@ -53,7 +56,7 @@ RUN set -eux; \
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=umputun/ralphex
 ARG RALPHEX_VERSION=1.7.0
