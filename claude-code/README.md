@@ -514,6 +514,9 @@ docker build --target default -t claude-code:local .devcontainer
 
 # Sandbox variant
 docker build --target sandbox -t claude-code-sandbox:local .devcontainer
+
+# Run the checks CI runs (use "sandbox" for the sandbox image)
+docker run --rm -v "$PWD/verify-image.sh:/verify-image.sh:ro" claude-code:local bash /verify-image.sh default
 ```
 
 Then update your project's `docker-compose.yml` to use the local tag:

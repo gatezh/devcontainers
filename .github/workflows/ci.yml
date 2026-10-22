@@ -117,12 +117,12 @@ jobs:
             add_image "claude-code" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "bun --version || true && claude --version && mise --version && zsh --version && gh --version && gh stack --version && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node" \
+              "bash /repo/claude-code/verify-image.sh default" \
               "default"
             add_image "claude-code-sandbox" \
               "claude-code/.devcontainer" \
               "claude-code/.devcontainer/Dockerfile" \
-              "claude --version && mise --version && zsh --version && gh --version && gh stack --version && which iptables && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node" \
+              "bash /repo/claude-code/verify-image.sh sandbox" \
               "sandbox"
           fi
 
@@ -192,7 +192,8 @@ jobs:
         env:
           IMAGE_TAG: ${{ matrix.image }}:test
           VERIFY_CMD: ${{ matrix.verify }}
-        run: docker run --rm --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
+        # The checkout is mounted at /repo for images whose checks live in a script.
+        run: docker run --rm -v "$PWD:/repo:ro" --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
 
   # -- Single required status check for branch protection ------------------
   # Aggregates every job above so master needs exactly one required check.

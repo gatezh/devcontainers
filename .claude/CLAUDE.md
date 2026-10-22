@@ -61,6 +61,7 @@ Never duplicate: wiki pages link to READMEs, READMEs link back. Every wiki page 
 
 - **Before committing**, check which CI workflows in `.github/workflows/` will run against the changed files and run those checks locally first (e.g., Hadolint for Dockerfiles, linters for YAML/JS, etc.)
 - Validate YAML and Dockerfile syntax before committing
+- `claude-code` image checks live in `claude-code/verify-image.sh`, which both `ci.yml` and `build-claude-code.yml` run. A tool added to the Dockerfile gets its check there
 - Verify on target platform — not just local macOS/Windows
 - Check tool version availability and command syntax from official docs:
   - [GitHub Actions](https://docs.github.com/en/actions) · [Dockerfile reference](https://docs.docker.com/reference/dockerfile/)
