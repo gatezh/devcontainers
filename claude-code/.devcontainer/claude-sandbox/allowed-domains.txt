@@ -1,0 +1,11 @@
+# Extra domains the sandbox firewall allows, one per line; `#` starts a comment.
+# The image already allows GitHub, the npm registry, the Anthropic API, the VS Code
+# marketplace and the MDN MCP server. Edits apply on the next container start.
+
+# cf (Cloudflare CLI): API calls and sign-in
+# api.cloudflare.com
+# dash.cloudflare.com
+
+# security-guidance plugin: its commit reviewer's Python packages
+# pypi.org
+# files.pythonhosted.org

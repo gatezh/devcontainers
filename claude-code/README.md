@@ -9,7 +9,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | Variant | Image | Use Case |
 |---------|-------|----------|
 | **default** | `ghcr.io/gatezh/devcontainers/claude-code:latest` | Full dev environment with agent-browser and passwordless sudo |
-| **sandbox** | `ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest` | Network-restricted environment with iptables firewall packages and agent-browser |
+| **sandbox** | `ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest` | Network-restricted environment with a baked-in firewall and agent-browser; sudo runs only the firewall |
 
 ## What's Included
 
@@ -24,15 +24,17 @@ Projects consume these pre-built images and control their own tool versions via 
 | ralphex | Pinned `ARG`, bumped by Renovate on each GitHub release | Dev infrastructure (like Claude Code) — the image tracks the version so projects don't have to |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), passwordless sudo
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), and the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill))
 
-**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate
+**Default-only:** passwordless sudo
+
+**Sandbox-only:** iptables, ipset, iproute2, dnsutils, aggregate; the firewall (`/usr/local/sbin/init-firewall`) and volume chown (`/usr/local/sbin/chown-volumes`), the only commands `node` can run with sudo
 
 ### MDN MCP server
 
 The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-US/mcp) (web platform docs and browser compatibility data) to every session through `managedMcpServers` in `/etc/claude-code/managed-settings.json` — no per-project setup. It sends `X-Moz-1st-Party-Data-Opt-Out: 1`, Mozilla's documented opt-out from the query logging they do while the server is experimental.
 
-Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. Sandbox users must allowlist `mcp.mdn.mozilla.net` in their firewall script.
+Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. The sandbox firewall allows `mcp.mdn.mozilla.net` by default.
 
 ### Cloudflare CLI (`cf`)
 
@@ -45,7 +47,7 @@ cf auth login --no-browser   # approve the printed link and code in your host br
 cf auth whoami
 ```
 
-The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must allowlist `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in).
+The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must add `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in) to `allowed-domains.txt`.
 
 The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Most commands that call the Cloudflare API don't need it, but `cf workers …` does, even for API reads like `cf workers scripts list` ([#212](https://github.com/gatezh/devcontainers/issues/212)). For Workers reads outside such a project, use `bunx wrangler` or the Cloudflare MCP server.
 
@@ -87,7 +89,8 @@ Copy these to your project's `.devcontainer/`:
 Copy these to your project's `.devcontainer/claude-sandbox/`:
 
 - [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
-- [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, firewall script bind mount, and `CLAUDE_CODE_OAUTH_TOKEN` injection
+- [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, and `CLAUDE_CODE_OAUTH_TOKEN` injection
+- [`.devcontainer/claude-sandbox/allowed-domains.txt`](.devcontainer/claude-sandbox/allowed-domains.txt) — extra domains for the firewall (optional)
 
 **Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
 
@@ -145,30 +148,27 @@ Mark as executable: `chmod +x init-plugins.sh`
 
 > **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
 
-**`security-guidance` runtime download:** on first session start the plugin builds a `claude-agent-sdk` venv in `~/.claude/security/` for its agentic commit reviewer — a ~100 MB wheel from PyPI (it bundles its own Claude Code binary), stored once in the `~/.claude` volume, not the image. In the sandbox, add `pypi.org` and `files.pythonhosted.org` to your `init-firewall.sh` allowlist, or the commit reviewer falls back to the single-call diff review (edit warnings and Stop reviews still work). `SECURITY_GUIDANCE_DISABLE=1` in `containerEnv` turns the reviews off, but the venv bootstrap still runs; to skip the download, drop the plugin from your `init-plugins.sh`.
+**`security-guidance` runtime download:** on first session start the plugin builds a `claude-agent-sdk` venv in `~/.claude/security/` for its agentic commit reviewer — a ~100 MB wheel from PyPI (it bundles its own Claude Code binary), stored once in the `~/.claude` volume, not the image. In the sandbox, add `pypi.org` and `files.pythonhosted.org` to `allowed-domains.txt`, or the commit reviewer falls back to the single-call diff review (edit warnings and Stop reviews still work). `SECURITY_GUIDANCE_DISABLE=1` in `containerEnv` turns the reviews off, but the venv bootstrap still runs; to skip the download, drop the plugin from your `init-plugins.sh`.
 
 To remove a plugin in your project, delete its entry from the local `init-plugins.sh` — the script is a template, not image-baked, so each consumer controls its own list.
 
 > **Why `init-plugins.sh` stays per-project:** it carries project-specific configuration (marketplace list, plugin list) and is *meant* to be edited per project. Anything identical across every consumer, such as the Playwright MCP browser settings or the managed settings file, lives in the image instead and flows through the same Renovate-triggered rebuild + `initializeCommand` image-pull channel. That boundary is the rule: project-specific config stays per-project; universal logic moves into the image.
 
-### Sandbox-only: `.devcontainer/claude-sandbox/init-firewall.sh`
+### Sandbox-only: `.devcontainer/claude-sandbox/allowed-domains.txt`
 
-Default-deny iptables firewall. The image provides the packages and sudo rule; the project provides this script via bind mount. Customize the domain allowlist for your project.
+The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
 
-See the [repo's own sandbox firewall script](../.devcontainer/claude-sandbox/init-firewall.sh) for a complete example. The script should: preserve Docker internal DNS rules, allow DNS/SSH/localhost, fetch GitHub IP ranges via `curl -s https://api.github.com/meta`, resolve additional allowed domains (npm, Anthropic API, VS Code marketplace, `mcp.mdn.mozilla.net` for the MDN MCP server, `api.cloudflare.com` and `dash.cloudflare.com` for `cf`, etc.) via `dig`, set default DROP policies, allow established connections and the ipset allowlist, then verify by confirming `example.com` is blocked and `api.github.com` is reachable.
+To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down.
 
-Mark as executable and ensure git tracks the executable bit:
-
-```bash
-chmod +x .devcontainer/claude-sandbox/init-firewall.sh
-git add .devcontainer/claude-sandbox/init-firewall.sh   # ensures git tracks +x (100755)
+```
+# cf
+api.cloudflare.com
+dash.cloudflare.com
 ```
 
-> **Troubleshooting (macOS):** If the firewall script fails with "command not found" despite correct permissions (`stat` shows `rwxr-xr-x`, git shows `100755`), stale Docker Desktop metadata may be overriding the file mode. Fix by removing the cached extended attribute:
->
-> ```bash
-> xattr -d com.docker.grpcfuse.ownership .devcontainer/claude-sandbox/init-firewall.sh
-> ```
+**Why the script is in the image:** Claude Code in the sandbox runs with permission prompts skipped, so the agent mustn't be able to turn the firewall off. In the sandbox, `node` can run only `init-firewall` and `chown-volumes` with sudo, both root-owned and without arguments. A second run of `init-firewall` refuses to touch an active firewall, so allowlist edits apply on the next container start, and you'll see them in `git diff` first. The default variant keeps passwordless sudo ([#208](https://github.com/gatezh/devcontainers/issues/208)).
+
+**Upgrading from a project `init-firewall.sh`:** the image no longer runs a bind-mounted script, and sudo refuses `/usr/local/bin/init-firewall.sh`. Copy the domains your script adds beyond the defaults into `allowed-domains.txt`. Then delete the script and its bind mount, and update `postCreateCommand` and `postStartCommand` from the template's [`devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json).
 
 ### Sandbox-only: Claude Code skill for fetching docs
 
@@ -295,7 +295,7 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 └── claude-sandbox/
     ├── devcontainer.json          ← sandbox devcontainer
     ├── docker-compose.yml         ← sandbox compose (image reference)
-    ├── init-firewall.sh           ← firewall script (customize domain allowlist)
+    ├── allowed-domains.txt        ← extra firewall domains (optional)
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
 .claude/

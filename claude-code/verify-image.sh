@@ -6,8 +6,18 @@
 set -eux
 
 case "${1:?usage: verify-image.sh default|sandbox}" in
-    default) ;;
-    sandbox) command -v iptables ;;
+    default)
+        sudo -n true
+        ;;
+    sandbox)
+        command -v iptables
+        test -x /usr/local/sbin/init-firewall
+        # sudo reaches the two baked scripts and nothing else (#208). Not `! sudo …`:
+        # set -e ignores a negated command, so that line could never fail.
+        sudo -n -l /usr/local/sbin/init-firewall >/dev/null
+        sudo -n -l /usr/local/sbin/chown-volumes >/dev/null
+        if sudo -n true 2>/dev/null; then echo "sandbox: sudo is unrestricted" >&2; exit 1; fi
+        ;;
     *) echo "unknown target: $1" >&2; exit 2 ;;
 esac
 

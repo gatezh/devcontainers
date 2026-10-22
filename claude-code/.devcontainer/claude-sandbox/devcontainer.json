@@ -118,11 +118,7 @@
     // gh CLI auth/state (~/.config/gh/hosts.yml) — keeps `gh auth login` across rebuilds
     "source=myproject-gh-config-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume",
     // cf CLI login (~/.config/cloudflare) — keeps `cf auth login` across rebuilds
-    "source=myproject-cloudflare-config-${localWorkspaceFolderBasename},target=/home/node/.config/cloudflare,type=volume",
-    // ── Firewall script ────────────────────────────────────────────────
-    // The image provides iptables/ipset packages and sudo rule but NOT the script itself.
-    // Each project provides its own script via bind mount to customize the domain allowlist.
-    "source=${localWorkspaceFolder}/.devcontainer/claude-sandbox/init-firewall.sh,target=/usr/local/bin/init-firewall.sh,type=bind"
+    "source=myproject-cloudflare-config-${localWorkspaceFolderBasename},target=/home/node/.config/cloudflare,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
@@ -145,12 +141,13 @@
     "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
     "GIT_CONFIG_VALUE_2": "!gh auth git-credential"
   },
-  // The find command chowns all node_modules volume mount points in one pass.
+  // chown-volumes (image-baked; sudo allows only it and init-firewall) gives node the
+  // node_modules and config volume mount points.
   // Chromium is baked into the sandbox image (firewall blocks runtime install).
   // bun install and init-plugins.sh are skipped when their file is absent. Plugins
   // install here, before postStartCommand brings the firewall up.
-  "postCreateCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh /home/node/.config/cloudflare && mise install && if [ -f package.json ]; then bun install; fi && if [ -f .devcontainer/init-plugins.sh ]; then bash .devcontainer/init-plugins.sh; fi",
-  // Firewall init (bind-mounted from project).
-  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "postCreateCommand": "sudo /usr/local/sbin/chown-volumes && mise install && if [ -f package.json ]; then bun install; fi && if [ -f .devcontainer/init-plugins.sh ]; then bash .devcontainer/init-plugins.sh; fi",
+  // Image-baked firewall, plus extra domains from allowed-domains.txt beside this file.
+  "postStartCommand": "sudo /usr/local/sbin/init-firewall",
   "waitFor": "postStartCommand"
 }

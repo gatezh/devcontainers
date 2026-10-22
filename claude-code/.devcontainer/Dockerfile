@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # Shared devcontainer image — two build targets:
 #   default — full dev environment with agent-browser and passwordless sudo
-#   sandbox — network-restricted environment with firewall packages
+#   sandbox — network-restricted environment: baked firewall, sudo for it only
 #
 # Projects consume these pre-built images and run `mise install` at container
 # creation to install their specific tool versions (Bun, Hugo, etc.).
@@ -201,20 +201,12 @@ RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
 # small layer on top (firewall packages in the sandbox).
 FROM base AS shared
 
-# Passwordless sudo for node user — standard practice for devcontainer images.
-# Needed for the canonical "sudo chown" pattern for named volume ownership, and
-# in the sandbox for "sudo /usr/local/bin/init-firewall.sh". Sandbox security
-# comes from the network firewall, not sudo restrictions.
-# See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
-USER root
-RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
-  && chmod 0440 /etc/sudoers.d/node-nopasswd
-
 # System Chromium + fonts for headless browser testing.
 # - chromium: launched by agent-browser and Playwright (env vars below).
 # - fonts-freefont-ttf: baseline fonts for headless rendering.
 # Baked in for both targets — the sandbox firewall blocks deb.debian.org, so
 # chromium cannot be added at runtime.
+USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -311,6 +303,14 @@ USER node
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM shared AS default
 
+# Passwordless sudo for node user — standard practice for devcontainer images,
+# needed for the canonical "sudo chown" pattern for named volume ownership.
+# See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
+USER root
+RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
+  && chmod 0440 /etc/sudoers.d/node-nopasswd
+USER node
+
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
       org.opencontainers.image.licenses="MIT" \
@@ -323,8 +323,6 @@ CMD ["sleep", "infinity"]
 FROM shared AS sandbox
 
 # Firewall packages (not needed in default target).
-# The firewall script is NOT baked into the image — each project mounts its
-# own script via bind mount in devcontainer.json to customize the domain allowlist.
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -334,10 +332,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   iproute2 \
   dnsutils \
   aggregate
+
+# The agent runs with permission prompts skipped, so sudo reaches only these two
+# root-owned scripts, with no arguments: a firewall the agent can't edit or flush,
+# and the volume chown. Projects list extra domains in a file, read as data (#208).
+COPY --chown=root:root --chmod=0755 init-firewall.sh /usr/local/sbin/init-firewall
+COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
+RUN printf '%s\n' 'node ALL=(root) NOPASSWD: /usr/local/sbin/init-firewall "", /usr/local/sbin/chown-volumes ""' \
+    > /etc/sudoers.d/node-sandbox \
+  && chmod 0440 /etc/sudoers.d/node-sandbox \
+  && visudo -cf /etc/sudoers.d/node-sandbox
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
-      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages and agent-browser" \
+      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with a baked firewall and agent-browser" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code-sandbox" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
