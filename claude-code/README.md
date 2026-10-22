@@ -118,7 +118,7 @@ Claude Code plugin initialization. `init-plugins.sh` registers marketplaces, ins
 
 Mark as executable: `chmod +x init-plugins.sh`
 
-**Upgrading from an image with rtk:** the images no longer ship rtk, but earlier versions of this script registered its `rtk hook claude` hook in `~/.claude/settings.json`, which persists on the volume. Without the binary, that hook errors on every Bash call. Update your copy of `init-plugins.sh` from the template and run it once: it removes the hook and leaves your other hooks alone.
+**Upgrading from an image with rtk:** the images no longer ship rtk, but earlier versions of this script registered its `rtk hook claude` hook in `~/.claude/settings.json`, which persists on the volume. The image removes that entry at the start of each Claude Code session (a managed `SessionStart` hook) and leaves your other hooks alone, so there's nothing to do. Until the first session after you pull the new image, Bash calls log a non-blocking hook error.
 
 #### Bundled plugins
 

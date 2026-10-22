@@ -11,13 +11,14 @@ This is a standalone image, not a devcontainer.
 | Tool | Version |
 |------|---------|
 | Node.js | 24 (from base image) |
-| Bun | 1.4.2 |
-| Hugo Extended | 0.166.0 |
-| Go | for Hugo Modules |
+| Bun | pinned `ARG`, Renovate |
+| Hugo Extended | pinned `ARG`, Renovate |
+| Go | pinned `ARG`, Renovate (for Hugo Modules) |
+| Docker CLI | pinned `ARG`, Renovate (client only) |
 | Python 3 | system |
 | Playwright + Chromium | native Debian |
-| Claude Code CLI | 2.1.280 (pinned) |
-| Ralphex | 1.7.0 (pinned) |
+| Claude Code CLI | pinned `ARG`, Renovate |
+| Ralphex | pinned `ARG`, Renovate |
 | Git, ripgrep, jq, curl | system |
 
 All pinned versions live as `ARG`s in the Dockerfile and are kept current by Renovate — see

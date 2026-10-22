@@ -117,14 +117,6 @@ done
 # hook is what closes the gap when the plugin auto-updates mid-container-run.
 /usr/local/bin/patch-playwright-mcp
 
-# ── rtk removed: drop the hook earlier versions of this script registered ───
-# Without the binary, a leftover `rtk hook claude` PreToolUse entry errors on
-# every Bash call. Transitional: delete this block after 2027-01-31.
-SETTINGS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
-if [ -f "$SETTINGS" ] && grep -q 'rtk' "$SETTINGS"; then
-    jq 'if .hooks.PreToolUse then .hooks.PreToolUse |= (map(.hooks |= map(select((.command // "") | test("(^|/)rtk hook claude$|rtk-rewrite\\.sh") | not))) | map(select(.hooks | length > 0))) else . end' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
-fi
-
 # ── agent-browser skill ─────────────────────────────────────────────────────
 # Installs the agent-browser Claude Code skill for headless browser automation.
 # agent-browser CLI is pre-installed in the default devcontainer image (not sandbox).

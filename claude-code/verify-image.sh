@@ -29,6 +29,8 @@ agent-browser --version
 test -r "$SETTINGS"
 test -x /usr/local/bin/patch-playwright-mcp
 jq -r '.hooks.SessionStart[0].hooks[0].command' "$SETTINGS" | grep -qx /usr/local/bin/patch-playwright-mcp
+test -x /usr/local/bin/drop-rtk-hook
+jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook
 jq -r '.managedMcpServers.mdn.url' "$SETTINGS" | grep -qx https://mcp.mdn.mozilla.net/
 jq -e '.permissions.deny | index("Bash(agent-browser install *)")' "$SETTINGS" >/dev/null
 jq -r '.permissions.ask[]' "$SETTINGS" | grep -qxF 'Bash(cf * --force*)'

@@ -278,7 +278,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 
 # ── Claude Code managed settings and skills, agent-browser config ────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
+# any volume mount). Wires patch-playwright-mcp (#98, #101) and drop-rtk-hook as SessionStart hooks,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
 # (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
@@ -295,6 +295,8 @@ RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-bro
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
+# Transitional SessionStart hook: removes the rtk hook older images registered.
+COPY --chmod=0755 drop-rtk-hook.sh /usr/local/bin/drop-rtk-hook
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────

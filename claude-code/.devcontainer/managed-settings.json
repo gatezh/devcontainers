@@ -17,6 +17,10 @@
           {
             "type": "command",
             "command": "/usr/local/bin/patch-playwright-mcp"
+          },
+          {
+            "type": "command",
+            "command": "/usr/local/bin/drop-rtk-hook"
           }
         ]
       }
