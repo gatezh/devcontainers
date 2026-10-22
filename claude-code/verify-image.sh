@@ -77,7 +77,7 @@ for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/clou
 done
 
 # ── Firewall: sandbox only, and only when run with NET_ADMIN (CI adds it) ───
-# init-firewall checks itself: example.com refused on 443 and 22, GitHub reachable.
+# init-firewall checks itself: example.com:443 and gitlab.com:22 refused, GitHub reachable.
 # Last, because nothing can reach the network after it.
 cap_bnd=$(awk '/^CapBnd:/ {print $2}' /proc/self/status)
 if [ "$1" = sandbox ] && (( (0x$cap_bnd >> 12) & 1 )); then

@@ -179,11 +179,13 @@ else
     echo "Firewall verification passed - unable to reach https://example.com as expected"
 fi
 
-if timeout 5 bash -c '</dev/tcp/example.com/22' 2>/dev/null; then
-    echo "ERROR: Firewall verification failed - was able to reach example.com:22"
+# gitlab.com listens on 22 and isn't allowlisted; example.com doesn't listen there,
+# so it would pass even with port 22 open.
+if timeout 5 bash -c '</dev/tcp/gitlab.com/22' 2>/dev/null; then
+    echo "ERROR: Firewall verification failed - was able to reach gitlab.com:22"
     exit 1
 else
-    echo "Firewall verification passed - unable to reach example.com:22 as expected"
+    echo "Firewall verification passed - unable to reach gitlab.com:22 as expected"
 fi
 
 if ! curl --connect-timeout 5 https://api.github.com/zen >/dev/null 2>&1; then
