@@ -72,7 +72,7 @@ zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k
 zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))'
 
 # ── Volume mount points owned by node ───────────────────────────────────────
-for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/cloudflare; do
+for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/cloudflare /home/node/.bun/install/cache; do
     stat -c %U "$dir" | grep -qx node
 done
 

@@ -93,23 +93,17 @@
     }
   },
   // Named volumes keep node_modules OFF the host machine and persist across rebuilds.
-  // Uses ${localWorkspaceFolderBasename} so default and sandbox variants share volumes.
-  // Replace "myproject" with your project name (must match across both variants).
+  // Compose prefixes these with its project name, so each variant (and worktree) gets its
+  // own: the default's node_modules link into bun-global-store, which the sandbox lacks.
+  // Config volumes shared by both variants are in docker-compose.yml.
   "mounts": [
     // ── node_modules isolation (one per workspace) ─────────────────────
     // Each workspace with a package.json needs its own volume mount.
     // Without one, node_modules lands in the bind mount and shows up on the host.
-    "source=myproject-node-modules-root-${localWorkspaceFolderBasename},target=/workspace/node_modules,type=volume",
+    "source=myproject-node-modules-root-${localWorkspaceFolderBasename},target=/workspace/node_modules,type=volume"
     // ── Monorepo: uncomment and customize for your structure ──────────
     // "source=myproject-node-modules-api-${localWorkspaceFolderBasename},target=/workspace/services/api/node_modules,type=volume",
-    // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume",
-    // ── Persistent config ──────────────────────────────────────────────
-    "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
-    "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
-    // gh CLI auth/state (~/.config/gh/hosts.yml) — keeps `gh auth login` across rebuilds
-    "source=myproject-gh-config-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume",
-    // cf CLI login (~/.config/cloudflare) — keeps `cf auth login` across rebuilds
-    "source=myproject-cloudflare-config-${localWorkspaceFolderBasename},target=/home/node/.config/cloudflare,type=volume"
+    // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",

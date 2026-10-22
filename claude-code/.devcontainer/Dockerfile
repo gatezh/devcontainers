@@ -113,9 +113,10 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.config/gh \
   /home/node/.config/cloudflare \
   /home/node/.cache \
+  /home/node/.bun/install/cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
-       /home/node/.config /home/node/.cache /commandhistory
+       /home/node/.config /home/node/.cache /home/node/.bun /commandhistory
 
 WORKDIR /workspace
 

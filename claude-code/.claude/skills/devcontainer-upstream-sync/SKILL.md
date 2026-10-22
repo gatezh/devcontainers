@@ -103,7 +103,10 @@ When adopting an upstream change, preserve these per-project patterns:
 1. **Volume-name prefixes.** Upstream uses `myproject-…`; downstream
    uses `<project>-…`. Read the project name from
    `.devcontainer/docker-compose.yml`'s top-level `name:` field, then
-   substitute.
+   substitute. That includes the `volumes:` names in both compose files,
+   but not `bun-global-store`, which every project shares. When a project
+   first adopts compose-declared volumes, point the user to the README's
+   "Upgrading from per-variant volumes" before they reopen the container.
 2. **VS Code `extensions` list.** Keep local additions (e.g. Hugo,
    OpenAI Codex). When adopting upstream, only port over upstream's
    *new* additions; don't strip what's local.

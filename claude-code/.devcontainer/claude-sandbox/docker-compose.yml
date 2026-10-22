@@ -10,3 +10,20 @@ services:
     image: ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest
     volumes:
       - ../..:/workspace:cached
+      # The default variant's volumes, by their fixed names. No bun-global-store:
+      # the sandbox keeps its own Bun cache, isolated from other projects.
+      - claude-config:/home/node/.claude
+      - zsh-history:/commandhistory
+      - gh-config:/home/node/.config/gh
+      - cloudflare-config:/home/node/.config/cloudflare
+
+# Must match the names in ../docker-compose.yml.
+volumes:
+  claude-config:
+    name: myproject-claude-config
+  zsh-history:
+    name: myproject-zsh-history
+  gh-config:
+    name: myproject-gh-config
+  cloudflare-config:
+    name: myproject-cloudflare-config

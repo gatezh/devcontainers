@@ -10,3 +10,25 @@ services:
     image: ghcr.io/gatezh/devcontainers/claude-code:latest
     volumes:
       - ..:/workspace:cached
+      # Declared here, not in devcontainer.json `mounts`: Compose prefixes those with
+      # the project name, and only a fixed `name:` lets the sandbox mount the same volume.
+      - claude-config:/home/node/.claude
+      - zsh-history:/commandhistory
+      - gh-config:/home/node/.config/gh
+      - cloudflare-config:/home/node/.config/cloudflare
+      # Bun's package cache and global store, shared by every project's default variant
+      # (README "Shared Bun store"). The sandbox doesn't mount it.
+      - bun-global-store:/home/node/.bun/install/cache
+
+# Shared with the sandbox variant: change "myproject" in both compose files.
+volumes:
+  claude-config:
+    name: myproject-claude-config
+  zsh-history:
+    name: myproject-zsh-history
+  gh-config:
+    name: myproject-gh-config
+  cloudflare-config:
+    name: myproject-cloudflare-config
+  bun-global-store:
+    name: bun-global-store
