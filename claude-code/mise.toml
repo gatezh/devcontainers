@@ -3,4 +3,4 @@
 # (OXC, Playwright, etc.) that spawn node. Do not add it here.
 [tools]
 bun = "1.4.4"
-hugo = "0.155.1"
+hugo = "0.168.0"

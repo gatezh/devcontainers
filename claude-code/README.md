@@ -350,7 +350,7 @@ Bun then keeps each package once in the volume's `links/`, and `node_modules` ho
 - **If a package breaks under the store**, add its missing dependency with `packageExtensions` in `package.json`, or set `globalStore = false`.
 - **CI cache:** if CI caches `~/.bun/install/cache`, exclude `!~/.bun/install/cache/links`. `bun install` rebuilds it from the downloads, and caching it about doubles what every job restores.
 - **Trust model:** every devcontainer that mounts the store can change packages the others run. A malicious install script in one project could edit a package another project loads. That's the trust model of a laptop where all projects share `~/.bun`. The sandbox doesn't mount it and keeps its own cache.
-- **To reset it**, stop every devcontainer, run `docker volume rm bun-global-store`, then run `bun install` in each project. Until then, their `node_modules` symlinks point at nothing.
+- **To reset it**, run `bun pm cache rm` in any default-variant container: it clears the cache, global store included ([Bun docs](https://bun.com/docs/pm/global-store)). Then run `bun install` in each project; until then, their `node_modules` symlinks point at nothing. To delete the volume itself, stop every devcontainer first, then `docker volume rm bun-global-store`.
 
 ## Workspace Directory Layout
 
@@ -384,7 +384,7 @@ The image itself trusts `/workspace` in `/etc/gitconfig` (`safe.directory`). Doc
 | `credential.https://github.com.helper` | *(empty)* | Clears the helper list for github.com, including the helper VS Code injects, which answers with the host's possibly stale GitHub credential. Other hosts keep VS Code's helper. |
 | `credential.https://github.com.helper` | `!gh auth git-credential` | Authenticates github.com through the container's `gh` login. The empty entry and this one are what `gh auth setup-git` writes. |
 
-**One-time setup:** run `gh auth login` in the default variant. The login lives on its `myproject-gh-config-*` volume, so it survives rebuilds. The sandbox has its own volume ([why](#why-the-variants-dont-share-volumes)): there, sign in with a [fine-grained token](https://github.com/settings/personal-access-tokens) limited to the project's repository (`gh auth login --with-token < token.txt`). After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
+**One-time setup:** run `gh auth login` in the default variant. The login lives on its `myproject-gh-config-*` volume, so it survives rebuilds. The sandbox has its own volume ([why](#why-the-variants-dont-share-volumes)): there, sign in with a [fine-grained token](https://github.com/settings/personal-access-tokens) limited to the project's repository (run `gh auth login --with-token`, paste the token, and press Ctrl-D; don't save it to a file under `/workspace`, which is your host repo). After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
 
 To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The table's entries are listed with scope `command` and `safe.directory` with scope `system`. To add your own entries, append `GIT_CONFIG_KEY_3` / `GIT_CONFIG_VALUE_3` and so on, and raise `GIT_CONFIG_COUNT` to match.
 
