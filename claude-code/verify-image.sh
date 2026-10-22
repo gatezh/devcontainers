@@ -1,6 +1,7 @@
 #!/bin/bash
 # Smoke-tests a built claude-code image. CI and local runs use the same command:
 #   docker run --rm -v "$PWD/claude-code/verify-image.sh:/verify-image.sh:ro" <image> bash /verify-image.sh default|sandbox
+# Add `--cap-add NET_ADMIN --cap-add NET_RAW` to also bring up the sandbox firewall.
 #
 # No pipefail: `… | grep -q` exits early, and a SIGPIPE'd writer must not fail the check.
 set -eux
@@ -74,5 +75,13 @@ zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))'
 for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/cloudflare; do
     stat -c %U "$dir" | grep -qx node
 done
+
+# ── Firewall: sandbox only, and only when run with NET_ADMIN (CI adds it) ───
+# init-firewall checks itself: example.com refused on 443 and 22, GitHub reachable.
+# Last, because nothing can reach the network after it.
+cap_bnd=$(awk '/^CapBnd:/ {print $2}' /proc/self/status)
+if [ "$1" = sandbox ] && (( (0x$cap_bnd >> 12) & 1 )); then
+    sudo -n /usr/local/sbin/init-firewall
+fi
 
 echo "verify-image: $1 OK"

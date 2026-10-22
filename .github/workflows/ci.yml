@@ -193,7 +193,8 @@ jobs:
           IMAGE_TAG: ${{ matrix.image }}:test
           VERIFY_CMD: ${{ matrix.verify }}
         # The checkout is mounted at /repo for images whose checks live in a script.
-        run: docker run --rm -v "$PWD:/repo:ro" --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
+        # NET_ADMIN/NET_RAW let the claude-code sandbox check bring up its firewall.
+        run: docker run --rm --cap-add NET_ADMIN --cap-add NET_RAW -v "$PWD:/repo:ro" --entrypoint sh "$IMAGE_TAG" -c "$VERIFY_CMD"
 
   # -- Single required status check for branch protection ------------------
   # Aggregates every job above so master needs exactly one required check.
