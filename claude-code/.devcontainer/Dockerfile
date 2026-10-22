@@ -128,7 +128,8 @@ RUN ARCH=$(dpkg --print-architecture) \
   && rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
 
 # Trust the bind-mounted /workspace in /etc/gitconfig, which every git process reads.
-# A GIT_CONFIG_* env var is stripped by tools that filter env, e.g. Hugo >= 0.166 (#211).
+# A GIT_CONFIG_* env var is stripped by tools that filter env, e.g. Hugo, whose
+# security.exec.osEnv allowlist has no GIT_* pattern (#211).
 RUN git config --system --add safe.directory /workspace
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
@@ -250,9 +251,11 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
   && cf complete zsh >> "$HOME/.zshrc"
-# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
+# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to, and
+# no npm dependency metadata in Worker deploys (cf >= 1.0.0-beta.15).
 ENV CF_SEND_TELEMETRY=false \
-    WRANGLER_SEND_METRICS=false
+    WRANGLER_SEND_METRICS=false \
+    CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false
 
 # ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
 # npm, not the native installer: the installer rate-limits (429) under parallel

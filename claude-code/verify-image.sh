@@ -50,6 +50,7 @@ test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 # ── Environment ─────────────────────────────────────────────────────────────
 printenv CF_SEND_TELEMETRY | grep -qx false
 printenv WRANGLER_SEND_METRICS | grep -qx false
+printenv CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION | grep -qx false
 
 # ── Git ─────────────────────────────────────────────────────────────────────
 git config --system --get-all safe.directory | grep -qx /workspace
