@@ -9,6 +9,12 @@ ARG HUGO_VERSION=0.168.0
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
+# Also the image tags of the actionlint and shellcheck stages. Renovate reads
+# GitHub releases; the 3-day soak covers the short lag before each image tag.
+# renovate: datasource=github-releases depName=rhysd/actionlint
+ARG ACTIONLINT_VERSION=1.7.12
+# renovate: datasource=github-releases depName=koalaman/shellcheck
+ARG SHELLCHECK_VERSION=0.11.0
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -63,25 +69,10 @@ RUN set -eux; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
 
 # ── actionlint + shellcheck (GitHub Actions workflow linting) ─────────────
-# actionlint hands `run:` scripts to shellcheck when it is on PATH, else skips them.
-FROM alpine:${ALPINE_VERSION} AS actionlint-download
-RUN apk add --no-cache curl
-# renovate: datasource=github-releases depName=rhysd/actionlint
-ARG ACTIONLINT_VERSION=1.7.12
-RUN set -eux; \
-    ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
-    curl -fsSL -o /tmp/actionlint.tar.gz \
-      "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_${ARCH}.tar.gz"; \
-    tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
-
-FROM alpine:${ALPINE_VERSION} AS shellcheck-download
-RUN apk add --no-cache curl tar
-# renovate: datasource=github-releases depName=koalaman/shellcheck
-ARG SHELLCHECK_VERSION=0.11.0
-RUN set -eux; \
-    curl -fsSL -o /tmp/shellcheck.tar.gz \
-      "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.$(uname -m).tar.gz"; \
-    tar -xzf /tmp/shellcheck.tar.gz -C /usr/local/bin --strip-components=1 "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
+# Both publish multi-arch images. actionlint hands `run:` scripts to shellcheck
+# when it is on PATH, else skips them.
+FROM rhysd/actionlint:${ACTIONLINT_VERSION} AS actionlint
+FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Final image
@@ -149,8 +140,8 @@ COPY --from=go-download /usr/local/go /usr/local/go
 COPY --from=docker-download /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=hugo-download /usr/local/bin/hugo /usr/local/bin/hugo
 COPY --from=ralphex-download /usr/local/bin/ralphex /srv/ralphex
-COPY --from=actionlint-download /usr/local/bin/actionlint /usr/local/bin/actionlint
-COPY --from=shellcheck-download /usr/local/bin/shellcheck /usr/local/bin/shellcheck
+COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint
+COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 
 ENV GOROOT=/usr/local/go \
     GOPATH=/home/app/go
