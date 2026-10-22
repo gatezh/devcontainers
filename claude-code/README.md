@@ -40,14 +40,14 @@ Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp rem
 
 Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. The `claudeMd` key in `/etc/claude-code/managed-settings.json` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. A managed `ask` rule makes Claude Code ask before any `cf` command with `--force` or `-f`, the flag `cf` requires for deletes when there's no terminal. Bypass mode skips the prompt, as it skips every prompt. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`) and leaves npm dependency metadata out of Worker deploys (`CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false`).
 
-Sign in once per project. The template's `myproject-cloudflare-config` volume keeps the login (`~/.config/cloudflare`) across rebuilds, and both variants share it:
+Sign in once per project. The template's `myproject-cloudflare-config-*` volume keeps the login (`~/.config/cloudflare`) across rebuilds:
 
 ```bash
 cf auth login --no-browser   # approve the printed link and code in your host browser
 cf auth whoami
 ```
 
-The sandbox shares that login, and Claude Code there may run with permission prompts skipped. For agents there, or in CI, prefer an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must add `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in) to `allowed-domains.txt`.
+The sandbox doesn't get that login: it has its own volumes (see [Why the variants don't share volumes](#why-the-variants-dont-share-volumes)), and Claude Code there may run with permission prompts skipped. For agents there, or in CI, use an [API token](https://developers.cloudflare.com/fundamentals/api/get-started/create-token/) limited to what the project needs: set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and the token takes priority over the stored login. Sandbox users must add `api.cloudflare.com` (API calls) and `dash.cloudflare.com` (sign-in) to `allowed-domains.txt`.
 
 The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Most commands that call the Cloudflare API don't need it, but `cf workers …` does, even for API reads like `cf workers scripts list` ([#212](https://github.com/gatezh/devcontainers/issues/212)). For Workers reads outside such a project, use `bunx wrangler` or the Cloudflare MCP server.
 
@@ -73,9 +73,9 @@ The image rebuilds automatically whenever one of its pinned tools — Claude Cod
 
 ### Default variant
 
-Copy the example files into your project's `.devcontainer/` directory and customize as needed. A host-side `initializeCommand` in `devcontainer.json` pulls the prebuilt image before the container is built, so "Rebuild Without Cache" always layers on the latest image. Apart from the volumes both variants share (see [Volumes](#volumes)), config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${localWorkspaceFolderBasename}`, `${localEnv:...}`).
+Copy the example files into your project's `.devcontainer/` directory and customize as needed. A host-side `initializeCommand` in `devcontainer.json` pulls the prebuilt image before the container is built, so "Rebuild Without Cache" always layers on the latest image. Apart from the shared Bun store (see [Volumes](#volumes)), config stays in `devcontainer.json` using cross-orchestrator properties (`mounts`, `containerEnv`, `capAdd`, `init`) so you keep devcontainer variable substitution (`${localWorkspaceFolderBasename}`, `${localEnv:...}`).
 
-**After copying:** replace `myproject` with your project name in `docker-compose.yml` (the `name:` field and the volume names) and `devcontainer.json` (volume mount prefixes). The volume names must match across both variants if using the sandbox.
+**After copying:** replace `myproject` with your project name in `docker-compose.yml` (the `name:` field) and `devcontainer.json` (volume mount prefixes), in both variants if you use the sandbox. Leave `bun-global-store` as it is: every project shares it.
 
 Copy these to your project's `.devcontainer/`:
 
@@ -92,9 +92,9 @@ Copy these to your project's `.devcontainer/claude-sandbox/`:
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 - [`.devcontainer/claude-sandbox/allowed-domains.txt`](.devcontainer/claude-sandbox/allowed-domains.txt) — extra domains for the firewall (optional)
 
-**Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and an optional host-injected OAuth token for standalone use (see [Sandbox Authentication](#sandbox-authentication)).
+**Sandbox differences from default:** `capAdd` for iptables, setup (including `init-plugins.sh`) runs in `postCreateCommand` before `postStartCommand` brings up the firewall, `claudeCode.allowDangerouslySkipPermissions` enabled, and a host-injected OAuth token for sign-in (see [Sandbox Authentication](#sandbox-authentication)).
 
-**Shared volumes:** both variants mount the same Claude config, zsh history, gh CLI auth (`~/.config/gh`) and `cf` login (`~/.config/cloudflare`), so you sign in once. Each variant keeps its own `node_modules`. See [Volumes](#volumes).
+**Separate volumes:** the sandbox shares no volumes with the default variant. It has its own Claude config, zsh history, gh CLI auth (`~/.config/gh`), `cf` login (`~/.config/cloudflare`) and `node_modules`, so you sign in to it separately. This is deliberate: see [Why the variants don't share volumes](#why-the-variants-dont-share-volumes).
 
 ## Project Setup Guide
 
@@ -225,13 +225,11 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-**Usual path: sign in once in the default variant.** Both variants mount the same `myproject-claude-config` volume at `/home/node/.claude`, so credentials created by signing in to the default variant (VS Code extension, or `claude` in a terminal) are already there when the sandbox starts. No token is needed.
+**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). Signing in inside the sandbox doesn't work either: the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it through an environment variable instead.
 
-**Standalone sandbox: inject a token.** If you use the sandbox without ever opening the default variant, sign-in has to happen inside the sandbox, where the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it via environment variable instead.
+When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. Claude Code then falls back to any credentials already on the sandbox's own `~/.claude` volume.
 
-When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. That is expected: with an empty token, Claude Code authenticates from the credentials on the shared volume.
-
-**Setup (one-time, standalone sandbox only):**
+**Setup (one-time):**
 
 1. Generate a setup token on your host machine:
    ```bash
@@ -311,20 +309,28 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 
 ## Volumes
 
-| Volume | Mounted at | Shared by |
+| Volume (as named in the template) | Mounted at | Shared by |
 |---|---|---|
-| `myproject-claude-config` | `~/.claude` | both variants of the project |
-| `myproject-zsh-history` | `/commandhistory` | both variants |
-| `myproject-gh-config` | `~/.config/gh` | both variants |
-| `myproject-cloudflare-config` | `~/.config/cloudflare` | both variants |
+| `myproject-claude-config-*` | `~/.claude` | nothing: one per variant and worktree |
+| `myproject-zsh-history-*` | `/commandhistory` | nothing: one per variant and worktree |
+| `myproject-gh-config-*` | `~/.config/gh` | nothing: one per variant and worktree |
+| `myproject-cloudflare-config-*` | `~/.config/cloudflare` | nothing: one per variant and worktree |
+| `myproject-node-modules-*` | `/workspace/**/node_modules` | nothing: one per variant and worktree |
 | `bun-global-store` | `~/.bun/install/cache` | every project's default variant |
-| `node_modules` volumes | `/workspace/**/node_modules` | one variant of one worktree |
 
-**Why shared volumes live in `docker-compose.yml`:** the devcontainer CLI passes `devcontainer.json` `mounts` to Compose, which prefixes each volume with the project name. The variants have different project names (`myproject` and `myproject-sandbox`), so a volume declared there is never shared ([#209](https://github.com/gatezh/devcontainers/issues/209)). A volume declared in `docker-compose.yml` with a fixed `name:` keeps that name, and Compose still creates it on first use. Compose can't see `${localWorkspaceFolderBasename}`, so these volumes are also shared by the project's worktrees.
+The devcontainer CLI passes `devcontainer.json` `mounts` to Compose, which prefixes each volume with its project name (`myproject` or `myproject-sandbox`). On disk the default's Claude config is `myproject_myproject-claude-config-<folder>` and the sandbox's is `myproject-sandbox_myproject-claude-config-<folder>`. `bun-global-store` is declared in `docker-compose.yml` with a fixed `name:` instead, because a fixed name is the only way a volume is shared across Compose projects.
 
-**Why `node_modules` stays per variant:** with Bun's global store, the default variant's `node_modules` is symlinks into `bun-global-store`, which the sandbox doesn't mount. Each variant runs its own `bun install`.
+### Why the variants don't share volumes
 
-**Sandbox and the shared `~/.claude`:** an agent in either variant can write plugins, hooks and settings the other one loads. That adds nothing new: both variants already share `/workspace`, which holds the project's `.claude/` settings and `package.json` scripts.
+The sandbox exists to contain Claude Code running with permission prompts skipped. Any volume the sandbox can write and the default variant reads would carry the sandbox agent's writes past the firewall into a container with passwordless sudo and open network. So the sandbox gets none of the default variant's volumes, and you sign in to it separately ([Sandbox Authentication](#sandbox-authentication)). Older templates said the variants shared these volumes, but Compose's prefixing meant they never did ([#209](https://github.com/gatezh/devcontainers/issues/209)). [#239](https://github.com/gatezh/devcontainers/pull/239) considered making them share and kept them separate for the reasons below, so don't add sharing back.
+
+- **`~/.claude` is user scope, which is stronger than the workspace both variants already share.** Claude Code honors `permissions.defaultMode: "bypassPermissions"` only from user or managed settings, never from a project's `.claude/settings.json`. User `allow` rules don't wait for workspace trust, settings and hooks hot-reload, and `~/.claude` edits don't show in `git diff`. A sandbox agent that wrote a hook or bypass mode there would run it in the default variant. See [settings precedence](https://code.claude.com/docs/en/settings#a-value-you-set-is-ignored).
+- **`~/.config/gh` holds your `gh auth login` token**, whose default scopes are `repo`, `read:org` and `gist`. GitHub is on the sandbox allowlist, so a shared token would let the agent push to your repos or post data to a gist.
+- **`~/.config/cloudflare` holds your Cloudflare account login.** Give the sandbox a scoped API token instead (see [Cloudflare CLI](#cloudflare-cli-cf)).
+- **Shell history** holds whatever you typed in the default variant, including tokens pasted on a command line.
+- **`node_modules`** in the default variant can be symlinks into `bun-global-store`, which the sandbox doesn't mount.
+
+`/workspace` is still shared, but edits there show in `git diff`, and a project's settings can't turn on bypass mode.
 
 ### Shared Bun store
 
@@ -345,19 +351,6 @@ Bun then keeps each package once in the volume's `links/`, and `node_modules` ho
 - **CI cache:** if CI caches `~/.bun/install/cache`, exclude `!~/.bun/install/cache/links`. `bun install` rebuilds it from the downloads, and caching it about doubles what every job restores.
 - **Trust model:** every devcontainer that mounts the store can change packages the others run. A malicious install script in one project could edit a package another project loads. That's the trust model of a laptop where all projects share `~/.bun`. The sandbox doesn't mount it and keeps its own cache.
 - **To reset it**, stop every devcontainer, run `docker volume rm bun-global-store`, then run `bun install` in each project. Until then, their `node_modules` symlinks point at nothing.
-
-### Upgrading from per-variant volumes
-
-Projects created from an older template have volumes named `<project>_myproject-claude-config-<folder>` (default) and `<project>-sandbox_myproject-claude-config-<folder>` (sandbox). After updating both compose files and `devcontainer.json`, copy the default variant's data into the new volumes before you open the devcontainer, so you keep your sign-ins and history:
-
-```bash
-for v in claude-config zsh-history gh-config cloudflare-config; do
-  old=$(docker volume ls -q | grep -x "myproject_myproject-$v-.*" | head -n 1)
-  [ -n "$old" ] && docker run --rm -v "$old":/from -v "myproject-$v":/to alpine cp -a /from/. /to/
-done
-```
-
-Once everything works, remove the old volumes with `docker volume rm`.
 
 ## Workspace Directory Layout
 
@@ -391,7 +384,7 @@ The image itself trusts `/workspace` in `/etc/gitconfig` (`safe.directory`). Doc
 | `credential.https://github.com.helper` | *(empty)* | Clears the helper list for github.com, including the helper VS Code injects, which answers with the host's possibly stale GitHub credential. Other hosts keep VS Code's helper. |
 | `credential.https://github.com.helper` | `!gh auth git-credential` | Authenticates github.com through the container's `gh` login. The empty entry and this one are what `gh auth setup-git` writes. |
 
-**One-time setup:** run `gh auth login` in either variant. The login lives on the shared `myproject-gh-config` volume, so it survives rebuilds and covers both variants. After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
+**One-time setup:** run `gh auth login` in the default variant. The login lives on its `myproject-gh-config-*` volume, so it survives rebuilds. The sandbox has its own volume ([why](#why-the-variants-dont-share-volumes)): there, sign in with a [fine-grained token](https://github.com/settings/personal-access-tokens) limited to the project's repository (`gh auth login --with-token < token.txt`). After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
 
 To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The table's entries are listed with scope `command` and `safe.directory` with scope `system`. To add your own entries, append `GIT_CONFIG_KEY_3` / `GIT_CONFIG_VALUE_3` and so on, and raise `GIT_CONFIG_COUNT` to match.
 

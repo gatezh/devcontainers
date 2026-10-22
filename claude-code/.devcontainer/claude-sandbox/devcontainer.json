@@ -101,10 +101,9 @@
       }
     }
   },
-  // Named volumes keep node_modules OFF the host machine and persist across rebuilds.
-  // Compose prefixes these with its project name, so each variant (and worktree) gets its
-  // own: the default's node_modules link into bun-global-store, which the sandbox lacks.
-  // Config volumes shared by both variants are in docker-compose.yml.
+  // Named volumes keep node_modules and config OFF the host machine and persist across rebuilds.
+  // Compose prefixes them with its project name, so each variant gets its own. The sandbox
+  // must not share them (README "Why the variants don't share volumes"). Replace "myproject".
   "mounts": [
     // ── node_modules isolation (one per workspace) ─────────────────────
     // Each workspace with a package.json needs its own volume mount.
@@ -112,15 +111,22 @@
     "source=myproject-node-modules-root-${localWorkspaceFolderBasename},target=/workspace/node_modules,type=volume",
     // ── Monorepo: uncomment and customize for your structure ──────────
     // "source=myproject-node-modules-api-${localWorkspaceFolderBasename},target=/workspace/services/api/node_modules,type=volume",
-    // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume"
+    // "source=myproject-node-modules-web-${localWorkspaceFolderBasename},target=/workspace/apps/web/node_modules,type=volume",
+    // ── Persistent config ──────────────────────────────────────────────
+    "source=myproject-claude-config-${localWorkspaceFolderBasename},target=/home/node/.claude,type=volume",
+    "source=myproject-zsh-history-${localWorkspaceFolderBasename},target=/commandhistory,type=volume",
+    // gh CLI auth/state (~/.config/gh/hosts.yml) — keeps `gh auth login` across rebuilds
+    "source=myproject-gh-config-${localWorkspaceFolderBasename},target=/home/node/.config/gh,type=volume",
+    // cf CLI login (~/.config/cloudflare) — keeps `cf auth login` across rebuilds
+    "source=myproject-cloudflare-config-${localWorkspaceFolderBasename},target=/home/node/.config/cloudflare,type=volume"
   ],
   "containerEnv": {
     "TZ": "${localEnv:TZ:America/Edmonton}",
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    // Optional — only needed when the sandbox is used without the default variant, whose
-    // sign-in lands on the shared ~/.claude volume. Resolves to "" when the host var is
+    // Signs the sandbox in: it shares no volumes with the default variant, and the firewall
+    // blocks the browser login. Resolves to "" when the host var is
     // unset. See "Sandbox Authentication" section in README.
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}",
     // Git config for every process, outranking the ~/.gitconfig the extension copies in:
