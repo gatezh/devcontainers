@@ -498,7 +498,7 @@ more often than right.
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
 
-The eight Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
+The Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Minor and patch bumps land as auto-merged PRs, majors wait for review —
 see [Automatic Rebuilds](#automatic-rebuilds).
 
