@@ -6,6 +6,15 @@ ARG DOCKER_VERSION=29.9.1
 ARG GO_VERSION=1.27.3
 # renovate: datasource=github-releases depName=gohugoio/hugo
 ARG HUGO_VERSION=0.168.0
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
+# Also the image tags of the actionlint and shellcheck stages. Renovate reads
+# GitHub releases; the 3-day soak covers the short lag before each image tag.
+# renovate: datasource=github-releases depName=rhysd/actionlint
+ARG ACTIONLINT_VERSION=1.7.12
+# renovate: datasource=github-releases depName=koalaman/shellcheck
+ARG SHELLCHECK_VERSION=0.11.0
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -13,7 +22,7 @@ ARG HUGO_VERSION=0.168.0
 
 # ── Go binary ────────────────────────────────────────────────────────────────
 # Pattern from: https://github.com/umputun/ralphex/blob/master/Dockerfile-go
-FROM alpine:3.21 AS go-download
+FROM alpine:${ALPINE_VERSION} AS go-download
 ARG GO_VERSION
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
@@ -22,7 +31,7 @@ RUN set -eux; \
 
 # ── Docker CLI static binary ────────────────────────────────────────────────
 # Matches ralphex base's docker-cli — only the CLI, no daemon/containerd/runc.
-FROM alpine:3.21 AS docker-download
+FROM alpine:${ALPINE_VERSION} AS docker-download
 ARG DOCKER_VERSION
 RUN set -eux; \
     ARCH="$(uname -m)"; \
@@ -31,7 +40,7 @@ RUN set -eux; \
     mv /tmp/docker/docker /usr/local/bin/docker
 
 # ── Hugo Extended with checksum verification ─────────────────────────────────
-FROM alpine:3.21 AS hugo-download
+FROM alpine:${ALPINE_VERSION} AS hugo-download
 ARG HUGO_VERSION
 ARG TARGETARCH
 RUN set -eux; \
@@ -46,27 +55,10 @@ RUN set -eux; \
     fi; \
     tar -xzf hugo.tar.gz -C /usr/local/bin/ hugo
 
-# ── RTK (token-optimized CLI proxy for Claude Code) ─────────────────────────
-# Pattern from: .devcontainer/Dockerfile
-# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS rtk-download
-RUN apk add --no-cache curl
-# renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=1.0.1
-RUN set -eux; \
-    ARCH="$(uname -m)"; \
-    case "$ARCH" in \
-      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
-      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
-    esac; \
-    curl -fsSL -o /tmp/rtk.tar.gz \
-      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
-    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
-
 # ── Ralphex binary (pinned; Renovate-managed) ───────────────────────────────
 # Pattern from: claude-code/.devcontainer/Dockerfile
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=umputun/ralphex
 ARG RALPHEX_VERSION=1.7.0
@@ -75,6 +67,12 @@ RUN set -eux; \
     curl -fsSL -o /tmp/ralphex.tar.gz \
       "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
+
+# ── actionlint + shellcheck (GitHub Actions workflow linting) ─────────────
+# Both publish multi-arch images. actionlint hands `run:` scripts to shellcheck
+# when it is on PATH, else skips them.
+FROM rhysd/actionlint:${ACTIONLINT_VERSION} AS actionlint
+FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Final image
@@ -142,7 +140,8 @@ COPY --from=go-download /usr/local/go /usr/local/go
 COPY --from=docker-download /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=hugo-download /usr/local/bin/hugo /usr/local/bin/hugo
 COPY --from=ralphex-download /usr/local/bin/ralphex /srv/ralphex
-COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint
+COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 
 ENV GOROOT=/usr/local/go \
     GOPATH=/home/app/go
@@ -185,10 +184,14 @@ RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" && \
 SHELL ["/bin/sh", "-c"]
 
 # ── Environment ──────────────────────────────────────────────────────────────
+# PLAYWRIGHT_MCP_* point the Playwright MCP plugin at the system Chromium (#64, #67).
 ENV RALPHEX_DOCKER=1 \
     USE_BUILTIN_RIPGREP=0 \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
-    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_BROWSER=chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_HEADLESS=true
 
 # Ralphex web dashboard port
 EXPOSE 8080

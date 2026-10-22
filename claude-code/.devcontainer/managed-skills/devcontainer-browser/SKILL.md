@@ -36,10 +36,10 @@ Every concrete fact below comes from the project at invocation time, not from th
    - `echo $APP_PORT $PORT $VITE_PORT $WEB_PORT`; the project's `.env.example` or `webServer.url` in `playwright.config.*` usually names which one.
    - `grep -E '^[A-Z_]*PORT=' .env.local .env 2>/dev/null` (in a monorepo, service-level `.env*` too).
    - Confirm: `curl -sI http://localhost:$PORT/ | head -1`. Nothing listening → ask the user to start it. Don't start one yourself: it port-collides with theirs.
-2. **Playwright configs**, only when a Playwright row above applies. RTK rewrites `find` and rejects compound predicates (`-not`, `! -path`, `\( … -o … \)`), so use single-predicate `find` plus `grep`:
+2. **Playwright configs**, only when a Playwright row above applies:
    ```sh
-   find . -maxdepth 6 -name 'playwright.config.*' | grep -v node_modules
-   find . -maxdepth 6 -name 'vitest.config.*' | grep -v node_modules
+   find . -maxdepth 6 -name 'playwright.config.*' -not -path '*/node_modules/*'
+   find . -maxdepth 6 -name 'vitest.config.*' -not -path '*/node_modules/*'
    ```
    - No `playwright.config.*` and the user asked for E2E → there is no Playwright suite; say so and stop.
    - A `vitest.config.*` drives Playwright only with `test.browser.enabled` — read it before assuming.

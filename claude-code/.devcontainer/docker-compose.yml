@@ -10,3 +10,11 @@ services:
     image: ghcr.io/gatezh/devcontainers/claude-code:latest
     volumes:
       - ..:/workspace:cached
+      # Bun's package cache and global store, shared by every project's default variant
+      # (README "Shared Bun store"). Declared here because Compose prefixes devcontainer.json
+      # `mounts` with the project name; only a fixed `name:` is shared across projects.
+      - bun-global-store:/home/node/.bun/install/cache
+
+volumes:
+  bun-global-store:
+    name: bun-global-store

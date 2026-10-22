@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/local/bin/patch-playwright-mcp"
+            "command": "/usr/local/bin/drop-rtk-hook"
           }
         ]
       }

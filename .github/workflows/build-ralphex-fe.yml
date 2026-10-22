@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
+    # Everything in the build context except docs, so a new COPY'd file can't be missed.
     paths:
-      - 'ralphex-fe/Dockerfile'
-      - 'ralphex-fe/*.sh'
-      - 'ralphex-fe/managed-settings.json'
+      - 'ralphex-fe/**'
+      - '!ralphex-fe/**/*.md'
   workflow_dispatch:
 
 permissions:
@@ -102,12 +102,15 @@ jobs:
             docker --version &&
             node --version &&
             /srv/ralphex --version &&
+            actionlint --version &&
+            shellcheck --version &&
             claude --version &&
             id app &&
             test -f /init.sh &&
             test -f /srv/init.sh &&
             chromium --no-sandbox --version &&
             test -x /usr/bin/chromium &&
+            printenv PLAYWRIGHT_MCP_EXECUTABLE_PATH | grep -qx /usr/bin/chromium &&
             test -r /etc/claude-code/managed-settings.json &&
             jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ &&
             echo 'All checks passed'

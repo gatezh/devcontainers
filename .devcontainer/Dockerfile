@@ -13,15 +13,18 @@
 #   docker build --target sandbox -t devcontainers:sandbox .
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
 
-# ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
 # Pinned by commit SHA: neither project tags usefully, and auto-adopting
 # shell-framework changes has broken this image before. Bump deliberately.
-FROM alpine:3.21 AS ohmyzsh-download
+FROM alpine:${ALPINE_VERSION} AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
 ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
@@ -32,22 +35,8 @@ RUN set -eux; \
     curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
 
-FROM alpine:3.21 AS rtk-download
-RUN apk add --no-cache curl jq
-RUN set -eux; \
-    ARCH="$(uname -m)"; \
-    case "$ARCH" in \
-      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
-      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
-    esac; \
-    RTK_VERSION=$(curl -fsSL https://api.github.com/repos/rtk-ai/rtk/releases/latest \
-      | jq -r '.tag_name' | sed 's/^v//'); \
-    curl -fsSL -o /tmp/rtk.tar.gz \
-      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
-    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
-
 # ── hadolint (Dockerfile linter) ────────────────────────────────────────
-FROM alpine:3.21 AS hadolint-download
+FROM alpine:${ALPINE_VERSION} AS hadolint-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/x86_64/;s/aarch64/arm64/')"; \
@@ -58,7 +47,7 @@ RUN set -eux; \
     chmod +x /usr/local/bin/hadolint
 
 # ── actionlint (GitHub Actions workflow linter) ────────────────────────
-FROM alpine:3.21 AS actionlint-download
+FROM alpine:${ALPINE_VERSION} AS actionlint-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
@@ -69,7 +58,7 @@ RUN set -eux; \
     tar -xzf /tmp/actionlint.tar.gz -C /usr/local/bin actionlint
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl jq
 RUN set -eux; \
     ARCH="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"; \
@@ -168,9 +157,8 @@ RUN printf '%s\n' \
       > "$HOME/.zshrc"
 
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
-# rtk (token-optimized CLI proxy) and ralphex (autonomous plan execution).
-# Downloaded from GitHub Releases; refreshed on each image rebuild.
-COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+# ralphex (autonomous plan execution). Downloaded from GitHub Releases;
+# refreshed on each image rebuild.
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 
 # ── CI linting tools ────────────────────────────────────────────────────────

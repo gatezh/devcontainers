@@ -7,8 +7,8 @@
 # an issue. Check upstream for updates.
 
 # ── Local: ~/.claude must exist without the host mount (#128) ───────────────
-# rtk init -g below writes into it (as app) and fails if it is missing. Not
-# recursive: only the copies below are chowned, never anything bind-mounted in.
+# Claude Code writes into it (as app). Not recursive: only the copies below
+# are chowned, never anything bind-mounted in.
 mkdir -p /home/app/.claude
 chown app:app /home/app/.claude
 
@@ -22,25 +22,14 @@ if [ -d /mnt/claude ]; then
     for d in commands skills hooks agents plugins; do
         [ -d "/mnt/claude/$d" ] && cp -rL "/mnt/claude/$d" "/home/app/.claude/" 2>/dev/null || true
     done
-    # ── Playwright MCP: use system Chromium (#64, #67) ──────────────────────
-    # @playwright/mcp defaults to --browser chrome, which isn't installed in Docker.
-    # Point it at the system Chromium with --executable-path and --no-sandbox.
-    PLAYWRIGHT_MCP_CONFIG="/home/app/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/playwright/.mcp.json"
-    if [ -f "$PLAYWRIGHT_MCP_CONFIG" ]; then
-        jq '.playwright.args = ["@playwright/mcp@latest", "--browser", "chromium", "--executable-path", "/usr/bin/chromium", "--no-sandbox"]' \
-            "$PLAYWRIGHT_MCP_CONFIG" > /tmp/playwright-mcp.json \
-            && mv /tmp/playwright-mcp.json "$PLAYWRIGHT_MCP_CONFIG"
+    # ── Local: the image has no rtk; drop a host rtk hook from this copy ────
+    # Otherwise `rtk hook claude` errors on every Bash call. The host file is untouched.
+    S=/home/app/.claude/settings.json
+    if [ -f "$S" ] && grep -q 'rtk' "$S"; then
+        jq 'if .hooks.PreToolUse then .hooks.PreToolUse |= (map(.hooks |= map(select((.command // "") | test("(^|/)rtk hook claude$|rtk-rewrite\\.sh") | not))) | map(select(.hooks | length > 0))) else . end' "$S" > /tmp/settings.json && mv /tmp/settings.json "$S"
     fi
 
     chown -R app:app /home/app/.claude
-fi
-
-# ── Local: RTK rewrite hook, with or without the host mount (#128) ──────────
-# Idempotent; --hook-only avoids workspace artifacts. Telemetry prompt:
-# RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477), closed stdin stops it
-# blocking, and timeout backstops any other hang.
-if command -v rtk >/dev/null 2>&1; then
-    RTK_TELEMETRY_DISABLED=1 gosu app timeout 10 rtk init -g --hook-only --auto-patch < /dev/null 2>/dev/null || true
 fi
 
 # copy credentials extracted from macOS keychain (mounted separately)

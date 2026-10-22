@@ -1,6 +1,7 @@
 ---
 paths:
   - "**/devcontainer.json"
+  - "**/docker-compose.yml"
 ---
 
 # devcontainer.json Conventions
@@ -25,6 +26,10 @@ Always include to keep node_modules off the host:
   "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
 ]
 ```
+
+## Sandbox Volumes
+
+The `claude-code` sandbox shares no volume with the default variant: not `~/.claude`, `~/.config/gh`, `~/.config/cloudflare`, shell history, or `node_modules`. A volume both mount lets the sandbox agent, which runs with prompts skipped, plant user-scope hooks or `bypassPermissions` that run in the default variant (full sudo, no firewall), and hands it the gh and cf logins. This was decided in #239; the reasons are in `claude-code/README.md` "Why the variants don't share volumes". Treat a change that shares one as a security regression, not a convenience fix.
 
 ## VS Code Extensions
 

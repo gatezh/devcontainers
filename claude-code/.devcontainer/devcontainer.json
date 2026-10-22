@@ -86,13 +86,15 @@
           "source.fixAll": "explicit",
           "source.organizeImports": "explicit"
         },
+        // Oxc starts oxfmt/oxlint with the PATH from `$SHELL -ilc env`, which can lack node (#228)
+        "oxc.path.node": "/usr/local/bin/node",
         "window.title": "${localWorkspaceFolderBasename}"
       }
     }
   },
-  // Named volumes keep node_modules OFF the host machine and persist across rebuilds.
-  // Uses ${localWorkspaceFolderBasename} so default and sandbox variants share volumes.
-  // Replace "myproject" with your project name (must match across both variants).
+  // Named volumes keep node_modules and config OFF the host machine and persist across rebuilds.
+  // Compose prefixes them with its project name, so each variant gets its own. The sandbox
+  // must not share them (README "Why the variants don't share volumes"). Replace "myproject".
   "mounts": [
     // ── node_modules isolation (one per workspace) ─────────────────────
     // Each workspace with a package.json needs its own volume mount.
@@ -115,30 +117,24 @@
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     // Git config for every process, outranking the ~/.gitconfig the extension copies in:
-    // trust /workspace, send git@github.com: remotes over HTTPS, and authenticate github.com
-    // only through gh (the empty helper drops VS Code's, as `gh auth setup-git` does).
-    "GIT_CONFIG_COUNT": "4",
-    "GIT_CONFIG_KEY_0": "safe.directory",
-    "GIT_CONFIG_VALUE_0": "/workspace",
-    "GIT_CONFIG_KEY_1": "url.https://github.com/.insteadOf",
-    "GIT_CONFIG_VALUE_1": "git@github.com:",
+    // send git@github.com: remotes over HTTPS, and authenticate github.com only through gh
+    // (the empty helper drops VS Code's, as `gh auth setup-git` does). The image trusts
+    // /workspace in /etc/gitconfig, which tools that filter env (Hugo) can't strip (#211).
+    "GIT_CONFIG_COUNT": "3",
+    "GIT_CONFIG_KEY_0": "url.https://github.com/.insteadOf",
+    "GIT_CONFIG_VALUE_0": "git@github.com:",
+    "GIT_CONFIG_KEY_1": "credential.https://github.com.helper",
+    "GIT_CONFIG_VALUE_1": "",
     "GIT_CONFIG_KEY_2": "credential.https://github.com.helper",
-    "GIT_CONFIG_VALUE_2": "",
-    "GIT_CONFIG_KEY_3": "credential.https://github.com.helper",
-    "GIT_CONFIG_VALUE_3": "!gh auth git-credential"
+    "GIT_CONFIG_VALUE_2": "!gh auth git-credential"
   },
-  // sudo chown fixes volume ownership — safety net in case Docker volume population didn't apply.
-  // The find command chowns all node_modules volume mount points in one pass.
+  // chown-volumes (image-baked, shared with the sandbox) gives node the node_modules and
+  // config volume mount points, a safety net in case Docker volume population didn't apply.
   // mise install reads .mise.toml and installs project-specific tool versions.
   // bun install is skipped until the project has a package.json.
   // Chromium is baked into the image via apt — no playwright install step needed.
   // Projects' playwright.config.ts should use process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.
-  "updateContentCommand": "sudo find /workspace -maxdepth 4 -name node_modules -type d -exec chown node {} + && sudo chown -R node /home/node/.claude /commandhistory /home/node/.config/gh /home/node/.config/cloudflare && mise install && if [ -f package.json ]; then bun install; fi",
-  // Re-patch the Playwright MCP plugin's .mcp.json on every start. Defense in
-  // depth alongside the SessionStart hook in /etc/claude-code/managed-settings.json,
-  // which handles the case where the plugin auto-updates mid-container-run.
-  // See issues #85, #87, #98.
+  "updateContentCommand": "sudo /usr/local/sbin/chown-volumes && mise install && if [ -f package.json ]; then bun install; fi"
   // No postCreateCommand: claude CLI calls there race the extension's OAuth sign-in
   // (#58). Run `bash .devcontainer/init-plugins.sh` once after signing in.
-  "postStartCommand": "/usr/local/bin/patch-playwright-mcp"
 }

@@ -57,14 +57,12 @@ for plugin in "${PLUGINS[@]}"; do
     }
 done
 
-# Initialize rtk global hook for Claude Code (auto-rewrite mode).
-# --hook-only: installs only the PreToolUse rewrite hook, no workspace artifacts.
-# Telemetry consent prompt: RTK_TELEMETRY_DISABLED=1 opts out (rtk-ai/rtk#2477),
-# closed stdin defeats the pseudo-TTY postCreateCommand hands us, and timeout
-# backstops any other init-time hang.
-echo "Initializing rtk (token optimizer)..."
-RTK_TELEMETRY_DISABLED=1 timeout 10 rtk init -g --hook-only --auto-patch < /dev/null || {
-    echo "Note: rtk init may have already been configured or rtk not available"
-}
+# ── rtk removed: drop the hook earlier versions of this script registered ───
+# Without the binary, a leftover `rtk hook claude` PreToolUse entry errors on
+# every Bash call. Transitional: delete this block after 2027-01-31.
+SETTINGS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+if [ -f "$SETTINGS" ] && grep -q 'rtk' "$SETTINGS"; then
+    jq 'if .hooks.PreToolUse then .hooks.PreToolUse |= (map(.hooks |= map(select((.command // "") | test("(^|/)rtk hook claude$|rtk-rewrite\\.sh") | not))) | map(select(.hooks | length > 0))) else . end' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
+fi
 
 echo "=== Plugin initialization complete ==="

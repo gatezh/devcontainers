@@ -3,10 +3,14 @@ name: Build claude-code
 on:
   push:
     branches: [master]
+    # Everything in the build context except the project templates, so a new
+    # COPY'd file can't be missed (#175, #205). A template edit costs one extra build.
     paths:
-      - "claude-code/.devcontainer/Dockerfile"
-      - "claude-code/.devcontainer/*.sh"
-      - "claude-code/.devcontainer/managed-settings.json"
+      - "claude-code/.devcontainer/**"
+      - "!claude-code/.devcontainer/devcontainer.json"
+      - "!claude-code/.devcontainer/docker-compose.yml"
+      - "!claude-code/.devcontainer/init-plugins.sh"
+      - "!claude-code/.devcontainer/claude-sandbox/**"
   workflow_dispatch:
 
 permissions:
@@ -80,23 +84,26 @@ jobs:
       matrix:
         include:
           - image-suffix: claude-code
-            verify-command: "bun --version || true && claude --version && mise --version && zsh --version && gh --version && gh stack --version && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node"
+            target: default
             runner: ubuntu-24.04
             arch: amd64
           - image-suffix: claude-code
-            verify-command: "bun --version || true && claude --version && mise --version && zsh --version && gh --version && gh stack --version && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node"
+            target: default
             runner: ubuntu-24.04-arm
             arch: arm64
           - image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && zsh --version && gh --version && gh stack --version && which iptables && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node"
+            target: sandbox
             runner: ubuntu-24.04
             arch: amd64
           - image-suffix: claude-code-sandbox
-            verify-command: "claude --version && mise --version && zsh --version && gh --version && gh stack --version && which iptables && rtk --version && ralphex --version && cf --version && cf cli search 'list zones' | jq -e '.[0].command' >/dev/null && python3 -c 'import ensurepip' && test -x /usr/local/bin/patch-playwright-mcp && test -r /etc/claude-code/managed-settings.json && jq -r '.hooks.SessionStart[0].hooks[0].command' /etc/claude-code/managed-settings.json | grep -qx /usr/local/bin/patch-playwright-mcp && jq -r '.managedMcpServers.mdn.url' /etc/claude-code/managed-settings.json | grep -qx https://mcp.mdn.mozilla.net/ && agent-browser --version && printenv AGENT_BROWSER_EXECUTABLE_PATH | grep -qx /usr/bin/chromium && test -r /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md && jq -e '.permissions.deny | index(\"Bash(agent-browser install *)\")' /etc/claude-code/managed-settings.json >/dev/null && printenv AGENT_BROWSER_CONFIG | grep -qx /etc/agent-browser/config.json && jq -e .contentBoundaries /etc/agent-browser/config.json >/dev/null && jq -r '.claudeMd' /etc/claude-code/managed-settings.json | grep -q devcontainer-browser && zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k && zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))' && stat -c %U /home/node/.local/share | grep -qx node && stat -c %U /home/node/.config/gh | grep -qx node && jq -r .claudeMd /etc/claude-code/managed-settings.json | grep -q cloudflare.config.ts && jq -r '.permissions.ask[]' /etc/claude-code/managed-settings.json | grep -qxF 'Bash(cf * --force*)' && printenv CF_SEND_TELEMETRY | grep -qx false && printenv WRANGLER_SEND_METRICS | grep -qx false && stat -c %U /home/node/.config/cloudflare | grep -qx node"
+            target: sandbox
             runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
       - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
@@ -105,6 +112,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify image
+        env:
+          IMAGE: ghcr.io/gatezh/devcontainers/${{ matrix.image-suffix }}:latest
+          TARGET: ${{ matrix.target }}
         run: |
-          docker pull ghcr.io/gatezh/devcontainers/${{ matrix.image-suffix }}:latest
-          docker run --rm ghcr.io/gatezh/devcontainers/${{ matrix.image-suffix }}:latest bash -c "${{ matrix.verify-command }}"
+          docker pull "$IMAGE"
+          # NET_ADMIN/NET_RAW let the sandbox check bring up its firewall.
+          docker run --rm --cap-add NET_ADMIN --cap-add NET_RAW \
+            -v "$PWD/claude-code/verify-image.sh:/verify-image.sh:ro" "$IMAGE" bash /verify-image.sh "$TARGET"

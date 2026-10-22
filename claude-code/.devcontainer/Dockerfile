@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # Shared devcontainer image — two build targets:
 #   default — full dev environment with agent-browser and passwordless sudo
-#   sandbox — network-restricted environment with firewall packages
+#   sandbox — network-restricted environment: baked firewall, sudo for it only
 #
 # Projects consume these pre-built images and run `mise install` at container
 # creation to install their specific tool versions (Bun, Hugo, etc.).
@@ -16,17 +16,24 @@
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
 ARG CLAUDE_CODE_VERSION=2.1.308
+# Base of the download stages only; no final image is built on it.
+# renovate: datasource=docker depName=alpine
+ARG ALPINE_VERSION=3.24
+# Also the image tags of the actionlint and shellcheck stages. Renovate reads
+# GitHub releases; the 3-day soak covers the short lag before each image tag.
+# renovate: datasource=github-releases depName=rhysd/actionlint
+ARG ACTIONLINT_VERSION=1.7.12
+# renovate: datasource=github-releases depName=koalaman/shellcheck
+ARG SHELLCHECK_VERSION=0.11.0
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
 # ═════════════════════════════════════════════════════════════════════════════
 
-# ── rtk (token-optimized CLI proxy) ──────────────────────────────────────
-# Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # ── oh-my-zsh + powerlevel10k ─────────────────────────────────
 # Pinned by commit SHA: neither project tags usefully, and auto-adopting
 # shell-framework changes has broken this image before. Bump deliberately.
-FROM alpine:3.21 AS ohmyzsh-download
+FROM alpine:${ALPINE_VERSION} AS ohmyzsh-download
 RUN apk add --no-cache curl tar
 ARG OH_MY_ZSH_REF=0ee67f042872d1dfab74270c31867771ca35aef4
 ARG POWERLEVEL10K_REF=d05a1b00f9a61f9578bf9dc19b8451942dde8734
@@ -37,23 +44,9 @@ RUN set -eux; \
     curl -fsSL "https://github.com/romkatv/powerlevel10k/archive/${POWERLEVEL10K_REF}.tar.gz" \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
 
-FROM alpine:3.21 AS rtk-download
-RUN apk add --no-cache curl
-# renovate: datasource=github-releases depName=rtk-ai/rtk
-ARG RTK_VERSION=1.0.1
-RUN set -eux; \
-    ARCH="$(uname -m)"; \
-    case "$ARCH" in \
-      x86_64)  RTK_TARGET="x86_64-unknown-linux-musl" ;; \
-      aarch64) RTK_TARGET="aarch64-unknown-linux-gnu" ;; \
-    esac; \
-    curl -fsSL -o /tmp/rtk.tar.gz \
-      "https://github.com/rtk-ai/rtk/releases/download/v${RTK_VERSION}/rtk-${RTK_TARGET}.tar.gz"; \
-    tar -xzf /tmp/rtk.tar.gz -C /usr/local/bin rtk
-
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
-FROM alpine:3.21 AS ralphex-download
+FROM alpine:${ALPINE_VERSION} AS ralphex-download
 RUN apk add --no-cache curl
 # renovate: datasource=github-releases depName=umputun/ralphex
 ARG RALPHEX_VERSION=1.7.0
@@ -62,6 +55,12 @@ RUN set -eux; \
     curl -fsSL -o /tmp/ralphex.tar.gz \
       "https://github.com/umputun/ralphex/releases/download/v${RALPHEX_VERSION}/ralphex_${RALPHEX_VERSION}_linux_${ARCH}.tar.gz"; \
     tar -xzf /tmp/ralphex.tar.gz -C /usr/local/bin ralphex
+
+# ── actionlint + shellcheck (GitHub Actions workflow linting) ─────────────
+# Both publish multi-arch images. actionlint hands `run:` scripts to shellcheck
+# when it is on PATH, else skips them.
+FROM rhysd/actionlint:${ACTIONLINT_VERSION} AS actionlint
+FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 
 # ─── BASE ─────────────────────────────────────────────────────────────────────
 FROM node:24-trixie-slim AS base
@@ -126,9 +125,10 @@ RUN mkdir -p /workspace/node_modules \
   /home/node/.config/gh \
   /home/node/.config/cloudflare \
   /home/node/.cache \
+  /home/node/.bun/install/cache \
   /commandhistory \
   && chown -R node:node /workspace /home/node/.claude /home/node/.local \
-       /home/node/.config /home/node/.cache /commandhistory
+       /home/node/.config /home/node/.cache /home/node/.bun /commandhistory
 
 WORKDIR /workspace
 
@@ -139,6 +139,11 @@ RUN ARCH=$(dpkg --print-architecture) \
     "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${ARCH}.deb" \
   && dpkg -i "gh_${GH_VERSION}_linux_${ARCH}.deb" \
   && rm "gh_${GH_VERSION}_linux_${ARCH}.deb"
+
+# Trust the bind-mounted /workspace in /etc/gitconfig, which every git process reads.
+# A GIT_CONFIG_* env var is stripped by tools that filter env, e.g. Hugo, whose
+# security.exec.osEnv allowlist has no GIT_* pattern (#211).
+RUN git config --system --add safe.directory /workspace
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
@@ -190,16 +195,9 @@ ENV PATH="/home/node/.local/share/mise/shims:$PATH"
 ENV MISE_TRUSTED_CONFIG_PATHS="/workspace"
 
 # ── Dev tools (copied from parallel download stages) ─────────────────────────
-# rtk (CLI proxy) and ralphex (plan execution) — dev infrastructure, not project
-# dependencies. Renovate-pinned; see .github/renovate.json5.
-COPY --from=rtk-download /usr/local/bin/rtk /usr/local/bin/rtk
+# ralphex (plan execution) — dev infrastructure, not a project dependency.
+# Renovate-pinned; see .github/renovate.json5.
 COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
-
-# ── Playwright MCP patch script ──────────────────────────────────────────────
-# Baked in so consumer projects don't carry a copy. Invoked from init-plugins.sh,
-# postStartCommand and a SessionStart hook — the hook covers plugin auto-updates
-# mid-run. See #87, #98.
-COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 
 # ── gh-stack (native stacked PRs) ────────────────────────────────────────────
 # Baked as node into ~/.local/share/gh/extensions, which is on the image layer (only
@@ -216,20 +214,12 @@ RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
 # small layer on top (firewall packages in the sandbox).
 FROM base AS shared
 
-# Passwordless sudo for node user — standard practice for devcontainer images.
-# Needed for the canonical "sudo chown" pattern for named volume ownership, and
-# in the sandbox for "sudo /usr/local/bin/init-firewall.sh". Sandbox security
-# comes from the network firewall, not sudo restrictions.
-# See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
-USER root
-RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
-  && chmod 0440 /etc/sudoers.d/node-nopasswd
-
 # System Chromium + fonts for headless browser testing.
 # - chromium: launched by agent-browser and Playwright (env vars below).
 # - fonts-freefont-ttf: baseline fonts for headless rendering.
 # Baked in for both targets — the sandbox firewall blocks deb.debian.org, so
 # chromium cannot be added at runtime.
+USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
@@ -245,10 +235,20 @@ USER node
 # it would attempt a Chrome-for-Testing download on first use. AGENT_BROWSER_CONFIG
 # pins its config to the image's file, so a repo's ./agent-browser.json (which can
 # declare plugin executables and Chromium args) is never loaded.
+# PLAYWRIGHT_MCP_* configure the Playwright MCP plugin, which Claude Code starts with
+# this environment: its default chrome channel isn't installed. The chromium channel
+# already runs without Chromium's sandbox on Linux.
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_BROWSER=chromium \
+    PLAYWRIGHT_MCP_EXECUTABLE_PATH=/usr/bin/chromium \
+    PLAYWRIGHT_MCP_HEADLESS=true \
     AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium \
     AGENT_BROWSER_CONFIG=/etc/agent-browser/config.json
+
+# ── actionlint + shellcheck — after Chromium, so their bumps don't rebuild it ─
+COPY --from=actionlint /usr/local/bin/actionlint /usr/local/bin/actionlint
+COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 
 # ── cf (Cloudflare CLI) — before Claude Code so its bumps don't reinstall cf ──
 # Needs Node >= 22.18 (Bun can't load cloudflare.config.ts). No install scripts, and the
@@ -260,9 +260,11 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
   && cf complete zsh >> "$HOME/.zshrc"
-# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to.
+# No telemetry from cf, nor from the Wrangler it delegates esbuild builds to, and
+# no npm dependency metadata in Worker deploys (cf >= 1.0.0-beta.15).
 ENV CF_SEND_TELEMETRY=false \
-    WRANGLER_SEND_METRICS=false
+    WRANGLER_SEND_METRICS=false \
+    CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false
 
 # ── Claude Code CLI — after Chromium: it changes most often (see global ARG) ─
 # npm, not the native installer: the installer rate-limits (429) under parallel
@@ -292,7 +294,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 
 # ── Claude Code managed settings and skills, agent-browser config ────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires patch-playwright-mcp as a SessionStart hook (#98, #101),
+# any volume mount). Wires drop-rtk-hook as a SessionStart hook,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
 # (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
@@ -309,10 +311,25 @@ RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-bro
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
+# Transitional: a hook that removes the rtk hook older images registered, and a
+# no-op where the Playwright MCP patcher was, for projects that still call it.
+COPY --chmod=0755 drop-rtk-hook.sh /usr/local/bin/drop-rtk-hook
+COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
+# Volume-ownership safety net both templates run through sudo; in the sandbox it's
+# one of the only two commands sudo allows (#208).
+COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
 USER node
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM shared AS default
+
+# Passwordless sudo for node user — standard practice for devcontainer images,
+# needed for the canonical "sudo chown" pattern for named volume ownership.
+# See: https://code.visualstudio.com/remote/advancedcontainers/improve-performance
+USER root
+RUN echo "node ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/node-nopasswd \
+  && chmod 0440 /etc/sudoers.d/node-nopasswd
+USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
       org.opencontainers.image.description="Claude Code devcontainer — full dev environment with agent-browser, Playwright, and passwordless sudo" \
@@ -326,8 +343,6 @@ CMD ["sleep", "infinity"]
 FROM shared AS sandbox
 
 # Firewall packages (not needed in default target).
-# The firewall script is NOT baked into the image — each project mounts its
-# own script via bind mount in devcontainer.json to customize the domain allowlist.
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -337,10 +352,19 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   iproute2 \
   dnsutils \
   aggregate
+
+# The agent runs with permission prompts skipped, so sudo reaches only these two
+# root-owned scripts, with no arguments: a firewall the agent can't edit or flush,
+# and the volume chown. Projects list extra domains in a file, read as data (#208).
+COPY --chown=root:root --chmod=0755 init-firewall.sh /usr/local/sbin/init-firewall
+RUN printf '%s\n' 'node ALL=(root) NOPASSWD: /usr/local/sbin/init-firewall "", /usr/local/sbin/chown-volumes ""' \
+    > /etc/sudoers.d/node-sandbox \
+  && chmod 0440 /etc/sudoers.d/node-sandbox \
+  && visudo -cf /etc/sudoers.d/node-sandbox
 USER node
 
 LABEL org.opencontainers.image.source="https://github.com/gatezh/devcontainers" \
-      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with firewall packages and agent-browser" \
+      org.opencontainers.image.description="Claude Code devcontainer — network-restricted sandbox with a baked firewall and agent-browser" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.title="claude-code-sandbox" \
       org.opencontainers.image.url="https://github.com/gatezh/devcontainers"
