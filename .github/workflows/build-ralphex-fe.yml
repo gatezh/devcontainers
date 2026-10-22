@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - master
+    # Everything in the build context except docs, so a new COPY'd file can't be missed.
     paths:
-      - 'ralphex-fe/Dockerfile'
-      - 'ralphex-fe/*.sh'
-      - 'ralphex-fe/managed-settings.json'
+      - 'ralphex-fe/**'
+      - '!ralphex-fe/**/*.md'
   workflow_dispatch:
 
 permissions:

@@ -3,12 +3,14 @@ name: Build claude-code
 on:
   push:
     branches: [master]
+    # Everything in the build context except the project templates, so a new
+    # COPY'd file can't be missed (#175, #205). A template edit costs one extra build.
     paths:
-      - "claude-code/.devcontainer/Dockerfile"
-      - "claude-code/.devcontainer/*.sh"
-      - "claude-code/.devcontainer/managed-settings.json"
-      - "claude-code/.devcontainer/managed-skills/**"
-      - "claude-code/.devcontainer/agent-browser.json"
+      - "claude-code/.devcontainer/**"
+      - "!claude-code/.devcontainer/devcontainer.json"
+      - "!claude-code/.devcontainer/docker-compose.yml"
+      - "!claude-code/.devcontainer/init-plugins.sh"
+      - "!claude-code/.devcontainer/claude-sandbox/**"
   workflow_dispatch:
 
 permissions:
