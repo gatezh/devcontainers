@@ -66,7 +66,7 @@ FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.102.0
+ARG GH_VERSION=2.102.1
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -255,7 +255,7 @@ COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 # bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
 # Completion is installed the documented way; it queries cf, so upgrades don't stale it.
 # renovate: datasource=npm depName=cf
-ARG CF_VERSION=1.0.0-beta.19
+ARG CF_VERSION=1.0.0-beta.20
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
