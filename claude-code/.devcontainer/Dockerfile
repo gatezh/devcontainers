@@ -286,7 +286,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # `agent-browser` link targets agent-browser-linux-<arch> directly, so the other
 # six are deleted. Rebuilt on each Claude Code bump (ARG above) — a small layer.
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.39.1
+ARG AGENT_BROWSER_VERSION=0.39.2
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
   && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \
