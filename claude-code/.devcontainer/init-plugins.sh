@@ -94,18 +94,21 @@ for plugin in "${DISABLED_PLUGINS[@]}"; do
     fi
 done
 
-# Built-in plugins, written to settings: `claude plugin enable` fails until feature
-# flags load. Only when unset, so a `/plugin disable` (false) survives re-runs.
+# ── Built-in plugins ────────────────────────────────────────────────────────
+# Off by default. Enabled only while unset: `enable` would overwrite a `/plugin disable`.
 ENABLED_PLUGINS=(
     "cc-plugin-you-should-know@builtin"   # "You should know" notes above the prompt
 )
 
-SETTINGS="$HOME/.claude/settings.json"
-[ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
 for plugin in "${ENABLED_PLUGINS[@]}"; do
-    jq --arg id "$plugin" \
-        'if (.enabledPlugins // {}) | has($id) then . else .enabledPlugins[$id] = true end' \
-        "$SETTINGS" > /tmp/settings.json && mv /tmp/settings.json "$SETTINGS"
+    if ! jq -e --arg id "$plugin" '.enabledPlugins | has($id)' \
+        "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json" &>/dev/null; then
+        if claude plugin enable "$plugin" 2>&1; then
+            echo "✔ Enabled: $plugin"
+        else
+            echo "⚠ Failed to enable: $plugin" >&2
+        fi
+    fi
 done
 
 # ~/.claude is a persistent volume, so `install` no-ops after the first run.
