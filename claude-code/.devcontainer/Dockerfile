@@ -66,7 +66,7 @@ FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.103.1
+ARG GH_VERSION=2.103.2
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
