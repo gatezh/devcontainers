@@ -94,6 +94,23 @@ for plugin in "${DISABLED_PLUGINS[@]}"; do
     fi
 done
 
+# ── Built-in plugins ────────────────────────────────────────────────────────
+# Off by default. Enabled only while unset: `enable` would overwrite a `/plugin disable`.
+ENABLED_PLUGINS=(
+    "cc-plugin-you-should-know@builtin"   # "You should know" notes above the prompt
+)
+
+for plugin in "${ENABLED_PLUGINS[@]}"; do
+    if ! jq -e --arg id "$plugin" '.enabledPlugins | has($id)' \
+        "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json" &>/dev/null; then
+        if claude plugin enable "$plugin" 2>&1; then
+            echo "✔ Enabled: $plugin"
+        else
+            echo "⚠ Failed to enable: $plugin" >&2
+        fi
+    fi
+done
+
 # ~/.claude is a persistent volume, so `install` no-ops after the first run.
 # Refresh marketplace indexes first — `plugin update` resolves against the cache.
 if claude plugin marketplace update 2>&1; then
