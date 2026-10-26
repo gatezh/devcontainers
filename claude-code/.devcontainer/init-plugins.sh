@@ -94,6 +94,20 @@ for plugin in "${DISABLED_PLUGINS[@]}"; do
     fi
 done
 
+# Built-in plugins, written to settings: `claude plugin enable` fails until feature
+# flags load. Only when unset, so a `/plugin disable` (false) survives re-runs.
+ENABLED_PLUGINS=(
+    "cc-plugin-you-should-know@builtin"   # "You should know" notes above the prompt
+)
+
+SETTINGS="$HOME/.claude/settings.json"
+[ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+for plugin in "${ENABLED_PLUGINS[@]}"; do
+    jq --arg id "$plugin" \
+        'if (.enabledPlugins // {}) | has($id) then . else .enabledPlugins[$id] = true end' \
+        "$SETTINGS" > /tmp/settings.json && mv /tmp/settings.json "$SETTINGS"
+done
+
 # ~/.claude is a persistent volume, so `install` no-ops after the first run.
 # Refresh marketplace indexes first — `plugin update` resolves against the cache.
 if claude plugin marketplace update 2>&1; then
