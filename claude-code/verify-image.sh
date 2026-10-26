@@ -47,6 +47,10 @@ jq -r '.permissions.ask[]' "$SETTINGS" | grep -qxF 'Bash(cf * --force*)'
 jq -r '.claudeMd' "$SETTINGS" | grep -q devcontainer-browser
 jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
 
+# ── Managed skills ──────────────────────────────────────────────────────────
+grep -qx 'name: security-audit' /etc/claude-code/.claude/skills/security-audit/SKILL.md
+test -r /etc/claude-code/.claude/skills/security-audit/validate-findings.cjs
+
 # ── Transitional (until 2027-01-31) ─────────────────────────────────────────
 test -x /usr/local/bin/drop-rtk-hook
 jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook

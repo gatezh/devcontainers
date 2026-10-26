@@ -25,7 +25,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | actionlint, shellcheck | Pinned `ARG`s, bumped by Renovate on each GitHub release | GitHub Actions workflow linting; actionlint checks `run:` scripts only when shellcheck is on `PATH` |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), and `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), Cloudflare's `security-audit` skill (see [Built in: security-audit skill](#built-in-security-audit-skill)), and `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run
 
 **Default-only:** passwordless sudo
 
@@ -192,6 +192,12 @@ The image doesn't pre-allow agent-browser. Some of its flags start any binary (`
 agent-browser reads only `/etc/agent-browser/config.json` (`AGENT_BROWSER_CONFIG`). A repo's `./agent-browser.json` can declare plugin executables and Chromium args, so it is ignored, and so is `~/.agent-browser/config.json`; pass options as CLI flags or `AGENT_BROWSER_*` env vars. The image config turns on [content boundaries](https://github.com/vercel-labs/agent-browser#security), which mark where page output starts and ends, and caps output at 50,000 characters.
 
 **Migrating from `sandbox-playwright`:** delete `.claude/skills/sandbox-playwright/` from your project. It has a different name, so Claude Code would load both.
+
+### Built in: security-audit skill
+
+Both image variants ship Cloudflare's [security-audit](https://github.com/cloudflare/security-audit-skill) skill at `/etc/claude-code/.claude/skills/security-audit/`. It answers security questions by default; ask for a full audit or pen test of the codebase to run its six-phase workflow.
+
+A full audit writes to `~/security-audit-skill/<repo-name>/run-<N>` unless you name another directory. The home directory isn't a volume, so copy the reports out before you rebuild.
 
 ### Recommended: Claude Code skill for stacked PRs
 
@@ -536,6 +542,7 @@ more often than right.
 | `ALPINE_VERSION` | Renovate | Alpine base of the download stages; no final image is built on it |
 | `OH_MY_ZSH_REF` | by hand | oh-my-zsh, pinned to a commit SHA |
 | `POWERLEVEL10K_REF` | by hand | powerlevel10k, pinned to a commit SHA |
+| `SECURITY_AUDIT_SKILL_REF` | by hand | Cloudflare's security-audit skill, pinned to a commit SHA |
 
 The Renovate-managed args carry `# renovate:` annotations in the Dockerfile; edit them by
 hand only for a local build. Minor and patch bumps land as auto-merged PRs, majors wait for review —
