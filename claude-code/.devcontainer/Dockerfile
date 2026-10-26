@@ -297,7 +297,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # any volume mount). Wires drop-rtk-hook as a SessionStart hook,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
-# (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
+# (claudeMd), denies agent-browser install/upgrade, asks before `cf ... --force`, and
+# installs the auto-updating dev plugin from gatezh/claude-skills at session start.
 #
 # The skill ships at the managed skills location, so every project gets it without a
 # copy in its own .claude/skills/, and it wins a name clash with a project skill.

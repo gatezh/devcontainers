@@ -37,6 +37,12 @@ The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-U
 
 Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. The sandbox firewall allows `mcp.mdn.mozilla.net` by default.
 
+### Personal skills plugin
+
+`extraKnownMarketplaces` and `enabledPlugins` in `/etc/claude-code/managed-settings.json` install the `dev` plugin from [gatezh/claude-skills](https://github.com/gatezh/claude-skills) at session start: `/dev:review`, `/dev:canonicalize` and `/dev:pr-description`. No per-project setup or `init-plugins.sh` entry. The marketplace auto-updates in the background, so a push to that repo reaches every container at its next session without an image rebuild.
+
+The marketplace is cloned over HTTPS (`git` source), so it needs no GitHub SSH key in the container. The sandbox firewall allows GitHub's published ranges. Managed settings force-enable the plugin; to drop it in one project, set `"dev@gatezh": false` in a managed settings drop-in, not in project settings.
+
 ### Cloudflare CLI (`cf`)
 
 Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. The `claudeMd` key in `/etc/claude-code/managed-settings.json` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. A managed `ask` rule makes Claude Code ask before any `cf` command with `--force` or `-f`, the flag `cf` requires for deletes when there's no terminal. Bypass mode skips the prompt, as it skips every prompt. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`) and leaves npm dependency metadata out of Worker deploys (`CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false`).
