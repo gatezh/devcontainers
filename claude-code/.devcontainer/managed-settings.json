@@ -22,6 +22,15 @@
       }
     ]
   },
+  "extraKnownMarketplaces": {
+    "gatezh": {
+      "source": { "source": "git", "url": "https://github.com/gatezh/claude-skills.git" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "dev@gatezh": true
+  },
   "managedMcpServers": {
     "mdn": {
       "type": "http",

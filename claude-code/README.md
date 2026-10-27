@@ -37,6 +37,16 @@ The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-U
 
 Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. The sandbox firewall allows `mcp.mdn.mozilla.net` by default.
 
+### Personal skills plugin
+
+`extraKnownMarketplaces` and `enabledPlugins` in `/etc/claude-code/managed-settings.json` install the `dev` plugin from [gatezh/claude-skills](https://github.com/gatezh/claude-skills) at session start: `/dev:review`, `/dev:canonicalize` and `/dev:pr-description`. No per-project setup or `init-plugins.sh` entry. Auto-update is on, so a push to that repo reaches containers without an image rebuild: an interactive session checks for new commits at a random point up to ten minutes after its first message, and the new version loads at the next launch or after `/reload-plugins`. `claude -p` runs don't check.
+
+The marketplace is cloned over HTTPS (`git` source), so it needs no GitHub SSH key in the container. The sandbox firewall allows GitHub's published ranges. Managed settings force-enable the plugin, so project settings can't turn it off. To drop it in one project, put a managed settings drop-in containing `{ "enabledPlugins": { "dev@gatezh": false } }` beside the variant's `docker-compose.yml` and mount it under `volumes`:
+
+```yaml
+      - ./no-dev-plugin.json:/etc/claude-code/managed-settings.d/no-dev-plugin.json:ro
+```
+
 ### Cloudflare CLI (`cf`)
 
 Both targets ship Cloudflare's [`cf`](https://developers.cloudflare.com/cf/) CLI, the open-beta successor to Wrangler. It covers the whole Cloudflare API and prints JSON. The `claudeMd` key in `/etc/claude-code/managed-settings.json` tells every Claude Code session to use it, except in projects that have a Wrangler config but no `cloudflare.config.ts`: there, `cf dev`, `cf build` and `cf deploy` would rewrite project files without asking. A managed `ask` rule makes Claude Code ask before any `cf` command with `--force` or `-f`, the flag `cf` requires for deletes when there's no terminal. Bypass mode skips the prompt, as it skips every prompt. The image turns telemetry off (`CF_SEND_TELEMETRY=false`, `WRANGLER_SEND_METRICS=false`) and leaves npm dependency metadata out of Worker deploys (`CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION=false`).
@@ -148,6 +158,8 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
 
 > **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
+
+It also turns on Claude Code's built-in [You should know](https://code.claude.com/docs/en/interactive-mode#you-should-know-suggestions) plugin (`ENABLED_PLUGINS`), unless you've turned it off with `/plugin disable`. During longer tasks a side agent rereads the conversation, and each check counts toward your plan's usage or API costs. It needs a direct claude.ai or Console API-key login and feature-flag fetching, which `DISABLE_TELEMETRY` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` turn off.
 
 **`security-guidance` runtime download:** on first session start the plugin builds a `claude-agent-sdk` venv in `~/.claude/security/` for its agentic commit reviewer — a ~100 MB wheel from PyPI (it bundles its own Claude Code binary), stored once in the `~/.claude` volume, not the image. In the sandbox, add `pypi.org` and `files.pythonhosted.org` to `allowed-domains.txt`, or the commit reviewer falls back to the single-call diff review (edit warnings and Stop reviews still work). `SECURITY_GUIDANCE_DISABLE=1` in `containerEnv` turns the reviews off, but the venv bootstrap still runs; to skip the download, drop the plugin from your `init-plugins.sh`.
 

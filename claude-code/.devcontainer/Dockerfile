@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.310
+ARG CLAUDE_CODE_VERSION=2.1.311
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -84,7 +84,7 @@ FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.103.0
+ARG GH_VERSION=2.103.2
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -315,7 +315,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # any volume mount). Wires drop-rtk-hook as a SessionStart hook,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
-# (claudeMd), denies agent-browser install/upgrade, and asks before `cf ... --force`.
+# (claudeMd), denies agent-browser install/upgrade, asks before `cf ... --force`, and
+# installs the auto-updating dev plugin from gatezh/claude-skills at session start.
 #
 # The skills ship at the managed skills location, so every project gets them without a
 # copy in its own .claude/skills/, and they win a name clash with a project skill.
