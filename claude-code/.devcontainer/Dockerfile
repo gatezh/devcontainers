@@ -25,6 +25,9 @@ ARG ALPINE_VERSION=3.24
 ARG ACTIONLINT_VERSION=1.7.12
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 ARG SHELLCHECK_VERSION=0.11.0
+# Cloudflare's security-audit skill has no releases: pinned by SHA, bumped by hand
+# after reading the upstream diff.
+ARG SECURITY_AUDIT_SKILL_REF=c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Parallel download stages — BuildKit runs these concurrently
@@ -45,17 +48,18 @@ RUN set -eux; \
       | tar -xz -C /omz/custom/themes/powerlevel10k --strip-components=1
 
 # ── security-audit skill (Cloudflare) ─────────────────────────────────────
-# Pinned by SHA (no releases); read the upstream diff before a bump.
+# Wildcards, not the archive's top dir: GitHub renames it for short SHAs and tags.
+# Keeps the MIT LICENSE the image must ship; drops upstream's unit tests.
 FROM alpine:${ALPINE_VERSION} AS security-audit-skill-download
 RUN apk add --no-cache curl tar
-ARG SECURITY_AUDIT_SKILL_REF=c1c8a8c1471069fb0e188eeaff69b8e8db6564a8
+ARG SECURITY_AUDIT_SKILL_REF
 RUN set -eux; \
-    curl -fsSL -o /tmp/skill.tar.gz \
-      "https://github.com/cloudflare/security-audit-skill/archive/${SECURITY_AUDIT_SKILL_REF}.tar.gz"; \
-    mkdir /skill; \
-    tar -xzf /tmp/skill.tar.gz -C /skill --strip-components=3 \
-      "security-audit-skill-${SECURITY_AUDIT_SKILL_REF}/skills/security-audit"; \
-    test -f /skill/SKILL.md; \
+    mkdir /src; \
+    curl -fsSL "https://github.com/cloudflare/security-audit-skill/archive/${SECURITY_AUDIT_SKILL_REF}.tar.gz" \
+      | tar -xz -C /src --strip-components=1 --wildcards --exclude='*.test.cjs' \
+        '*/LICENSE' '*/skills/security-audit'; \
+    mv /src/skills/security-audit /skill; \
+    mv /src/LICENSE /skill/LICENSE; \
     chmod -R u=rwX,go=rX /skill
 
 # ── ralphex (autonomous plan execution) ──────────────────────────────────
@@ -324,6 +328,7 @@ USER root
 RUN mkdir -p /etc/claude-code/.claude/skills/devcontainer-browser /etc/agent-browser
 COPY --chown=root:root --chmod=0644 managed-settings.json /etc/claude-code/managed-settings.json
 COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md /etc/claude-code/.claude/skills/devcontainer-browser/SKILL.md
+# No --chmod: modes come from the download stage's chmod; verify-image.sh checks them.
 COPY --from=security-audit-skill-download --chown=root:root /skill /etc/claude-code/.claude/skills/security-audit
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
 # Transitional: a hook that removes the rtk hook older images registered, and a

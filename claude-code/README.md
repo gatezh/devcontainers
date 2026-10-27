@@ -197,6 +197,8 @@ agent-browser reads only `/etc/agent-browser/config.json` (`AGENT_BROWSER_CONFIG
 
 Both image variants ship Cloudflare's [security-audit](https://github.com/cloudflare/security-audit-skill) skill at `/etc/claude-code/.claude/skills/security-audit/`. It answers security questions by default; ask for a full audit or pen test of the codebase to run its six-phase workflow.
 
+In this image a full audit is source-only. The skill runs builds, tests and reproductions only inside an OS-enforced sandbox (no network, resource limits, read-only source), and the image ships none, so it reports each dynamic check as a needs-validation blocker.
+
 A full audit writes to `~/security-audit-skill/<repo-name>/run-<N>` unless you name another directory. The home directory isn't a volume, so copy the reports out before you rebuild.
 
 ### Recommended: Claude Code skill for stacked PRs
