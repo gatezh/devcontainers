@@ -50,6 +50,22 @@ jq -r '.extraKnownMarketplaces.gatezh.source.url' "$SETTINGS" | grep -qx https:/
 jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
 jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
 
+# ── Managed skills ──────────────────────────────────────────────────────────
+AUDIT_SKILL=/etc/claude-code/.claude/skills/security-audit
+grep -qx 'name: security-audit' "$AUDIT_SKILL/SKILL.md"
+grep -q 'Cloudflare, Inc' "$AUDIT_SKILL/LICENSE"
+test -r "$AUDIT_SKILL/report-schema.json"
+test -z "$(find "$AUDIT_SKILL" -name '*.test.cjs')"
+# Root-owned, writable by no one else
+test -z "$(find "$AUDIT_SKILL" ! -user root -o -perm /022)"
+# An empty report passes both validators; validate-findings also loads the schema.
+# A real file: the validators refuse a symlink such as /dev/stdin.
+REPORT=$(mktemp)
+echo '[]' >"$REPORT"
+node "$AUDIT_SKILL/validate-findings.cjs" "$REPORT"
+node "$AUDIT_SKILL/validate-coverage-ledger.cjs" "$REPORT"
+rm "$REPORT"
+
 # ── Transitional (until 2027-01-31) ─────────────────────────────────────────
 test -x /usr/local/bin/drop-rtk-hook
 jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/drop-rtk-hook
