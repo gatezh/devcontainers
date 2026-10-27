@@ -39,9 +39,13 @@ Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp rem
 
 ### Personal skills plugin
 
-`extraKnownMarketplaces` and `enabledPlugins` in `/etc/claude-code/managed-settings.json` install the `dev` plugin from [gatezh/claude-skills](https://github.com/gatezh/claude-skills) at session start: `/dev:review`, `/dev:canonicalize` and `/dev:pr-description`. No per-project setup or `init-plugins.sh` entry. The marketplace auto-updates in the background, so a push to that repo reaches every container at its next session without an image rebuild.
+`extraKnownMarketplaces` and `enabledPlugins` in `/etc/claude-code/managed-settings.json` install the `dev` plugin from [gatezh/claude-skills](https://github.com/gatezh/claude-skills) at session start: `/dev:review`, `/dev:canonicalize` and `/dev:pr-description`. No per-project setup or `init-plugins.sh` entry. Auto-update is on, so a push to that repo reaches containers without an image rebuild: an interactive session checks for new commits at a random point up to ten minutes after its first message, and the new version loads at the next launch or after `/reload-plugins`. `claude -p` runs don't check.
 
-The marketplace is cloned over HTTPS (`git` source), so it needs no GitHub SSH key in the container. The sandbox firewall allows GitHub's published ranges. Managed settings force-enable the plugin; to drop it in one project, set `"dev@gatezh": false` in a managed settings drop-in, not in project settings.
+The marketplace is cloned over HTTPS (`git` source), so it needs no GitHub SSH key in the container. The sandbox firewall allows GitHub's published ranges. Managed settings force-enable the plugin, so project settings can't turn it off. To drop it in one project, put a managed settings drop-in containing `{ "enabledPlugins": { "dev@gatezh": false } }` beside the variant's `docker-compose.yml` and mount it under `volumes`:
+
+```yaml
+      - ./no-dev-plugin.json:/etc/claude-code/managed-settings.d/no-dev-plugin.json:ro
+```
 
 ### Cloudflare CLI (`cf`)
 
