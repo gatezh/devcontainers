@@ -46,6 +46,9 @@ jq -e '.permissions.deny | index("Bash(agent-browser install *)")' "$SETTINGS" >
 jq -r '.permissions.ask[]' "$SETTINGS" | grep -qxF 'Bash(cf * --force*)'
 jq -r '.claudeMd' "$SETTINGS" | grep -q devcontainer-browser
 jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
+jq -r '.extraKnownMarketplaces.gatezh.source.url' "$SETTINGS" | grep -qx https://github.com/gatezh/claude-skills.git
+jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
+jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
 
 # ── Transitional (until 2027-01-31) ─────────────────────────────────────────
 test -x /usr/local/bin/drop-rtk-hook
