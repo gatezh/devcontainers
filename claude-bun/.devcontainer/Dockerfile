@@ -24,7 +24,7 @@ ENV TZ="$TZ"
 
 ARG CLAUDE_CODE_VERSION=latest
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.103.2
+ARG GH_VERSION=2.103.3
 
 # Install basic development tools and iptables/ipset
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
