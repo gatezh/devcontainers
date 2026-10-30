@@ -5,7 +5,7 @@ ARG DOCKER_VERSION=29.9.2
 # renovate: datasource=golang-version depName=go
 ARG GO_VERSION=1.27.3
 # renovate: datasource=github-releases depName=gohugoio/hugo
-ARG HUGO_VERSION=0.168.0
+ARG HUGO_VERSION=0.169.0
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
