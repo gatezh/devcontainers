@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.312
+ARG CLAUDE_CODE_VERSION=2.1.314
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -222,7 +222,7 @@ COPY --from=ralphex-download /usr/local/bin/ralphex /usr/local/bin/ralphex
 # ~/.config/gh is a volume); a volume over ~/.local/share/gh would shadow it. See #160.
 # ~/.cache/gh is gh's HTTP cache — the install leaves a 25 MB copy of the download.
 # renovate: datasource=github-releases depName=github/gh-stack
-ARG GH_STACK_VERSION=0.2.1
+ARG GH_STACK_VERSION=0.3.0
 RUN gh extension install github/gh-stack --pin "v${GH_STACK_VERSION}" \
   && rm -rf /home/node/.cache/gh
 
