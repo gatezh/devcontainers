@@ -44,7 +44,6 @@ PLUGINS=(
     "code-review@claude-plugins-official"
     "code-simplifier@claude-plugins-official"
     "playwright@claude-plugins-official"
-    "superpowers@claude-plugins-official"
     "explanatory-output-style@claude-plugins-official"
     "claude-md-management@claude-plugins-official"
     "claude-code-setup@claude-plugins-official"
@@ -75,12 +74,12 @@ for plugin in "${PLUGINS[@]}"; do
     fi
 done
 
-# ── Conflicting plugins ─────────────────────────────────────────────────────
-# Plugins that claim the same file extensions as one in PLUGINS: Claude Code
-# starts only whichever registers first. Not installed above, but a persistent
-# ~/.claude volume may still hold them from an older run — disable if enabled.
+# ── Retired plugins ─────────────────────────────────────────────────────────
+# Not installed above, but a persistent ~/.claude volume may still hold them from
+# an older run — disable if enabled.
 DISABLED_PLUGINS=(
-    "typescript-lsp@claude-plugins-official"   # superseded by typescript-native-lsp
+    "typescript-lsp@claude-plugins-official"   # claims .ts with typescript-native-lsp; only one starts
+    "superpowers@claude-plugins-official"      # session-start "MUST invoke a skill" block overconstrains Claude 5 models (#292)
 )
 
 for plugin in "${DISABLED_PLUGINS[@]}"; do
