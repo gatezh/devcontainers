@@ -64,6 +64,18 @@ The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--
 
 The `cloudflare` plugin (skills plus the Cloudflare MCP server) stays installed alongside `cf`: its MCP server also searches current Cloudflare docs, which `cf` doesn't.
 
+### Claude Code shell and disk cleanup
+
+The terminal's shell is zsh, but Claude Code's Bash tool runs bash: `env.CLAUDE_CODE_SHELL` in `/etc/claude-code/managed-settings.json` overrides `$SHELL` for it. Commands written for bash failed under zsh in most sessions: an unmatched glob such as `--include=*.md` aborts the command, `echo =====` is a command lookup, `$CMD args` doesn't word-split, and oh-my-zsh's `g` alias breaks `g() { … }`.
+
+The container's disk is the host's, and sessions leave things behind: a clone with `node_modules` in a scratchpad is ~700 MB, and each distinct `npx <pkg>@<spec>` is a separate install. A managed `SessionStart` hook, `/usr/local/bin/prune-claude-disk`, runs in the background at the start of each session and deletes:
+
+- other sessions' scratchpads (`/tmp/claude-<uid>/…`) idle for more than a day, judged by the session transcript. A scratchpad holding a git repo with uncommitted or unpushed work is kept, and the session shows a message naming it.
+- npx installs (`~/.npm/_npx`) older than 7 days.
+- the npm cache, once it passes 1 GB.
+
+`SCRATCH_DAYS`, `NPX_DAYS` and `CACHE_MAX_MB` in `containerEnv` change the limits. The `claudeMd` key also tells Claude to keep one checkout per other repo at `~/src/<repo>` instead of cloning into the scratchpad, and to clear what it put there when a task ends.
+
 ## Multi-platform Support
 
 Both variants are built for:
