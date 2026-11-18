@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.325
+ARG CLAUDE_CODE_VERSION=2.1.327
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -273,7 +273,7 @@ COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 # bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
 # Completion is installed the documented way; it queries cf, so upgrades don't stale it.
 # renovate: datasource=npm depName=cf
-ARG CF_VERSION=1.0.0-beta.31
+ARG CF_VERSION=1.0.0-beta.32
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
