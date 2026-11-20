@@ -26,6 +26,14 @@
     "gatezh": {
       "source": { "source": "git", "url": "https://github.com/gatezh/claude-skills.git" },
       "autoUpdate": true
+    },
+    "cloudflare": {
+      "source": { "source": "github", "repo": "cloudflare/skills" },
+      "autoUpdate": true
+    },
+    "googlechrome": {
+      "source": { "source": "github", "repo": "GoogleChrome/modern-web-guidance" },
+      "autoUpdate": true
     }
   },
   "enabledPlugins": {
