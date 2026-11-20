@@ -144,7 +144,6 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via the image's `PLAYWRIGHT_MCP_*` env vars) |
-| `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
 | `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
