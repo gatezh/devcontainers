@@ -312,7 +312,8 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 
 # ── Claude Code managed settings and skills, agent-browser config ────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Wires drop-rtk-hook as a SessionStart hook,
+# any volume mount). Runs the Bash tool in bash, not the login shell zsh
+# (CLAUDE_CODE_SHELL), wires drop-rtk-hook and prune-claude-disk as SessionStart hooks,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
 # (claudeMd), denies agent-browser install/upgrade, asks before `cf ... --force`, and
@@ -332,6 +333,7 @@ COPY --chown=root:root --chmod=0644 managed-skills/devcontainer-browser/SKILL.md
 # No --chmod: modes come from the download stage's chmod; verify-image.sh checks them.
 COPY --from=security-audit-skill-download --chown=root:root /skill /etc/claude-code/.claude/skills/security-audit
 COPY --chown=root:root --chmod=0644 agent-browser.json /etc/agent-browser/config.json
+COPY --chmod=0755 prune-claude-disk.sh /usr/local/bin/prune-claude-disk
 # Transitional: a hook that removes the rtk hook older images registered, and a
 # no-op where the Playwright MCP patcher was, for projects that still call it.
 COPY --chmod=0755 drop-rtk-hook.sh /usr/local/bin/drop-rtk-hook

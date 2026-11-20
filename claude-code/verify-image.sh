@@ -49,6 +49,19 @@ jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
 jq -r '.extraKnownMarketplaces.gatezh.source.url' "$SETTINGS" | grep -qx https://github.com/gatezh/claude-skills.git
 jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
 jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
+jq -r '.env.CLAUDE_CODE_SHELL' "$SETTINGS" | grep -qx /bin/bash
+test -x /bin/bash
+jq -r '.claudeMd' "$SETTINGS" | grep -qF 'src/<repo>'
+test -x /usr/local/bin/prune-claude-disk
+jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/prune-claude-disk
+# Deletes a stale clean scratchpad, keeps one with an uncommitted repo, prints only JSON.
+SCRATCH="/tmp/claude-$(id -u)/-verify"
+mkdir -p "$SCRATCH/clean/scratchpad" "$SCRATCH/dirty/scratchpad/repo"
+git -C "$SCRATCH/dirty/scratchpad/repo" init -q
+touch "$SCRATCH/dirty/scratchpad/repo/file"
+echo '{}' | /usr/local/bin/prune-claude-disk | jq -e '.systemMessage | contains("unpushed git work")' >/dev/null
+test ! -e "$SCRATCH/clean" && test -d "$SCRATCH/dirty"
+rm -rf "$SCRATCH"
 
 # ── Managed skills ──────────────────────────────────────────────────────────
 AUDIT_SKILL=/etc/claude-code/.claude/skills/security-audit
