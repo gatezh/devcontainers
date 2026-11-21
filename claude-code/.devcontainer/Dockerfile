@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.329
+ARG CLAUDE_CODE_VERSION=2.1.330
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -84,7 +84,7 @@ FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.104.0
+ARG GH_VERSION=2.105.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
