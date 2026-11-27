@@ -312,8 +312,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 
 # ── Claude Code managed settings and skills, agent-browser config ────────────
 # Image-policy settings at the Linux managed location (highest precedence, outside
-# any volume mount). Runs the Bash tool in bash, not the login shell zsh
-# (CLAUDE_CODE_SHELL), wires drop-rtk-hook and prune-claude-disk as SessionStart hooks,
+# any volume mount). Wires drop-rtk-hook and prune-claude-disk as SessionStart hooks,
 # provides the MDN MCP server (managedMcpServers needs Claude Code >= 2.1.259), and
 # routes browser work to the devcontainer-browser skill and Cloudflare work to cf
 # (claudeMd), denies agent-browser install/upgrade, asks before `cf ... --force`, and
@@ -342,6 +341,9 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 # one of the only two commands sudo allows (#208).
 COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
 USER node
+# Claude Code's Bash tool runs bash; the terminal stays zsh. An image ENV, not managed
+# env, so a settings `env` or containerEnv can switch it back.
+ENV CLAUDE_CODE_SHELL=/bin/bash
 
 # ─── DEFAULT — full dev environment ───────────────────────────────────────────
 FROM shared AS default
