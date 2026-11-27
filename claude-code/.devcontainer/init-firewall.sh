@@ -16,6 +16,12 @@ ALLOWLIST=/workspace/.devcontainer/claude-sandbox/allowed-domains.txt
 BASE_DOMAINS=(
     "registry.npmjs.org"
     "api.anthropic.com"
+    # https://code.claude.com/docs/en/network-config: OAuth token exchange, refresh and
+    # revocation (for claude.ai accounts too) and the first-run check; account auth;
+    # plugin executable downloads.
+    "platform.claude.com"
+    "claude.ai"
+    "downloads.claude.ai"
     "sentry.io"
     "statsig.com"
     "marketplace.visualstudio.com"
