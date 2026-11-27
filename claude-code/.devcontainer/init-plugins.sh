@@ -44,7 +44,6 @@ PLUGINS=(
     "code-review@claude-plugins-official"
     "code-simplifier@claude-plugins-official"
     "playwright@claude-plugins-official"
-    "superpowers@claude-plugins-official"
     "explanatory-output-style@claude-plugins-official"
     "claude-md-management@claude-plugins-official"
     "claude-code-setup@claude-plugins-official"
