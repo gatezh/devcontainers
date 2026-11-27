@@ -125,6 +125,10 @@
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    // Skip the claude.ai account connectors (Gmail, Drive, ...): a project container gets
+    // MCP from its plugins only. An env var, not the image's managed settings, so a project
+    // that wants them back deletes this line (a managed `true` can't be overridden).
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
     // Signs the sandbox in: it shares no volumes with the default variant, and the firewall
     // blocks the browser login. Resolves to "" when the host var is
     // unset. See "Sandbox Authentication" section in README.
