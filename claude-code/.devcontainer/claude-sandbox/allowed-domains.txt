@@ -9,3 +9,6 @@
 # security-guidance plugin: its commit reviewer's Python packages
 # pypi.org
 # files.pythonhosted.org
+
+# github plugin: its remote MCP server (see "GitHub MCP server" in the README)
+# api.githubcopilot.com

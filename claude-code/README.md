@@ -25,7 +25,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | actionlint, shellcheck | Pinned `ARG`s, bumped by Renovate on each GitHub release | GitHub Actions workflow linting; actionlint checks `run:` scripts only when shellcheck is on `PATH` |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), Cloudflare's `security-audit` skill (see [Built in: security-audit skill](#built-in-security-audit-skill)), and `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), Cloudflare's `security-audit` skill (see [Built in: security-audit skill](#built-in-security-audit-skill)), `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run, and `/etc/profile.d/github-mcp-token.sh`, which gives the GitHub MCP server the `gh` login's token (see [GitHub MCP server](#github-mcp-server))
 
 **Default-only:** passwordless sudo
 
@@ -36,6 +36,10 @@ Projects consume these pre-built images and control their own tool versions via 
 The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-US/mcp) (web platform docs and browser compatibility data) to every session through `managedMcpServers` in `/etc/claude-code/managed-settings.json` — no per-project setup. It sends `X-Moz-1st-Party-Data-Opt-Out: 1`, Mozilla's documented opt-out from the query logging they do while the server is experimental.
 
 Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. The sandbox firewall allows `mcp.mdn.mozilla.net` by default.
+
+### claude.ai connectors are off
+
+Both `devcontainer.json` templates set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in `containerEnv`, so Claude Code doesn't fetch the [connectors](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claude-ai) on your claude.ai account: none of them, from Gmail or Drive to Anthropic's own Claude Docs. MCP servers from plugins, the project's `.mcp.json` and the image's managed settings still load. To get your connectors back in one project, delete that line and rebuild. It's an env var in the template, not the native `disableClaudeAiConnectors` setting: in the image's managed settings, no project could get its connectors back, and in the project's `.claude/settings.json` it would also apply to Claude Code on the host.
 
 ### Personal skills plugin
 
@@ -63,6 +67,18 @@ The sandbox doesn't get that login: it has its own volumes (see [Why the variant
 The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--local` commands work only in a project that has `cf` as a dev dependency (`cf init` and `cf migrate` add it). The global `cf` then runs the project's copy, which has its own runtime. Most commands that call the Cloudflare API don't need it, but `cf workers …` does, even for API reads like `cf workers scripts list` ([#212](https://github.com/gatezh/devcontainers/issues/212)). For Workers reads outside such a project, use `bunx wrangler` or the Cloudflare MCP server.
 
 The `cloudflare` plugin (skills plus the Cloudflare MCP server) stays installed alongside `cf`: its MCP server also searches current Cloudflare docs, which `cf` doesn't.
+
+### Claude Code shell and disk cleanup
+
+The terminal's shell is zsh, but Claude Code's Bash tool runs bash: the image sets `CLAUDE_CODE_SHELL=/bin/bash`, which Claude Code reads before `$SHELL`. Commands written for bash failed under zsh in most sessions: an unmatched glob such as `--include=*.md` aborts the command, `echo =====` is a command lookup, `$CMD args` doesn't word-split, and oh-my-zsh's `g` alias breaks `g() { … }`. To get zsh back, set `CLAUDE_CODE_SHELL` to `/usr/bin/zsh` in `containerEnv` or in a settings file's `env`.
+
+The container's disk is the host's, and sessions leave things behind: a clone with `node_modules` in a scratchpad is ~700 MB, and each distinct `npx <pkg>@<spec>` is a separate install. A managed `SessionStart` hook, `/usr/local/bin/prune-claude-disk`, runs in the background when a session starts or resumes, and deletes:
+
+- other sessions' scratchpads (`/tmp/claude-<uid>/<project>/<session-id>/`, or under `CLAUDE_CODE_TMPDIR`) once the session isn't running and neither its transcript nor its files changed for a day. A scratchpad holding a git repo with uncommitted, stashed or unpushed work is kept, and Claude is told which ones on its next turn. Linked worktrees it deletes are pruned from their main repo.
+- npx installs (`~/.npm/_npx`) unused for 7 days, unless a running `npm exec` (such as an MCP server) uses the package.
+- the npm cache, once it passes 1 GB.
+
+`SCRATCH_DAYS`, `NPX_DAYS` and `CACHE_MAX_MB` in `containerEnv` change the limits. Claude Code's own retention sweep also deletes a scratchpad with its transcript after `cleanupPeriodDays`. The `claudeMd` key also tells Claude to keep one checkout per other repo at `~/src/<repo>` instead of cloning into the scratchpad, and to clear what it put there when a task ends.
 
 ## Multi-platform Support
 
@@ -144,7 +160,6 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via the image's `PLAYWRIGHT_MCP_*` env vars) |
-| `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
 | `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
@@ -157,7 +172,11 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
 | `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
 
+> **Why not `superpowers`:** its session-start hook injects a "you MUST invoke a skill" block into every session, which overconstrains Claude 5 models (#292). The image turns it off with `"superpowers@claude-plugins-official": false` under the managed `enabledPlugins`, so a persisted `~/.claude` volume stops loading it once the container runs the new image. A copy of `init-plugins.sh` that still lists it prints `⚠ Failed to install` or `⚠ Failed to update` for it (blocked by policy); delete the line. To keep it in one project, leave it in that project's `PLUGINS` and mount a managed settings drop-in containing `{ "enabledPlugins": { "superpowers@claude-plugins-official": true } }`, as for [the `dev` plugin](#personal-skills-plugin).
+
 > **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
+
+**Which plugins update on their own:** Claude Code auto-updates plugins from `claude-plugins-official` by default, checking up to ten minutes after an interactive session's first message. `extraKnownMarketplaces` in `/etc/claude-code/managed-settings.json` turns the same on for the two vendor-maintained marketplaces, `cloudflare/skills` and `GoogleChrome/modern-web-guidance`, so their skills track the vendor's own changes without a rerun of `init-plugins.sh`. The community marketplaces (`umputun/ralphex`, `AgriciDaniel/claude-seo`, `rubberduck-studio/typescript-native-lsp`) stay on deliberate updates: a push to any of them would otherwise reach every container unreviewed (#248). Rerun `init-plugins.sh` to update those. `/plugin` refuses to turn auto-update off for a marketplace that managed settings set it for. To keep `cloudflare` or `googlechrome` on manual updates in one project, mount a drop-in as in [Personal skills plugin](#personal-skills-plugin) that redefines its entry with the same `source` and `"autoUpdate": false`. A drop-in entry replaces the image's entry whole, so it must repeat `source`.
 
 It also turns on Claude Code's built-in [You should know](https://code.claude.com/docs/en/interactive-mode#you-should-know-suggestions) plugin (`ENABLED_PLUGINS`), unless you've turned it off with `/plugin disable`. During longer tasks a side agent rereads the conversation, and each check counts toward your plan's usage or API costs. It needs a direct claude.ai or Console API-key login and feature-flag fetching, which `DISABLE_TELEMETRY` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` turn off.
 
@@ -169,7 +188,7 @@ To remove a plugin in your project, delete its entry from the local `init-plugin
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/allowed-domains.txt`
 
-The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
+The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, Claude Code's sign-in and plugin-download hosts (`platform.claude.com`, `claude.ai`, `downloads.claude.ai`), the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
 
 To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down, and if setup itself fails partway (say, GitHub's IP list can't be fetched), the firewall closes the network rather than leaving it open: restart the container to retry. Allowlisted hosts are reachable on every port, SSH included; nothing else is, and IPv6 gets loopback only.
 
@@ -246,7 +265,7 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). Signing in inside the sandbox doesn't work either: the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it through an environment variable instead.
+**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). You could sign in inside the sandbox, since the firewall allows Claude Code's sign-in hosts, but that stores a full claude.ai login in `~/.claude`, where the agent, running with permission prompts skipped, can read it. Generate a token on the host and inject it through an environment variable instead: a [`setup-token`](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token) token can only make model requests.
 
 When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. Claude Code then falls back to any credentials already on the sandbox's own `~/.claude` volume.
 
@@ -408,6 +427,17 @@ The image itself trusts `/workspace` and every repository under it in `/etc/gitc
 **One-time setup:** run `gh auth login` in the default variant. The login lives on its `myproject-gh-config-*` volume, so it survives rebuilds. The sandbox has its own volume ([why](#why-the-variants-dont-share-volumes)): there, sign in with a [fine-grained token](https://github.com/settings/personal-access-tokens) limited to the project's repository (run `gh auth login --with-token`, paste the token, and press Ctrl-D; don't save it to a file under `/workspace`, which is your host repo). After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
 
 To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The table's entries are listed with scope `command` and `safe.directory` with scope `system`. To add your own entries, append `GIT_CONFIG_KEY_3` / `GIT_CONFIG_VALUE_3` and so on, and raise `GIT_CONFIG_COUNT` to match.
+
+### GitHub MCP server
+
+The official `github` plugin isn't in the template's `init-plugins.sh`. To use it, add `"github@claude-plugins-official"` to `PLUGINS`. Its MCP server sends `Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}` and has no OAuth fallback, so with the variable unset every request fails with HTTP 400 (`Authorization header is badly formatted`).
+
+The image fills the variable in from the `gh` login, so you don't create a personal access token. `~/.zshrc` and `~/.bashrc` source `/etc/profile.d/github-mcp-token.sh`, which runs `gh auth token`. VS Code's user environment probe starts a login-interactive shell, which carries the export into the Claude Code extension as well as every terminal. A token already in the environment wins, in this order: `GITHUB_PERSONAL_ACCESS_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`. An empty value, as `${localEnv:...}` gives for an unset host variable, counts as unset. With no token and no `gh` login, the script exports nothing.
+
+The token is then in the environment of every process the shell or the extension starts, including the agent's Bash tool and any MCP server a project's `.mcp.json` adds once you approve it. Anything running as `node` can already read the `gh` login, so this adds little, but don't approve project MCP servers you don't trust.
+
+- **Default variant:** run `gh auth login` once (see above). The value is read when a shell starts, so after you sign in or change the token, reload the window.
+- **Sandbox:** add `api.githubcopilot.com` to `allowed-domains.txt`. The GitHub IP ranges the firewall allows don't cover it. The token is the sandbox's own `gh` login, the fine-grained one scoped to the project's repository, so the MCP server gets only what that token allows.
 
 ## Playwright Strategy
 
