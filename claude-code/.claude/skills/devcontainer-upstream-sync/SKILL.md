@@ -173,8 +173,10 @@ Security findings, reported whatever the row's verdict:
   read-only `.devcontainer` mount
   (`- ../../.devcontainer:/workspace/.devcontainer:ro`) → **security**:
   the sandboxed agent can edit the devcontainer config and firewall
-  allowlist, which the host runs at the next start (#289, README "Host
-  files the sandbox can write"). The file is starter-customize, so
+  allowlist, which take effect at the next start, before review: the
+  host runs `initializeCommand`, and the firewall reads
+  `allowed-domains.txt` (#289, README "Host files the sandbox can
+  write"). The file is starter-customize, so
   surface the line and ask; don't add it automatically.
 - The sandbox shares the default variant's volumes → **security** (see
   §"Customization-preservation rules", rule 1).
