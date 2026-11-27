@@ -47,6 +47,31 @@ jobs:
       - name: Run actionlint
         uses: raven-actions/actionlint@v2
 
+  # ── Require a version bump when the upstream-sync skill changes ─────
+  # Downstream copies up to 1.3.0 self-update only when `version:` changes (#283).
+  skill-version:
+    name: Skill version bump
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2 # HEAD is the PR merge commit; HEAD^1 is the base
+
+      - name: Check devcontainer-upstream-sync version
+        env:
+          SKILL: claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md
+        run: |
+          git diff --quiet HEAD^1 HEAD -- "$SKILL" && exit 0
+          git show "HEAD^1:$SKILL" > "$RUNNER_TEMP/base-skill.md" # no pipe: grep -m1 could SIGPIPE it under pipefail
+          old=$(grep -m1 -oP 'version: "\K[^"]+' "$RUNNER_TEMP/base-skill.md")
+          new=$(grep -m1 -oP 'version: "\K[^"]+' "$SKILL")
+          if [ "$old" = "$new" ] || ! printf '%s\n%s\n' "$old" "$new" | sort -VC; then
+            echo "::error file=$SKILL::Changed without a version bump: raise version: above $old (now $new)"
+            exit 1
+          fi
+          echo "version: $old -> $new"
+
   # ── Detect which images have changed files ──────────────────────────
   detect-changes:
     name: Detect changes
@@ -210,7 +235,7 @@ jobs:
     # always(), not !cancelled(): GitHub counts a *skipped* required check as
     # passing, so !cancelled() would let a cancelled run report a green gate.
     if: always()
-    needs: [lint-dockerfiles, lint-workflows, detect-changes, build-and-verify]
+    needs: [lint-dockerfiles, lint-workflows, skill-version, detect-changes, build-and-verify]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
