@@ -315,7 +315,7 @@ The template includes extensions for Claude Code, Bun, OXC, Tailwind, YAML, Dock
 ├── init-plugins.sh                ← Claude Code plugin setup (optional)
 └── claude-sandbox/
     ├── devcontainer.json          ← sandbox devcontainer
-    ├── docker-compose.yml         ← sandbox compose (image reference)
+    ├── docker-compose.yml         ← sandbox compose (image, read-only .devcontainer/)
     ├── allowed-domains.txt        ← extra firewall domains (optional)
     ├── .env.example               ← template for auth token (checked in)
     └── .env.local                 ← actual auth token (gitignored)
@@ -366,10 +366,10 @@ The mount doesn't cover files that `git diff` doesn't show, and the host runs so
 - **`.git/config` and `.git/hooks/`.** A `core.fsmonitor` command in `.git/config` runs on your next `git status`, which VS Code on the host runs by itself when it opens the folder. `core.hooksPath`, `core.sshCommand`, aliases and hooks run on later git commands.
 - **Ignored files**, such as `.claude/settings.local.json`, whose hooks and `allow` rules Claude Code on the host applies, or husky's `.husky/_/`. The agent can also hide a new file by listing it in `.git/info/exclude`.
 
-Git can't protect you from a repository's own config. `safe.directory` refuses only repositories owned by another user, and files the sandbox writes are owned by you on the host. [Protected configuration](https://git-scm.com/docs/git-config#SCOPES), which a repository can't override, covers only `safe.directory`, `safe.bareRepository` and `uploadpack.packObjectsHook`. A read-only `.git/config` in the sandbox would break `git push -u`, `gh pr checkout`, and workspaces that are git worktrees, where `.git` is a file. So after a sandbox session, check these before you run git, VS Code or Claude Code on the host in that folder:
+Git can't protect you from a repository's own config. `safe.directory` refuses only repositories owned by another user, and files the sandbox writes are owned by you on the host. [Protected configuration](https://git-scm.com/docs/git-config#SCOPES), which a repository can't override, covers only `safe.directory`, `safe.bareRepository` and `uploadpack.packObjectsHook`. A read-only `.git/config` in the sandbox would break `git push -u`, `gh pr checkout`, and workspaces that are git worktrees, where `.git` is a file. So after a sandbox session, check these before you run git, VS Code or Claude Code on the host in that folder. Read the config with `cat`: `git config --list` runs a pager that the repository's config can set.
 
 ```bash
-cat .git/config                      # core.fsmonitor, core.hooksPath, core.sshCommand, aliases
+cat .git/config                      # core.fsmonitor, core.hooksPath, core.sshCommand, aliases; read any include.path file too
 ls .git/hooks | grep -v '\.sample$'
 git status --ignored                 # runs core.fsmonitor, so check .git/config first
 ```
