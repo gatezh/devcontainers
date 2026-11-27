@@ -29,7 +29,8 @@
     }
   },
   "enabledPlugins": {
-    "dev@gatezh": true
+    "dev@gatezh": true,
+    "superpowers@claude-plugins-official": false
   },
   "managedMcpServers": {
     "mdn": {

@@ -148,7 +148,6 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via the image's `PLAYWRIGHT_MCP_*` env vars) |
-| `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
 | `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
@@ -160,6 +159,8 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
 | `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
+
+> **Why not `superpowers`:** its session-start hook injects a "you MUST invoke a skill" block into every session, which overconstrains Claude 5 models (#292). The image turns it off with `"superpowers@claude-plugins-official": false` under the managed `enabledPlugins`, so a persisted `~/.claude` volume stops loading it once the container runs the new image. A copy of `init-plugins.sh` that still lists it prints `⚠ Failed to install` or `⚠ Failed to update` for it (blocked by policy); delete the line. To keep it in one project, leave it in that project's `PLUGINS` and mount a managed settings drop-in containing `{ "enabledPlugins": { "superpowers@claude-plugins-official": true } }`, as for [the `dev` plugin](#personal-skills-plugin).
 
 > **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
 
