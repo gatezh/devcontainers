@@ -4,7 +4,7 @@ description: Use to audit a project's .devcontainer/ and bundled .claude/skills/
 metadata:
   author: Serge Gatezh
   url: https://github.com/gatezh
-  version: "1.3.0"
+  version: "1.4.0"
 ---
 
 # Devcontainer Upstream Sync
@@ -33,7 +33,7 @@ digraph upstream_sync {
   "Adopt drift (Workflow 2)" [shape=box, style=filled, fillcolor="#d4edda"];
   "Drift = upstream bug?" [shape=diamond];
   "Draft issue (Workflow 3)" [shape=box, style=filled, fillcolor="#fff3cd"];
-  "Skill version stale?" [shape=diamond];
+  "Skill differs from upstream?" [shape=diamond];
   "Self-update (Workflow 4)" [shape=box, style=filled, fillcolor="#d4edda"];
   "Done — report" [shape=doublecircle];
 
@@ -41,13 +41,13 @@ digraph upstream_sync {
   "Run audit (Workflow 1)" -> "Per-row verdict";
   "Per-row verdict" -> "Adopt drift (Workflow 2)" [label="framework-track drift"];
   "Per-row verdict" -> "Drift = upstream bug?" [label="local diverges intentionally"];
-  "Per-row verdict" -> "Skill version stale?" [label="all clean"];
+  "Per-row verdict" -> "Skill differs from upstream?" [label="all clean"];
   "Drift = upstream bug?" -> "Draft issue (Workflow 3)" [label="yes"];
-  "Drift = upstream bug?" -> "Skill version stale?" [label="no"];
-  "Adopt drift (Workflow 2)" -> "Skill version stale?";
-  "Draft issue (Workflow 3)" -> "Skill version stale?";
-  "Skill version stale?" -> "Self-update (Workflow 4)" [label="yes"];
-  "Skill version stale?" -> "Done — report" [label="no"];
+  "Drift = upstream bug?" -> "Skill differs from upstream?" [label="no"];
+  "Adopt drift (Workflow 2)" -> "Skill differs from upstream?";
+  "Draft issue (Workflow 3)" -> "Skill differs from upstream?";
+  "Skill differs from upstream?" -> "Self-update (Workflow 4)" [label="yes"];
+  "Skill differs from upstream?" -> "Done — report" [label="no"];
   "Self-update (Workflow 4)" -> "Done — report";
 }
 ```
@@ -131,18 +131,24 @@ When adopting an upstream change, preserve these per-project patterns:
   and `curl -sSL <raw-url>` for plain file fetches.
 - All workflows are read-only by default. Apply changes only after
   showing the diff to the user.
+- Run the sync on the host or in the default variant. The sandbox
+  mounts `.devcontainer/` read-only (#289), so Workflow 2 can't write
+  there. Check first with `test -w .devcontainer`: if it fails, run the
+  audit, report the `.devcontainer/` rows that need action, and tell
+  the user to adopt them on the host. Don't start edits that would fail
+  halfway.
 
 ## Workflow 1: Audit
 
 Walk the manifest, fetch each upstream file, diff, classify, report.
 
 ```sh
-# Per-row commands (run for each manifest row):
-curl -sSL "https://raw.githubusercontent.com/gatezh/devcontainers/master/${UPSTREAM_PATH}" -o /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream
+# Per-row commands (run for each manifest row). The full path keeps the three SKILL.md rows apart.
+curl -fsSL --create-dirs "https://raw.githubusercontent.com/gatezh/devcontainers/master/${UPSTREAM_PATH}" -o "/tmp/upstream-sync/${UPSTREAM_PATH}"
 if [ ! -e "${LOCAL_PATH}" ]; then
   echo "LOCAL_MISSING"
 else
-  diff -u "${LOCAL_PATH}" /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream || true
+  diff -u "${LOCAL_PATH}" "/tmp/upstream-sync/${UPSTREAM_PATH}" || true
 fi
 ```
 
@@ -161,6 +167,20 @@ Classification rules per row:
   - **template-divergence**. Show the diff in the report; do not adopt
     automatically.
 
+Security findings, reported whatever the row's verdict:
+
+- `.devcontainer/claude-sandbox/docker-compose.yml` lacks upstream's
+  read-only `.devcontainer` mount
+  (`- ../../.devcontainer:/workspace/.devcontainer:ro`) → **security**:
+  the sandboxed agent can edit the devcontainer config and firewall
+  allowlist, which take effect at the next start, before review: the
+  host runs `initializeCommand`, and the firewall reads
+  `allowed-domains.txt` (#289, README "Host files the sandbox can
+  write"). The file is starter-customize, so
+  surface the line and ask; don't add it automatically.
+- The sandbox shares the default variant's volumes → **security** (see
+  §"Customization-preservation rules", rule 1).
+
 Report format (one row per manifest entry):
 
 ```
@@ -170,6 +190,7 @@ Report format (one row per manifest entry):
 ⚠ .mise.toml                                        starter-customize  local-missing (project may not use mise)
 ✗ .claude/skills/stacked-prs/SKILL.md               framework-track    drift-needs-adopt: 3 hunks
 ✗ .claude/skills/sandbox-playwright/                retired            retired: delete
+✗ .devcontainer/claude-sandbox/docker-compose.yml   starter-customize  security: no read-only .devcontainer mount (#289)
 ```
 
 Audit is read-only. Don't apply edits in this phase.
@@ -278,33 +299,35 @@ blocks unattended posts to external systems, correctly.
 
 ## Workflow 4: Self-update
 
-Check whether this skill itself is up to date.
+Check whether this skill itself is up to date. Compare the content, not
+only `version:`: an upstream edit that forgot to bump the version must
+still show up.
 
-1. Fetch upstream's frontmatter:
+1. Fetch upstream's copy and diff it against this file:
    ```sh
-   curl -sSL "https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md" \
-     | head -30
+   curl -fsSL "https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md" \
+     -o /tmp/upstream-skill.md
+   diff -u .claude/skills/devcontainer-upstream-sync/SKILL.md /tmp/upstream-skill.md
    ```
-2. Extract `version:` from upstream and compare to the local file's
-   `version:` (this file's frontmatter).
-3. If versions match → done.
-4. If upstream is newer:
-   - Fetch the full upstream SKILL.md to a temp path.
-   - `diff -u .claude/skills/devcontainer-upstream-sync/SKILL.md /tmp/upstream-skill.md`
-   - Show the diff to the user.
-   - On accept: overwrite the local file. **Do not auto-overwrite.**
-5. If local is newer (e.g. the user is working on a future version):
-   report; do nothing.
+2. If the diff is empty → up to date, done.
+3. Otherwise compare the two `version:` values:
+   - **Upstream is newer** → show the diff.
+   - **Versions match** → report `drift: same version, different content`
+     and show the diff. Either upstream changed without a bump, or
+     someone edited the local copy; the diff tells which.
+   - **Local is newer** (e.g. the user is working on a future version) →
+     report; do nothing.
+4. On accept, overwrite the local file with `/tmp/upstream-skill.md`.
+   **Do not auto-overwrite.**
 
 ## One-time install (for new projects)
 
-For a new downstream project to adopt this skill, paste these three
-lines once:
+For a new downstream project to adopt this skill, paste these lines
+once:
 
 ```sh
-mkdir -p .claude/skills/devcontainer-upstream-sync
-curl -sSL https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md \
-  > .claude/skills/devcontainer-upstream-sync/SKILL.md
+curl -fsSL --create-dirs -o .claude/skills/devcontainer-upstream-sync/SKILL.md \
+  https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md
 git add .claude/skills/devcontainer-upstream-sync/SKILL.md
 ```
 
