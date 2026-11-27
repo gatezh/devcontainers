@@ -87,6 +87,7 @@ printenv CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION | grep -qx false
 
 # ── Git ─────────────────────────────────────────────────────────────────────
 git config --system --get-all safe.directory | grep -qx /workspace
+git config --system --get-all safe.directory | grep -qxF '/workspace/*'
 
 # ── Shell ───────────────────────────────────────────────────────────────────
 zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k

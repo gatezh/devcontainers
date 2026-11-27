@@ -160,8 +160,10 @@ RUN ARCH=$(dpkg --print-architecture) \
 
 # Trust the bind-mounted /workspace in /etc/gitconfig, which every git process reads.
 # A GIT_CONFIG_* env var is stripped by tools that filter env, e.g. Hugo, whose
-# security.exec.osEnv allowlist has no GIT_* pattern (#211).
-RUN git config --system --add safe.directory /workspace
+# security.exec.osEnv allowlist has no GIT_* pattern (#211). `/*` (git 2.46+) covers
+# worktrees and nested repos under it, but not /workspace itself (#253).
+RUN git config --system --add safe.directory /workspace \
+  && git config --system --add safe.directory '/workspace/*'
 
 # ── Non-root user setup ──────────────────────────────────────────────────────
 USER node
