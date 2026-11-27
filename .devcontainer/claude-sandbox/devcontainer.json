@@ -63,7 +63,7 @@
     "TZ": "${localEnv:TZ:America/Edmonton}",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "NODE_OPTIONS": "--max-old-space-size=4096",
-    // Sandbox blocks OAuth login — inject token from host
+    // Token from host: it can only make model requests, unlike a login stored in ~/.claude
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}"
   },
   // Plugins before firewall (network still open during postCreateCommand)
