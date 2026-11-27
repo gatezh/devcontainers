@@ -74,12 +74,12 @@ for plugin in "${PLUGINS[@]}"; do
     fi
 done
 
-# ── Retired plugins ─────────────────────────────────────────────────────────
-# Not installed above, but a persistent ~/.claude volume may still hold them from
-# an older run — disable if enabled.
+# ── Conflicting plugins ─────────────────────────────────────────────────────
+# Plugins that claim the same file extensions as one in PLUGINS: Claude Code
+# starts only whichever registers first. Not installed above, but a persistent
+# ~/.claude volume may still hold them from an older run — disable if enabled.
 DISABLED_PLUGINS=(
-    "typescript-lsp@claude-plugins-official"   # claims .ts with typescript-native-lsp; only one starts
-    "superpowers@claude-plugins-official"      # session-start "MUST invoke a skill" block overconstrains Claude 5 models (#292)
+    "typescript-lsp@claude-plugins-official"   # superseded by typescript-native-lsp
 )
 
 for plugin in "${DISABLED_PLUGINS[@]}"; do
