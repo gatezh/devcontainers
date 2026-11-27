@@ -99,7 +99,7 @@ Copy these to your project's `.devcontainer/`:
 
 Copy these to your project's `.devcontainer/claude-sandbox/`:
 
-- [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference
+- [`.devcontainer/claude-sandbox/docker-compose.yml`](.devcontainer/claude-sandbox/docker-compose.yml) — sandbox image reference and the read-only `.devcontainer/` mount
 - [`.devcontainer/claude-sandbox/devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json) — full config with `NET_ADMIN`/`NET_RAW` capabilities, Claude Dark theme, `claudeCode.allowDangerouslySkipPermissions`, node_modules volume isolation, and `CLAUDE_CODE_OAUTH_TOKEN` injection
 - [`.devcontainer/claude-sandbox/allowed-domains.txt`](.devcontainer/claude-sandbox/allowed-domains.txt) — extra domains for the firewall (optional)
 
@@ -179,7 +179,9 @@ api.cloudflare.com
 dash.cloudflare.com
 ```
 
-**Why the script is in the image:** Claude Code in the sandbox runs with permission prompts skipped, so the agent mustn't be able to turn the firewall off. In the sandbox, `node` can run only `init-firewall` and `chown-volumes` with sudo, both root-owned and without arguments. A second run of `init-firewall` refuses to touch an active firewall, so allowlist edits apply on the next container start, and you'll see them in `git diff` first. The default variant keeps passwordless sudo ([#208](https://github.com/gatezh/devcontainers/issues/208)).
+**Shared CDN addresses:** the firewall allows the IP addresses a domain resolves to, not the domain. A host behind a shared CDN such as Cloudflare shares its addresses with unrelated sites, so allowing it also lets the agent reach other sites the CDN serves from those addresses. Add only the hosts the project needs ([#296](https://github.com/gatezh/devcontainers/issues/296)).
+
+**Why the script is in the image:** Claude Code in the sandbox runs with permission prompts skipped, so the agent mustn't be able to turn the firewall off. In the sandbox, `node` can run only `init-firewall` and `chown-volumes` with sudo, both root-owned and without arguments. A second run of `init-firewall` refuses to touch an active firewall, and the sandbox mounts `.devcontainer/` read-only, so the agent can't edit the allowlist: change it on the host, and it applies on the next container start ([Host files the sandbox can write](#host-files-the-sandbox-can-write)). The default variant keeps passwordless sudo ([#208](https://github.com/gatezh/devcontainers/issues/208)).
 
 **Upgrading from a project `init-firewall.sh`:** the image no longer runs a bind-mounted script, and sudo refuses `/usr/local/bin/init-firewall.sh`. Copy the domains your script adds beyond the defaults into `allowed-domains.txt`. Then delete the script and its bind mount, and update `postCreateCommand` and `postStartCommand` from the template's [`devcontainer.json`](.devcontainer/claude-sandbox/devcontainer.json).
 
@@ -351,7 +353,26 @@ The sandbox exists to contain Claude Code running with permission prompts skippe
 - **Shell history** holds whatever you typed in the default variant, including tokens pasted on a command line.
 - **`node_modules`** in the default variant can be symlinks into `bun-global-store`, which the sandbox doesn't mount.
 
-`/workspace` is still shared, but edits there show in `git diff`, and a project's settings can't turn on bypass mode.
+`/workspace` is still shared, and a project's settings can't turn on bypass mode. [Host files the sandbox can write](#host-files-the-sandbox-can-write) covers what the shared workspace leaves open.
+
+### Host files the sandbox can write
+
+The sandbox bind-mounts your repository read-write at `/workspace`, so the agent's edits land on your disk. Edits to tracked files show in `git diff`. `.devcontainer/` is mounted read-only on top ([#289](https://github.com/gatezh/devcontainers/issues/289)), because a change there takes effect before you'd review it: the host runs `initializeCommand` at the next start, and the firewall reads `allowed-domains.txt`. Edit the devcontainer config, and run the [upstream-sync skill](#recommended-claude-code-skill-for-upstream-sync), on the host or in the default variant.
+
+Git in the sandbox can't write `.devcontainer/` either. A merge, pull or branch switch that changes a file there fails, or leaves stale files that show as modified. Run those on the host, and don't commit `.devcontainer/` changes from the sandbox.
+
+The mount doesn't cover files that `git diff` doesn't show, and the host runs some of those too:
+
+- **`.git/config` and `.git/hooks/`.** A `core.fsmonitor` command in `.git/config` runs on your next `git status`, which VS Code on the host runs by itself when it opens the folder. `core.hooksPath`, `core.sshCommand`, aliases and hooks run on later git commands.
+- **Ignored files**, such as `.claude/settings.local.json`, whose hooks and `allow` rules Claude Code on the host applies, or husky's `.husky/_/`. The agent can also hide a new file by listing it in `.git/info/exclude`.
+
+Git can't protect you from a repository's own config. `safe.directory` refuses only repositories owned by another user, and files the sandbox writes are owned by you on the host. [Protected configuration](https://git-scm.com/docs/git-config#SCOPES), which a repository can't override, covers only `safe.directory`, `safe.bareRepository` and `uploadpack.packObjectsHook`. A read-only `.git/config` in the sandbox would break `git push -u`, `gh pr checkout`, and workspaces that are git worktrees, where `.git` is a file. So after a sandbox session, check these before you run git, VS Code or Claude Code on the host in that folder:
+
+```bash
+cat .git/config                      # core.fsmonitor, core.hooksPath, core.sshCommand, aliases
+ls .git/hooks | grep -v '\.sample$'
+git status --ignored                 # runs core.fsmonitor, so check .git/config first
+```
 
 ### Shared Bun store
 
