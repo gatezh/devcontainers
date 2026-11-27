@@ -413,9 +413,11 @@ To check what git sees, run `git config --show-scope --get-regexp 'safe|insteado
 
 The official `github` plugin isn't in the template's `init-plugins.sh`. To use it, add `"github@claude-plugins-official"` to `PLUGINS`. Its MCP server sends `Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}` and has no OAuth fallback, so with the variable unset every request fails with HTTP 400 (`Authorization header is badly formatted`).
 
-The image fills the variable in from the `gh` login, so you don't create a personal access token. `~/.zshrc` and `~/.bashrc` source `/etc/profile.d/github-mcp-token.sh`. VS Code's user environment probe starts a login-interactive shell, which carries the export into the Claude Code extension as well as every terminal. A token already in the environment wins, in this order: `GITHUB_PERSONAL_ACCESS_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`. An empty value, as `${localEnv:...}` gives for an unset host variable, counts as unset. With no token and no `gh` login, the script exports nothing.
+The image fills the variable in from the `gh` login, so you don't create a personal access token. `~/.zshrc` and `~/.bashrc` source `/etc/profile.d/github-mcp-token.sh`, which runs `gh auth token`. VS Code's user environment probe starts a login-interactive shell, which carries the export into the Claude Code extension as well as every terminal. A token already in the environment wins, in this order: `GITHUB_PERSONAL_ACCESS_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`. An empty value, as `${localEnv:...}` gives for an unset host variable, counts as unset. With no token and no `gh` login, the script exports nothing.
 
-- **Default variant:** run `gh auth login` once (see above). If the extension started before you signed in, reload the window.
+The token is then in the environment of every process the shell or the extension starts, including the agent's Bash tool and any MCP server a project's `.mcp.json` adds once you approve it. Anything running as `node` can already read the `gh` login, so this adds little, but don't approve project MCP servers you don't trust.
+
+- **Default variant:** run `gh auth login` once (see above). The value is read when a shell starts, so after you sign in or change the token, reload the window.
 - **Sandbox:** add `api.githubcopilot.com` to `allowed-domains.txt`. The GitHub IP ranges the firewall allows don't cover it. The token is the sandbox's own `gh` login, the fine-grained one scoped to the project's repository, so the MCP server gets only what that token allows.
 
 ## Playwright Strategy
