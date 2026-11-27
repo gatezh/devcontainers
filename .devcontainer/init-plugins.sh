@@ -64,4 +64,11 @@ if [ -f "$SETTINGS" ] && grep -q 'rtk' "$SETTINGS"; then
     jq 'if .hooks.PreToolUse then .hooks.PreToolUse |= (map(.hooks |= map(select((.command // "") | test("(^|/)rtk hook claude$|rtk-rewrite\\.sh") | not))) | map(select(.hooks | length > 0))) else . end' "$SETTINGS" > "$SETTINGS.tmp" && mv "$SETTINGS.tmp" "$SETTINGS"
 fi
 
+# ── superpowers removed (#292): uninstall the copy earlier runs installed ──
+# Transitional: delete this block after 2027-02-28.
+if claude plugin list --json 2>/dev/null \
+    | jq -e 'any(.[]; .id == "superpowers@claude-plugins-official")' >/dev/null; then
+    claude plugin uninstall superpowers@claude-plugins-official || echo "Note: superpowers uninstall failed"
+fi
+
 echo "=== Plugin initialization complete ==="
