@@ -246,7 +246,7 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). Signing in inside the sandbox doesn't work either: the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it through an environment variable instead.
+**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). You could sign in inside the sandbox, since the firewall allows Claude Code's sign-in hosts, but that stores a full claude.ai login in `~/.claude`, where the agent, running with permission prompts skipped, can read it. Generate a token on the host and inject it through an environment variable instead: a [`setup-token`](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token) token can only make model requests.
 
 When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. Claude Code then falls back to any credentials already on the sandbox's own `~/.claude` volume.
 

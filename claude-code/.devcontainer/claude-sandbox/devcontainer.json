@@ -125,9 +125,9 @@
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
-    // Signs the sandbox in: it shares no volumes with the default variant, and the firewall
-    // blocks the browser login. Resolves to "" when the host var is
-    // unset. See "Sandbox Authentication" section in README.
+    // Signs the sandbox in with a token that can only make model requests, not a full login
+    // the agent could read from ~/.claude. Resolves to "" when the host var is unset.
+    // See "Sandbox Authentication" section in README.
     "CLAUDE_CODE_OAUTH_TOKEN": "${localEnv:CLAUDE_CODE_OAUTH_TOKEN}",
     // Git config for every process, outranking the ~/.gitconfig the extension copies in:
     // send git@github.com: remotes over HTTPS, and authenticate github.com only through gh
