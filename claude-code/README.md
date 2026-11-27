@@ -232,7 +232,7 @@ Then resolve the `TODO(@cloudflare)` comments it leaves: Durable Object migratio
 
 ### Recommended: Claude Code skill for upstream sync
 
-To keep your project's `.devcontainer/` and bundled `.claude/skills/` in step with this repo, copy the [devcontainer-upstream-sync](.claude/skills/devcontainer-upstream-sync/SKILL.md) skill into your project's `.claude/skills/` directory. The skill audits drift, helps adopt missed changes, drafts upstream issues for shared bugs, and self-updates when this skill's `version:` bumps.
+To keep your project's `.devcontainer/` and bundled `.claude/skills/` in step with this repo, copy the [devcontainer-upstream-sync](.claude/skills/devcontainer-upstream-sync/SKILL.md) skill into your project's `.claude/skills/` directory. The skill audits drift, helps adopt missed changes, drafts upstream issues for shared bugs, and self-updates whenever upstream's copy of the skill changes.
 
 ```bash
 mkdir -p .claude/skills/devcontainer-upstream-sync
