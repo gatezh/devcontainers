@@ -63,8 +63,7 @@ The container implements a **default-deny firewall policy** that only allows con
 | GitHub (web, API, git) | Version control, package downloads |
 | npm registry | Package installation |
 | Anthropic API | Claude Code functionality |
-| Sentry | Error reporting |
-| Statsig | Feature flags |
+| Claude sign-in and downloads | OAuth token exchange and refresh, account auth, plugin executables |
 | VS Code services | Extension marketplace, updates |
 
 All other outbound network connections are blocked.

@@ -173,7 +173,7 @@ To remove a plugin in your project, delete its entry from the local `init-plugin
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/allowed-domains.txt`
 
-The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
+The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, Claude Code's sign-in and plugin-download hosts (`platform.claude.com`, `claude.ai`, `downloads.claude.ai`), the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
 
 To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down, and if setup itself fails partway (say, GitHub's IP list can't be fetched), the firewall closes the network rather than leaving it open: restart the container to retry. Allowlisted hosts are reachable on every port, SSH included; nothing else is, and IPv6 gets loopback only.
 
@@ -250,7 +250,7 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). Signing in inside the sandbox doesn't work either: the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it through an environment variable instead.
+**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). You could sign in inside the sandbox, since the firewall allows Claude Code's sign-in hosts, but that stores a full claude.ai login in `~/.claude`, where the agent, running with permission prompts skipped, can read it. Generate a token on the host and inject it through an environment variable instead: a [`setup-token`](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token) token can only make model requests.
 
 When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. Claude Code then falls back to any credentials already on the sandbox's own `~/.claude` volume.
 
