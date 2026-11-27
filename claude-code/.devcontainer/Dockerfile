@@ -15,7 +15,7 @@
 # An ARG joins the cache key of every later RUN, so declaring it earlier would
 # rebuild Chromium on each Claude Code release.
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.325
+ARG CLAUDE_CODE_VERSION=2.1.332
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -84,7 +84,7 @@ FROM koalaman/shellcheck:v${SHELLCHECK_VERSION} AS shellcheck
 FROM node:24-trixie-slim AS base
 
 # renovate: datasource=github-releases depName=cli/cli
-ARG GH_VERSION=2.103.3
+ARG GH_VERSION=2.105.0
 
 # System packages shared by all targets
 # - ca-certificates: SSL/TLS for HTTPS connections
@@ -273,7 +273,7 @@ COPY --from=shellcheck /bin/shellcheck /usr/local/bin/shellcheck
 # bundled workerd (133 MB) goes: `cf dev`/--local run the project's own cf copy.
 # Completion is installed the documented way; it queries cf, so upgrades don't stale it.
 # renovate: datasource=npm depName=cf
-ARG CF_VERSION=1.0.0-beta.30
+ARG CF_VERSION=1.0.0-rc.5
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache --ignore-scripts cf@${CF_VERSION} \
   && rm -rf /usr/local/share/npm-global/lib/node_modules/cf/node_modules/@cloudflare/workerd-linux-* \
@@ -304,7 +304,7 @@ RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
 # `agent-browser` link targets agent-browser-linux-<arch> directly, so the other
 # six are deleted. Rebuilt on each Claude Code bump (ARG above) — a small layer.
 # renovate: datasource=npm depName=agent-browser
-ARG AGENT_BROWSER_VERSION=0.42.0
+ARG AGENT_BROWSER_VERSION=0.44.0
 RUN --mount=type=cache,target=/tmp/npm-cache,uid=1000,gid=1000 \
     npm install -g --cache /tmp/npm-cache agent-browser@${AGENT_BROWSER_VERSION} \
   && find /usr/local/share/npm-global/lib/node_modules/agent-browser/bin \

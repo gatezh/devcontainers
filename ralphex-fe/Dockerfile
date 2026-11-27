@@ -1,11 +1,11 @@
 # renovate: datasource=npm depName=bun
-ARG BUN_VERSION=1.4.4
+ARG BUN_VERSION=1.4.5
 # renovate: datasource=github-tags depName=docker/cli
-ARG DOCKER_VERSION=29.9.3
+ARG DOCKER_VERSION=29.10.0
 # renovate: datasource=golang-version depName=go
 ARG GO_VERSION=1.27.4
 # renovate: datasource=github-releases depName=gohugoio/hugo
-ARG HUGO_VERSION=0.169.0
+ARG HUGO_VERSION=0.170.1
 # Base of the download stages only; no final image is built on it.
 # renovate: datasource=docker depName=alpine
 ARG ALPINE_VERSION=3.24
@@ -163,7 +163,7 @@ WORKDIR /workspace
 # See: claude-code/.devcontainer/Dockerfile for rationale.
 # Version pinned and kept up to date by Renovate (see .github/renovate.json5).
 # renovate: datasource=npm depName=@anthropic-ai/claude-code
-ARG CLAUDE_CODE_VERSION=2.1.325
+ARG CLAUDE_CODE_VERSION=2.1.332
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
