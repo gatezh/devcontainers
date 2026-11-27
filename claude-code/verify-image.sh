@@ -51,7 +51,8 @@ jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
 jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
 jq -e '.extraKnownMarketplaces.cloudflare | .source.repo == "cloudflare/skills" and .autoUpdate == true' "$SETTINGS" >/dev/null
 jq -e '.extraKnownMarketplaces.googlechrome | .source.repo == "GoogleChrome/modern-web-guidance" and .autoUpdate == true' "$SETTINGS" >/dev/null
-jq -e '[.extraKnownMarketplaces | keys[]] - ["gatezh", "cloudflare", "googlechrome"] == []' "$SETTINGS" >/dev/null
+# Only reviewed marketplaces may auto-update (#248)
+jq -e '[.extraKnownMarketplaces | to_entries[] | select(.value.autoUpdate == true) | .key] - ["gatezh", "cloudflare", "googlechrome"] == []' "$SETTINGS" >/dev/null
 
 # ── Managed skills ──────────────────────────────────────────────────────────
 AUDIT_SKILL=/etc/claude-code/.claude/skills/security-audit
