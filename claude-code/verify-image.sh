@@ -48,7 +48,35 @@ jq -r '.claudeMd' "$SETTINGS" | grep -q devcontainer-browser
 jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
 jq -r '.extraKnownMarketplaces.gatezh.source.url' "$SETTINGS" | grep -qx https://github.com/gatezh/claude-skills.git
 jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
+jq -e '.enabledPlugins["superpowers@claude-plugins-official"] == false' "$SETTINGS" >/dev/null
 jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
+jq -e '.extraKnownMarketplaces.cloudflare | .source.repo == "cloudflare/skills" and .autoUpdate == true' "$SETTINGS" >/dev/null
+jq -e '.extraKnownMarketplaces.googlechrome | .source.repo == "GoogleChrome/modern-web-guidance" and .autoUpdate == true' "$SETTINGS" >/dev/null
+# Only reviewed marketplaces may auto-update (#248)
+jq -e '[.extraKnownMarketplaces | to_entries[] | select(.value.autoUpdate == true) | .key] - ["gatezh", "cloudflare", "googlechrome"] == []' "$SETTINGS" >/dev/null
+printenv CLAUDE_CODE_SHELL | grep -qx /bin/bash
+test -x /bin/bash
+jq -r '.claudeMd' "$SETTINGS" | grep -qF 'src/<repo>'
+test -x /usr/local/bin/prune-claude-disk
+jq -r '.hooks.SessionStart[].hooks[].command' "$SETTINGS" | grep -qx /usr/local/bin/prune-claude-disk
+# prune-claude-disk in a throwaway HOME and temp root: deletes a stale clean scratchpad,
+# keeps a stale one whose only commit is on a detached HEAD and a recent one, prints JSON.
+PRUNE=$(mktemp -d)
+SESSIONS="$PRUNE/claude-$(id -u)/-verify"
+CLEAN="$SESSIONS/00000000-0000-0000-0000-000000000001"
+DETACHED="$SESSIONS/00000000-0000-0000-0000-000000000002"
+RECENT="$SESSIONS/00000000-0000-0000-0000-000000000003"
+mkdir -p "$CLEAN/scratchpad" "$DETACHED/scratchpad/repo"
+git -C "$DETACHED/scratchpad/repo" init -q -b wip
+git -C "$DETACHED/scratchpad/repo" -c user.name=v -c user.email=v@v commit -q --allow-empty -m wip
+git -C "$DETACHED/scratchpad/repo" checkout -q --detach
+git -C "$DETACHED/scratchpad/repo" branch -q -D wip
+find "$PRUNE" -exec touch -h -d '3 days ago' {} +
+mkdir -p "$RECENT/scratchpad"
+echo '{}' | HOME="$PRUNE" CLAUDE_CONFIG_DIR="$PRUNE/.claude" CLAUDE_CODE_TMPDIR="$PRUNE" \
+  /usr/local/bin/prune-claude-disk | jq -e '.systemMessage | contains("unpushed git work")' >/dev/null
+test ! -e "$CLEAN" && test -d "$DETACHED" && test -d "$RECENT"
+rm -rf "$PRUNE"
 
 # ── Managed skills ──────────────────────────────────────────────────────────
 AUDIT_SKILL=/etc/claude-code/.claude/skills/security-audit
