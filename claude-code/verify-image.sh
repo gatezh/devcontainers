@@ -91,6 +91,12 @@ git config --system --get-all safe.directory | grep -qx /workspace
 # ── Shell ───────────────────────────────────────────────────────────────────
 zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k
 zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))'
+# GitHub MCP credential (#118): both rc files wire it, an injected token wins, and
+# with no gh login nothing is exported (a bare "Bearer " is a 400).
+test "$(env -u GITHUB_PERSONAL_ACCESS_TOKEN GH_TOKEN=injected zsh -ic 'printf %s "$GITHUB_PERSONAL_ACCESS_TOKEN"')" = injected
+test "$(env -u GITHUB_PERSONAL_ACCESS_TOKEN GH_TOKEN=injected bash -ic 'printf %s "$GITHUB_PERSONAL_ACCESS_TOKEN"' 2>/dev/null)" = injected
+test "$(env -u GITHUB_PERSONAL_ACCESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR="$(mktemp -d)" \
+    sh -c '. /etc/profile.d/github-mcp-token.sh; printf %s "${GITHUB_PERSONAL_ACCESS_TOKEN-unset}"')" = unset
 
 # ── Volume mount points owned by node ───────────────────────────────────────
 for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/cloudflare /home/node/.bun/install/cache; do
