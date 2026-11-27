@@ -137,12 +137,12 @@ When adopting an upstream change, preserve these per-project patterns:
 Walk the manifest, fetch each upstream file, diff, classify, report.
 
 ```sh
-# Per-row commands (run for each manifest row):
-curl -sSL "https://raw.githubusercontent.com/gatezh/devcontainers/master/${UPSTREAM_PATH}" -o /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream
+# Per-row commands (run for each manifest row). The full path keeps the three SKILL.md rows apart.
+curl -fsSL --create-dirs "https://raw.githubusercontent.com/gatezh/devcontainers/master/${UPSTREAM_PATH}" -o "/tmp/upstream-sync/${UPSTREAM_PATH}"
 if [ ! -e "${LOCAL_PATH}" ]; then
   echo "LOCAL_MISSING"
 else
-  diff -u "${LOCAL_PATH}" /tmp/upstream-sync/$(basename "${UPSTREAM_PATH}").upstream || true
+  diff -u "${LOCAL_PATH}" "/tmp/upstream-sync/${UPSTREAM_PATH}" || true
 fi
 ```
 
