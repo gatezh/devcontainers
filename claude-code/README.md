@@ -25,7 +25,7 @@ Projects consume these pre-built images and control their own tool versions via 
 | actionlint, shellcheck | Pinned `ARG`s, bumped by Renovate on each GitHub release | GitHub Actions workflow linting; actionlint checks `run:` scripts only when shellcheck is on `PATH` |
 | Claude Code | npm global install | npm avoids rate limiting that affects the native installer in parallel CI builds |
 
-**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), Cloudflare's `security-audit` skill (see [Built in: security-audit skill](#built-in-security-audit-skill)), and `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run
+**Both targets:** system Chromium + `fonts-freefont-ttf` at `/usr/bin/chromium`, [agent-browser](https://github.com/vercel-labs/agent-browser) (the default browser tool for agents), the `devcontainer-browser` skill (see [Built in: browser skill](#built-in-browser-skill)), Cloudflare's `security-audit` skill (see [Built in: security-audit skill](#built-in-security-audit-skill)), `/usr/local/sbin/chown-volumes`, the volume-ownership safety net both templates run, and `/etc/profile.d/github-mcp-token.sh`, which gives the GitHub MCP server the `gh` login's token (see [GitHub MCP server](#github-mcp-server))
 
 **Default-only:** passwordless sudo
 
@@ -427,6 +427,17 @@ The image itself trusts `/workspace` in `/etc/gitconfig` (`safe.directory`). Doc
 **One-time setup:** run `gh auth login` in the default variant. The login lives on its `myproject-gh-config-*` volume, so it survives rebuilds. The sandbox has its own volume ([why](#why-the-variants-dont-share-volumes)): there, sign in with a [fine-grained token](https://github.com/settings/personal-access-tokens) limited to the project's repository (run `gh auth login --with-token`, paste the token, and press Ctrl-D; don't save it to a file under `/workspace`, which is your host repo). After that, fetch, pull and push work from the terminal and from VS Code for both `https://github.com/` and `git@github.com:` remotes.
 
 To check what git sees, run `git config --show-scope --get-regexp 'safe|insteadof|credential'`. The table's entries are listed with scope `command` and `safe.directory` with scope `system`. To add your own entries, append `GIT_CONFIG_KEY_3` / `GIT_CONFIG_VALUE_3` and so on, and raise `GIT_CONFIG_COUNT` to match.
+
+### GitHub MCP server
+
+The official `github` plugin isn't in the template's `init-plugins.sh`. To use it, add `"github@claude-plugins-official"` to `PLUGINS`. Its MCP server sends `Authorization: Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}` and has no OAuth fallback, so with the variable unset every request fails with HTTP 400 (`Authorization header is badly formatted`).
+
+The image fills the variable in from the `gh` login, so you don't create a personal access token. `~/.zshrc` and `~/.bashrc` source `/etc/profile.d/github-mcp-token.sh`, which runs `gh auth token`. VS Code's user environment probe starts a login-interactive shell, which carries the export into the Claude Code extension as well as every terminal. A token already in the environment wins, in this order: `GITHUB_PERSONAL_ACCESS_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`. An empty value, as `${localEnv:...}` gives for an unset host variable, counts as unset. With no token and no `gh` login, the script exports nothing.
+
+The token is then in the environment of every process the shell or the extension starts, including the agent's Bash tool and any MCP server a project's `.mcp.json` adds once you approve it. Anything running as `node` can already read the `gh` login, so this adds little, but don't approve project MCP servers you don't trust.
+
+- **Default variant:** run `gh auth login` once (see above). The value is read when a shell starts, so after you sign in or change the token, reload the window.
+- **Sandbox:** add `api.githubcopilot.com` to `allowed-domains.txt`. The GitHub IP ranges the firewall allows don't cover it. The token is the sandbox's own `gh` login, the fine-grained one scoped to the project's repository, so the MCP server gets only what that token allows.
 
 ## Playwright Strategy
 

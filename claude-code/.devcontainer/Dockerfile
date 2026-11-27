@@ -340,7 +340,13 @@ COPY --chmod=0755 patch-playwright-mcp.sh /usr/local/bin/patch-playwright-mcp
 # Volume-ownership safety net both templates run through sudo; in the sandbox it's
 # one of the only two commands sudo allows (#208).
 COPY --chown=root:root --chmod=0755 chown-volumes.sh /usr/local/sbin/chown-volumes
+# GitHub MCP credential from the gh login (#118). zsh never reads /etc/profile.d,
+# and terminals are non-login shells, so both rc files source it.
+COPY --chown=root:root --chmod=0644 github-mcp-token.sh /etc/profile.d/github-mcp-token.sh
 USER node
+RUN for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do \
+      printf '\n. /etc/profile.d/github-mcp-token.sh\n' >> "$rc"; \
+    done
 # Claude Code's Bash tool runs bash; the terminal stays zsh. An image ENV, not managed
 # env, so a settings `env` or containerEnv can switch it back.
 ENV CLAUDE_CODE_SHELL=/bin/bash

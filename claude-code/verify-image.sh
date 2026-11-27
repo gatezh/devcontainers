@@ -119,6 +119,18 @@ git config --system --get-all safe.directory | grep -qx /workspace
 # ── Shell ───────────────────────────────────────────────────────────────────
 zsh -ic 'typeset -p ZSH_THEME' | grep -q powerlevel10k/powerlevel10k
 zsh -ic '(( $+_comps[gh] && $+_comps[cf] ))'
+# GitHub MCP credential (#118): both rc files export the gh login's token, and with
+# no login nothing is exported (a bare "Bearer " is a 400).
+GH_TEST_CONFIG=$(mktemp -d)
+printf 'github.com:\n    oauth_token: from-login\n' > "$GH_TEST_CONFIG/hosts.yml"
+for sh in zsh bash; do
+    env -u GITHUB_PERSONAL_ACCESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR="$GH_TEST_CONFIG" \
+        "$sh" -ic 'printenv GITHUB_PERSONAL_ACCESS_TOKEN' 2>/dev/null | grep -qx from-login
+done
+if env -u GITHUB_PERSONAL_ACCESS_TOKEN -u GH_TOKEN -u GITHUB_TOKEN GH_CONFIG_DIR="$(mktemp -d)" \
+    sh -c '. /etc/profile.d/github-mcp-token.sh; env' | grep -q '^GITHUB_PERSONAL_ACCESS_TOKEN='; then
+    echo "github-mcp-token: exported a token with no gh login" >&2; exit 1
+fi
 
 # ── Volume mount points owned by node ───────────────────────────────────────
 for dir in /home/node/.local/share /home/node/.config/gh /home/node/.config/cloudflare /home/node/.bun/install/cache; do
