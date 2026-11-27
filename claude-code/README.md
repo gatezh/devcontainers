@@ -39,7 +39,7 @@ Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp rem
 
 ### claude.ai connectors are off
 
-Both `devcontainer.json` templates set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in `containerEnv`, so Claude Code doesn't fetch the [connectors](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claude-ai) on your claude.ai account (Gmail, Drive and the like). A project container gets MCP servers from its plugins and the image's managed settings only. To get your connectors back in one project, delete that line and rebuild. It's in the template rather than the image's managed settings because a managed `disableClaudeAiConnectors: true` can't be overridden by any project.
+Both `devcontainer.json` templates set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in `containerEnv`, so Claude Code doesn't fetch the [connectors](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claude-ai) on your claude.ai account: none of them, from Gmail or Drive to Anthropic's own Claude Docs. MCP servers from plugins, the project's `.mcp.json` and the image's managed settings still load. To get your connectors back in one project, delete that line and rebuild. It's an env var in the template, not the native `disableClaudeAiConnectors` setting: in the image's managed settings, no project could turn it back off, and in the project's `.claude/settings.json` it would also apply to Claude Code on the host.
 
 ### Personal skills plugin
 
