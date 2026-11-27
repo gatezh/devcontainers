@@ -131,6 +131,12 @@ When adopting an upstream change, preserve these per-project patterns:
   and `curl -sSL <raw-url>` for plain file fetches.
 - All workflows are read-only by default. Apply changes only after
   showing the diff to the user.
+- Run the sync on the host or in the default variant. The sandbox
+  mounts `.devcontainer/` read-only (#289), so Workflow 2 can't write
+  there. Check first with `test -w .devcontainer`: if it fails, run the
+  audit, report the `.devcontainer/` rows that need action, and tell
+  the user to adopt them on the host. Don't start edits that would fail
+  halfway.
 
 ## Workflow 1: Audit
 
@@ -161,6 +167,18 @@ Classification rules per row:
   - **template-divergence**. Show the diff in the report; do not adopt
     automatically.
 
+Security findings, reported whatever the row's verdict:
+
+- `.devcontainer/claude-sandbox/docker-compose.yml` lacks upstream's
+  read-only `.devcontainer` mount
+  (`- ../../.devcontainer:/workspace/.devcontainer:ro`) → **security**:
+  the sandboxed agent can edit the devcontainer config and firewall
+  allowlist, which the host runs at the next start (#289, README "Host
+  files the sandbox can write"). The file is starter-customize, so
+  surface the line and ask; don't add it automatically.
+- The sandbox shares the default variant's volumes → **security** (see
+  §"Customization-preservation rules", rule 1).
+
 Report format (one row per manifest entry):
 
 ```
@@ -170,6 +188,7 @@ Report format (one row per manifest entry):
 ⚠ .mise.toml                                        starter-customize  local-missing (project may not use mise)
 ✗ .claude/skills/stacked-prs/SKILL.md               framework-track    drift-needs-adopt: 3 hunks
 ✗ .claude/skills/sandbox-playwright/                retired            retired: delete
+✗ .devcontainer/claude-sandbox/docker-compose.yml   starter-customize  security: no read-only .devcontainer mount (#289)
 ```
 
 Audit is read-only. Don't apply edits in this phase.
