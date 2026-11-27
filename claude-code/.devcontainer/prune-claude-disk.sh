@@ -43,6 +43,7 @@ has_unsaved_work() {
 remove() {
   local kb
   kb=$(du -sk "$1" 2>/dev/null | cut -f1)
+  chmod -R u+w "$1" 2>/dev/null # read-only trees, such as Go's module cache
   rm -rf "$1" && freed=$((freed + ${kb:-0}))
 }
 
@@ -80,15 +81,16 @@ for dir in "$root"/*/*/; do
   remove_session "$dir"
 done
 
-cache=$(npm config get cache 2>/dev/null) || cache="$HOME/.npm"
+cache=$(npm config get cache --logs-max=0 2>/dev/null) || cache="$HOME/.npm"
 if [ -d "$cache/_npx" ]; then
-  # npx bumps an entry's mtime on each use; skip one a running `npm exec <pkg>` uses.
+  # npx bumps an entry's mtime on each use; skip one a running `npm exec <pkg|bin>` uses.
   running=$(for f in /proc/[0-9]*/cmdline; do tr '\0' ' ' <"$f"; echo; done 2>/dev/null |
     grep '^npm exec ')
   while IFS= read -r d; do
     while IFS= read -r pkg; do
       grep -qF " $pkg" <<<"$running" && continue 2
-    done < <(jq -r '.dependencies // {} | keys[]' "$d/package.json" 2>/dev/null)
+    done < <(jq -r '.dependencies // {} | keys[]' "$d/package.json" 2>/dev/null
+             find "$d/node_modules/.bin" -mindepth 1 -maxdepth 1 -printf '%f\n' 2>/dev/null)
     remove "$d"
   done < <(find "$cache/_npx" -mindepth 1 -maxdepth 1 -type d -mtime +"$NPX_DAYS")
 fi
