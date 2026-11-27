@@ -48,6 +48,7 @@ jq -r '.claudeMd' "$SETTINGS" | grep -q devcontainer-browser
 jq -r '.claudeMd' "$SETTINGS" | grep -q cloudflare.config.ts
 jq -r '.extraKnownMarketplaces.gatezh.source.url' "$SETTINGS" | grep -qx https://github.com/gatezh/claude-skills.git
 jq -e '.extraKnownMarketplaces.gatezh.autoUpdate == true' "$SETTINGS" >/dev/null
+jq -e '.enabledPlugins["superpowers@claude-plugins-official"] == false' "$SETTINGS" >/dev/null
 jq -e '.enabledPlugins["dev@gatezh"] == true' "$SETTINGS" >/dev/null
 jq -e '.extraKnownMarketplaces.cloudflare | .source.repo == "cloudflare/skills" and .autoUpdate == true' "$SETTINGS" >/dev/null
 jq -e '.extraKnownMarketplaces.googlechrome | .source.repo == "GoogleChrome/modern-web-guidance" and .autoUpdate == true' "$SETTINGS" >/dev/null

@@ -37,6 +37,10 @@ The image provides Mozilla's [MDN MCP server](https://developer.mozilla.org/en-U
 
 Requires Claude Code >= 2.1.259; earlier clients ignore the key. `claude mcp remove` refuses it, but each developer can turn it off for themselves in `/mcp` under **Managed MCPs**. The sandbox firewall allows `mcp.mdn.mozilla.net` by default.
 
+### claude.ai connectors are off
+
+Both `devcontainer.json` templates set `ENABLE_CLAUDEAI_MCP_SERVERS=false` in `containerEnv`, so Claude Code doesn't fetch the [connectors](https://code.claude.com/docs/en/mcp#use-mcp-servers-from-claude-ai) on your claude.ai account: none of them, from Gmail or Drive to Anthropic's own Claude Docs. MCP servers from plugins, the project's `.mcp.json` and the image's managed settings still load. To get your connectors back in one project, delete that line and rebuild. It's an env var in the template, not the native `disableClaudeAiConnectors` setting: in the image's managed settings, no project could get its connectors back, and in the project's `.claude/settings.json` it would also apply to Claude Code on the host.
+
 ### Personal skills plugin
 
 `extraKnownMarketplaces` and `enabledPlugins` in `/etc/claude-code/managed-settings.json` install the `dev` plugin from [gatezh/claude-skills](https://github.com/gatezh/claude-skills) at session start: `/dev:review`, `/dev:canonicalize` and `/dev:pr-description`. No per-project setup or `init-plugins.sh` entry. Auto-update is on, so a push to that repo reaches containers without an image rebuild: an interactive session checks for new commits at a random point up to ten minutes after its first message, and the new version loads at the next launch or after `/reload-plugins`. `claude -p` runs don't check.
@@ -144,7 +148,6 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `anthropics/claude-plugins-official` | `code-review` | Multi-agent PR review |
 | `anthropics/claude-plugins-official` | `code-simplifier` | Refactors for clarity and consistency |
 | `anthropics/claude-plugins-official` | `playwright` | Browser MCP (system chromium via the image's `PLAYWRIGHT_MCP_*` env vars) |
-| `anthropics/claude-plugins-official` | `superpowers` | Workflow skills (TDD, debugging, planning) |
 | `anthropics/claude-plugins-official` | `explanatory-output-style` | Educational output mode |
 | `anthropics/claude-plugins-official` | `claude-md-management` | Audits and updates CLAUDE.md |
 | `anthropics/claude-plugins-official` | `claude-code-setup` | Settings, permissions, automation helpers |
@@ -156,6 +159,8 @@ Mark as executable: `chmod +x init-plugins.sh`
 | `GoogleChrome/modern-web-guidance` | `modern-web-guidance` | Accessible, performant, secure modern web patterns ([docs](https://developer.chrome.com/docs/modern-web-guidance)) |
 | `AgriciDaniel/claude-seo` | `claude-seo` | SEO analysis toolkit — technical SEO, schema, E-E-A-T, GEO/AEO, Google APIs ([repo](https://github.com/AgriciDaniel/claude-seo)) |
 | `rubberduck-studio/typescript-native-lsp` | `typescript-native-lsp` | TypeScript/JavaScript LSP: TS 7's native server (`tsc --lsp`), falls back to `typescript-language-server` on TS 6 and older ([repo](https://github.com/rubberduck-studio/typescript-native-lsp)) |
+
+> **Why not `superpowers`:** its session-start hook injects a "you MUST invoke a skill" block into every session, which overconstrains Claude 5 models (#292). The image turns it off with `"superpowers@claude-plugins-official": false` under the managed `enabledPlugins`, so a persisted `~/.claude` volume stops loading it once the container runs the new image. A copy of `init-plugins.sh` that still lists it prints `⚠ Failed to install` or `⚠ Failed to update` for it (blocked by policy); delete the line. To keep it in one project, leave it in that project's `PLUGINS` and mount a managed settings drop-in containing `{ "enabledPlugins": { "superpowers@claude-plugins-official": true } }`, as for [the `dev` plugin](#personal-skills-plugin).
 
 > **Why not the official `typescript-lsp`:** it runs `typescript-language-server`, which wraps `tsserver`. TypeScript 7 (the native Go port) ships no `tsserver.js`, so on a TS 7 project the official plugin fails every request. `typescript-native-lsp` covers TS 7 and older versions in one plugin. The two must not be enabled together: when two plugins claim `.ts`, Claude Code starts only the first one it registers. That's why `init-plugins.sh` also disables `typescript-lsp` when a persisted `~/.claude` volume still has it (`DISABLED_PLUGINS`). TS 6 and older projects need `typescript-language-server` in the project (`bun add -d typescript-language-server`) or installed globally. The official plugin needed that too. Switch back once [anthropics/claude-plugins-official#4492](https://github.com/anthropics/claude-plugins-official/issues/4492) ships native TS 7 support (#194).
 
@@ -171,7 +176,7 @@ To remove a plugin in your project, delete its entry from the local `init-plugin
 
 ### Sandbox-only: `.devcontainer/claude-sandbox/allowed-domains.txt`
 
-The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
+The sandbox image ships a default-deny iptables firewall at `/usr/local/sbin/init-firewall`, and `postStartCommand` runs it. It allows GitHub's published IP ranges, the npm registry, the Anthropic API, Claude Code's sign-in and plugin-download hosts (`platform.claude.com`, `claude.ai`, `downloads.claude.ai`), the VS Code marketplace and `mcp.mdn.mozilla.net`, then checks that `example.com` is blocked and `api.github.com` is reachable.
 
 To allow more, list one domain per line in `allowed-domains.txt`. Lines starting with `#` are comments. The firewall resolves each domain with `dig` when it starts. The file is read as data, never run, and the firewall skips, with a warning, any line that isn't a plain domain name. A broken allowlist never keeps the firewall down, and if setup itself fails partway (say, GitHub's IP list can't be fetched), the firewall closes the network rather than leaving it open: restart the container to retry. Allowlisted hosts are reachable on every port, SSH included; nothing else is, and IPv6 gets loopback only.
 
@@ -248,7 +253,7 @@ After the one-time copy, the skill manages its own updates.
 
 ### Sandbox Authentication
 
-**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). Signing in inside the sandbox doesn't work either: the firewall blocks the browser OAuth flow that `claude login` opens. Generate a token on the host and inject it through an environment variable instead.
+**Sign in with a token.** The sandbox has its own `~/.claude` volume, so signing in to the default variant doesn't sign it in ([why](#why-the-variants-dont-share-volumes)). You could sign in inside the sandbox, since the firewall allows Claude Code's sign-in hosts, but that stores a full claude.ai login in `~/.claude`, where the agent, running with permission prompts skipped, can read it. Generate a token on the host and inject it through an environment variable instead: a [`setup-token`](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token) token can only make model requests.
 
 When `CLAUDE_CODE_OAUTH_TOKEN` is unset on the host, `${localEnv:CLAUDE_CODE_OAUTH_TOKEN}` resolves to an empty string, so the variable still exists in the container, but empty. Claude Code then falls back to any credentials already on the sandbox's own `~/.claude` volume.
 

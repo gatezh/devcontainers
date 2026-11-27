@@ -116,6 +116,10 @@
     "DEVCONTAINER": "true",
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    // Skip the claude.ai account's connectors: MCP here comes from the project and image
+    // config. An env var, not the image's managed settings, so a project that wants them
+    // back deletes this line (a managed `true` can't be overridden).
+    "ENABLE_CLAUDEAI_MCP_SERVERS": "false",
     // Git config for every process, outranking the ~/.gitconfig the extension copies in:
     // send git@github.com: remotes over HTTPS, and authenticate github.com only through gh
     // (the empty helper drops VS Code's, as `gh auth setup-git` does). The image trusts
