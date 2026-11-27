@@ -1,5 +1,5 @@
 {
-  "claudeMd": "Browser work in this devcontainer (opening pages, UI checks, screenshots, browser measurements, browser tests): follow the `devcontainer-browser` skill. agent-browser is the default; use Playwright only for the project's committed test suites, Firefox/WebKit, or when agent-browser is missing. Never install or download a browser: Chromium is preinstalled at /usr/bin/chromium.\n\nCloudflare: use the `cf` CLI unless the project has a Wrangler config (`wrangler.jsonc`, `wrangler.json` or `wrangler.toml`) and no `cloudflare.config.ts`. There, use Wrangler and never run `cf dev`, `cf build` or `cf deploy`: without a terminal they rewrite `package.json`, the lockfile and `vite.config.ts` without asking. Migrate first with `cf migrate --dry-run`. Find commands with `cf cli search \"<task>\"`.",
+  "claudeMd": "Browser work in this devcontainer (opening pages, UI checks, screenshots, browser measurements, browser tests): follow the `devcontainer-browser` skill. agent-browser is the default; use Playwright only for the project's committed test suites, Firefox/WebKit, or when agent-browser is missing. Never install or download a browser: Chromium is preinstalled at /usr/bin/chromium.\n\nCloudflare: use the `cf` CLI unless the project has a Wrangler config (`wrangler.jsonc`, `wrangler.json` or `wrangler.toml`) and no `cloudflare.config.ts`. There, use Wrangler and never run `cf dev`, `cf build` or `cf deploy`: without a terminal they rewrite `package.json`, the lockfile and `vite.config.ts` without asking. Migrate first with `cf migrate --dry-run`. Find commands with `cf cli search \"<task>\"`.\n\nDisk: the container's disk is the host's. Keep one checkout per other repo at `~/src/<repo>` and reuse it (`git fetch`, `git switch`) instead of cloning into the scratchpad; for two branches at once use `git worktree add` and remove it when done. Run CLIs from the project that pins them, not `npx <pkg>@latest`: each distinct npx spec is a separate install. Before ending a task, delete large things you put in the scratchpad (clones, `node_modules`, builds, downloads).",
   "permissions": {
     "ask": [
       "Bash(cf * --force*)",
@@ -17,6 +17,16 @@
           {
             "type": "command",
             "command": "/usr/local/bin/drop-rtk-hook"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/local/bin/prune-claude-disk",
+            "async": true
           }
         ]
       }

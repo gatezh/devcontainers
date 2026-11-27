@@ -68,6 +68,18 @@ The image deletes `cf`'s bundled `workerd` runtime (133 MB), so `cf dev` and `--
 
 The `cloudflare` plugin (skills plus the Cloudflare MCP server) stays installed alongside `cf`: its MCP server also searches current Cloudflare docs, which `cf` doesn't.
 
+### Claude Code shell and disk cleanup
+
+The terminal's shell is zsh, but Claude Code's Bash tool runs bash: the image sets `CLAUDE_CODE_SHELL=/bin/bash`, which Claude Code reads before `$SHELL`. Commands written for bash failed under zsh in most sessions: an unmatched glob such as `--include=*.md` aborts the command, `echo =====` is a command lookup, `$CMD args` doesn't word-split, and oh-my-zsh's `g` alias breaks `g() { … }`. To get zsh back, set `CLAUDE_CODE_SHELL` to `/usr/bin/zsh` in `containerEnv` or in a settings file's `env`.
+
+The container's disk is the host's, and sessions leave things behind: a clone with `node_modules` in a scratchpad is ~700 MB, and each distinct `npx <pkg>@<spec>` is a separate install. A managed `SessionStart` hook, `/usr/local/bin/prune-claude-disk`, runs in the background when a session starts or resumes, and deletes:
+
+- other sessions' scratchpads (`/tmp/claude-<uid>/<project>/<session-id>/`, or under `CLAUDE_CODE_TMPDIR`) once the session isn't running and neither its transcript nor its files changed for a day. A scratchpad holding a git repo with uncommitted, stashed or unpushed work is kept, and Claude is told which ones on its next turn. Linked worktrees it deletes are pruned from their main repo.
+- npx installs (`~/.npm/_npx`) unused for 7 days, unless a running `npm exec` (such as an MCP server) uses the package.
+- the npm cache, once it passes 1 GB.
+
+`SCRATCH_DAYS`, `NPX_DAYS` and `CACHE_MAX_MB` in `containerEnv` change the limits. Claude Code's own retention sweep also deletes a scratchpad with its transcript after `cleanupPeriodDays`. The `claudeMd` key also tells Claude to keep one checkout per other repo at `~/src/<repo>` instead of cloning into the scratchpad, and to clear what it put there when a task ends.
+
 ## Multi-platform Support
 
 Both variants are built for:
