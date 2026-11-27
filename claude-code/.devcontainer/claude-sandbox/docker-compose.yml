@@ -10,3 +10,6 @@ services:
     image: ghcr.io/gatezh/devcontainers/claude-code-sandbox:latest
     volumes:
       - ../..:/workspace:cached
+      # Read-only: the host runs initializeCommand from here and the firewall reads its
+      # allowlist, so the agent mustn't edit them (README "Host files the sandbox can write").
+      - ../../.devcontainer:/workspace/.devcontainer:ro
