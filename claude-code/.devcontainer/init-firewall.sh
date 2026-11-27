@@ -16,14 +16,12 @@ ALLOWLIST=/workspace/.devcontainer/claude-sandbox/allowed-domains.txt
 BASE_DOMAINS=(
     "registry.npmjs.org"
     "api.anthropic.com"
-    # https://code.claude.com/docs/en/network-config: OAuth token exchange, refresh and
-    # revocation (for claude.ai accounts too) and the first-run check; account auth;
-    # plugin executable downloads.
+    # Synced to https://code.claude.com/docs/en/network-config, not the upstream reference
+    # (Claude Code no longer uses its statsig.com and sentry.io): OAuth token exchange and
+    # refresh, claude.ai account auth, plugin executable downloads.
     "platform.claude.com"
     "claude.ai"
     "downloads.claude.ai"
-    "sentry.io"
-    "statsig.com"
     "marketplace.visualstudio.com"
     "vscode.blob.core.windows.net"
     "update.code.visualstudio.com"

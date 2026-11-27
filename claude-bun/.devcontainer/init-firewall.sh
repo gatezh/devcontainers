@@ -70,8 +70,6 @@ for domain in \
     "platform.claude.com" \
     "claude.ai" \
     "downloads.claude.ai" \
-    "sentry.io" \
-    "statsig.com" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
     "update.code.visualstudio.com"; do

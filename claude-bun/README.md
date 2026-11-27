@@ -64,8 +64,6 @@ The container implements a **default-deny firewall policy** that only allows con
 | npm registry | Package installation |
 | Anthropic API | Claude Code functionality |
 | Claude sign-in and downloads | OAuth token exchange and refresh, account auth, plugin executables |
-| Sentry | Error reporting |
-| Statsig | Feature flags |
 | VS Code services | Extension marketplace, updates |
 
 All other outbound network connections are blocked.
