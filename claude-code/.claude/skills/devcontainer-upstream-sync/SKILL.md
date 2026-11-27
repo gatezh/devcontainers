@@ -301,13 +301,12 @@ still show up.
 
 ## One-time install (for new projects)
 
-For a new downstream project to adopt this skill, paste these three
-lines once:
+For a new downstream project to adopt this skill, paste these lines
+once:
 
 ```sh
-mkdir -p .claude/skills/devcontainer-upstream-sync
-curl -sSL https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md \
-  > .claude/skills/devcontainer-upstream-sync/SKILL.md
+curl -fsSL --create-dirs -o .claude/skills/devcontainer-upstream-sync/SKILL.md \
+  https://raw.githubusercontent.com/gatezh/devcontainers/master/claude-code/.claude/skills/devcontainer-upstream-sync/SKILL.md
 git add .claude/skills/devcontainer-upstream-sync/SKILL.md
 ```
 
